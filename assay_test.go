@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -463,5 +465,57 @@ func TestMaxClaimsCapComputeAudit(t *testing.T) {
 		if es[i].Verdict != "skipped (over cap)" {
 			t.Errorf("claim %d: want 'skipped (over cap)', got %q", i, es[i].Verdict)
 		}
+	}
+}
+
+// TestFixtureIngestion iterates testdata/fixtures and passes each real file through splitSummary.
+// Goal: confirm the regex boundaries don't panic or hang on large, heterogeneous real-world inputs.
+// Files missing from the directory (fetch failures) are skipped with t.Skip — never substituted.
+func TestFixtureIngestion(t *testing.T) {
+	const dir = "testdata/fixtures"
+	entries, err := os.ReadDir(dir)
+	if os.IsNotExist(err) {
+		t.Skipf("testdata/fixtures not present — run curl downloads to populate")
+	}
+	if err != nil {
+		t.Fatalf("ReadDir %s: %v", dir, err)
+	}
+	if len(entries) == 0 {
+		t.Skipf("testdata/fixtures is empty — no fixtures were successfully fetched")
+	}
+
+	cases := []struct {
+		name string // expected base filename
+	}{
+		{"legal.txt"},
+		{"accounting.txt"},
+		{"pm.md"},
+		{"engineering.html"},
+		{"contract.xml"},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(dir, tc.name)
+			data, err := os.ReadFile(path)
+			if os.IsNotExist(err) {
+				t.Skipf("%s not present — fetch failed or was not attempted", tc.name)
+			}
+			if err != nil {
+				t.Fatalf("ReadFile %s: %v", path, err)
+			}
+			if len(data) == 0 {
+				t.Skipf("%s is empty — fetch may have failed silently", tc.name)
+			}
+			content := string(data)
+			// splitSummary must not panic or hang regardless of content shape.
+			got := splitSummary(content)
+			if len(got) == 0 {
+				t.Errorf("%s: splitSummary returned 0 items on %d-byte input", tc.name, len(data))
+			}
+			t.Logf("%s: %d bytes → %d segments (first: %.80q)",
+				tc.name, len(data), len(got), strings.TrimSpace(got[0]))
+		})
 	}
 }
