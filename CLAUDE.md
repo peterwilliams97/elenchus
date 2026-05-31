@@ -19,8 +19,14 @@ Three operating modes, plus Go-only extras:
 - **Audit** (`-audit -source`) — all three modes in one cross-tab (Go only)
 - **Markdown output** (`-md`) — emit markdown tables instead of terminal colour (Go only)
 
-`assay.py` is kept for historical comparison only — do not edit it. It will be removed and
-referenced by git SHA.
+`assay.py` (the retired Python implementation) is archived at git SHA `469ebe4`.
+
+### Tracks
+
+**Rigour-application map** — a parallel track (no Go code yet) that classifies `(task, phase)` →
+`{advantage, disadvantage, irrelevant}` from a labeled decision log. Phase 0 is data collection;
+`rigour-map/decision_log.jsonl` is the corpus. Open decision: seed the classifier now vs. log
+unaided first to protect the disagreement baseline — not yet resolved.
 
 ## Running it
 
