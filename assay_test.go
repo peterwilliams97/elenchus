@@ -468,20 +468,20 @@ func TestMaxClaimsCapComputeAudit(t *testing.T) {
 	}
 }
 
-// TestFixtureIngestion iterates testdata/fixtures and passes each real file through splitSummary.
+// TestFixtureIngestion iterates fixtures/raw and passes each real file through splitSummary.
 // Goal: confirm the regex boundaries don't panic or hang on large, heterogeneous real-world inputs.
 // Files missing from the directory (fetch failures) are skipped with t.Skip — never substituted.
 func TestFixtureIngestion(t *testing.T) {
-	const dir = "testdata/fixtures"
+	const dir = "fixtures/raw"
 	entries, err := os.ReadDir(dir)
 	if os.IsNotExist(err) {
-		t.Skipf("testdata/fixtures not present — run curl downloads to populate")
+		t.Skipf("fixtures/raw not present — run curl downloads to populate")
 	}
 	if err != nil {
 		t.Fatalf("ReadDir %s: %v", dir, err)
 	}
 	if len(entries) == 0 {
-		t.Skipf("testdata/fixtures is empty — no fixtures were successfully fetched")
+		t.Skipf("fixtures/raw is empty — no fixtures were successfully fetched")
 	}
 
 	cases := []struct {
