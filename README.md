@@ -1,424 +1,120 @@
-#!/usr/bin/env python3
-"""
-assay.py — a dialectical filter, run from the terminal.
-
-Pipeline:
-  1. DECOMPOSE (grammar)   extract atomic, independently-evaluable claims
-  2. DIALECTIC (logic)     per claim, run a producer<->critic loop:
-       - Producer steelmans the claim, BLIND to the critique axes
-         (pattern rule: the producer must not see the critic's instructions)
-       - Critic attacks on FIXED AXES, returns structured findings + verdict
-       - Loop on the surviving claim until the critic raises no new
-         fatal/weakening finding, or --max-rounds is reached (convergence)
-  3. FILTER (rhetoric)     keep the substantive residue; show what dissolved
-
-Every Claude call is printed AS IT IS MADE: stage, system persona, user
-prompt, and the response streamed token-by-token. Calls run sequentially so
-the terminal output stays readable.
-
-Usage:
-  export ANTHROPIC_API_KEY=sk-ant-...
-  python3 assay.py                      # runs the built-in example
-  python3 assay.py path/to/prose.txt    # assay a file
-  python3 assay.py --text "Our AI-first transformation will ..."
-  echo "some prose" | python3 assay.py  # read stdin
-  python3 assay.py --model claude-opus-4-8 --max-rounds 3 --no-color
-
-Requires:  pip install anthropic
-"""
-
-import argparse
-import json
-import os
-import re
-import sys
-
-try:
-    import anthropic
-except ImportError:
-    sys.exit("Missing dependency. Install with:  pip install anthropic")
-
-# ── config ───────────────────────────────────────────────────────────────────
-
-MODEL = os.environ.get("ANTHROPIC_MODEL", "claude-sonnet-4-6")
-MAX_TOKENS = 1024
-
-AXES = [
-    "Evidence",
-    "Hidden premise",
-    "Falsifiability",
-    "Equivocation",
-    "Base rate / magnitude",
-    "Counterexample",
-    "Causality vs correlation",
-]
-
-DEFAULT_INPUT = (
-    "Our AI-first transformation will unlock unprecedented synergies across the "
-    "organization. By leveraging best-in-class machine learning, we will become "
-    "the market leader within 18 months. Customer-centricity is in our DNA, and "
-    "the data shows that engaged customers spend 3x more. We must move fast "
-    "because the window is closing. Empowering our people to think outside the "
-    "box will build a culture of innovation that competitors simply cannot "
-    "replicate."
-)
-
-# ── terminal colour ────────────────────────────────────────────────────────────
-
-USE_COLOR = sys.stdout.isatty()
-
-
-def c(code, s):
-    return f"\033[{code}m{s}\033[0m" if USE_COLOR else s
-
-
-def dim(s):      return c("2", s)
-def bold(s):     return c("1", s)
-def green(s):    return c("32", s)
-def yellow(s):   return c("33", s)
-def red(s):      return c("31", s)
-def cyan(s):     return c("36", s)
-def grey(s):     return c("90", s)
-
-
-VERDICT_COLOR = {
-    "substantive": green,
-    "partial": yellow,
-    "hollow": red,
-    "error": grey,
-}
-SEV_COLOR = {"fatal": red, "weakens": yellow, "clears": green}
-
-CALL_NO = 0
-
-# ── Claude plumbing ──────────────────────────────────────────────────────────
-
-client = None  # constructed in main(), after arg parsing
-
-
-def call_claude(system, prompt, label):
-    """Make one streaming call, printing the whole exchange as it happens."""
-    global CALL_NO
-    CALL_NO += 1
-    print()
-    print(cyan(f"┌─ call #{CALL_NO} · {label} · {MODEL}"))
-    print(grey("│ system:"))
-    for line in system.splitlines():
-        print(grey("│   " + line))
-    print(grey("│ user:"))
-    for line in prompt.splitlines():
-        print(grey("│   " + line))
-    print(cyan("├─ response:"))
-    sys.stdout.write("│ ")
-    sys.stdout.flush()
-
-    parts = []
-    with client.messages.stream(
-        model=MODEL,
-        max_tokens=MAX_TOKENS,
-        system=system,
-        messages=[{"role": "user", "content": prompt}],
-    ) as stream:
-        for chunk in stream.text_stream:
-            # keep the left gutter on newlines so streamed output stays aligned
-            sys.stdout.write(chunk.replace("\n", "\n│ "))
-            sys.stdout.flush()
-            parts.append(chunk)
-    print()
-    print(cyan("└─"))
-    return "".join(parts)
-
-
-def _strip_fences(t):
-    return re.sub(r"```(?:json)?", "", t).strip()
-
-
-def _extract_balanced(t):
-    """Return the first balanced {...} or [...] block, respecting strings."""
-    ib, ia = t.find("{"), t.find("[")
-    if ib == -1:
-        start = ia
-    elif ia == -1:
-        start = ib
-    else:
-        start = min(ia, ib)
-    if start == -1:
-        return None
-    open_ch = t[start]
-    close_ch = "}" if open_ch == "{" else "]"
-    depth = 0
-    in_str = esc = False
-    for i in range(start, len(t)):
-        ch = t[i]
-        if in_str:
-            if esc:
-                esc = False
-            elif ch == "\\":
-                esc = True
-            elif ch == '"':
-                in_str = False
-            continue
-        if ch == '"':
-            in_str = True
-        elif ch == open_ch:
-            depth += 1
-        elif ch == close_ch:
-            depth -= 1
-            if depth == 0:
-                return t[start : i + 1]
-    return t[start:]
-
-
-def parse_json(text):
-    cleaned = _strip_fences(text or "")
-
-    def attempt(s):
-        return json.loads(re.sub(r",\s*([}\]])", r"\1", s))  # drop trailing commas
-
-    try:
-        return attempt(cleaned)
-    except Exception:
-        sliced = _extract_balanced(cleaned)
-        if sliced:
-            return attempt(sliced)
-        raise ValueError("Could not parse JSON from model output")
-
-
-def call_json(system, prompt, label, retries=1):
-    out = call_claude(system, prompt, label)
-    try:
-        return parse_json(out)
-    except Exception:
-        if retries > 0:
-            strict = (
-                system
-                + "\n\nCRITICAL: Output ONLY raw JSON. No prose, no markdown, "
-                "no backticks. Your first character must be { or [."
-            )
-            return call_json(strict, prompt, label + " (retry)", retries - 1)
-        raise
-
-
-# ── pipeline stages ──────────────────────────────────────────────────────────
-
-def decompose(source):
-    system = (
-        "You are a claims extractor trained in analytic philosophy. Break prose "
-        "into its atomic, independently-evaluable assertions. Strip rhetoric, "
-        "hedges, and connective filler. Each item must be a single claim that "
-        "could in principle be true or false. Do not evaluate them. Return ONLY "
-        "a JSON array of strings, no markdown, no preamble."
-    )
-    arr = call_json(system, f"TEXT:\n{source}", "decompose")
-    return [s for s in arr if isinstance(s, str)] if isinstance(arr, list) else []
-
-
-def produce(claim):
-    """Producer — blind to the critique axes."""
-    system = (
-        "You are the Producer. Given a single claim, construct its STRONGEST "
-        "defensible version (steelman) and state precisely what would have to be "
-        "true for it to hold. Be concrete. You are NOT evaluating or criticising "
-        'the claim — only making the best honest case for it. Return ONLY JSON: '
-        '{"steelman": string, "conditions": string}. No markdown.'
-    )
-    return call_json(system, f"CLAIM:\n{claim}", "producer (steelman)")
-
-
-def critique(claim, steelman, conditions):
-    """Critic — works only from the fixed axes."""
-    system = (
-        "You are the Critic. Assess one claim against these FIXED AXES, in order:\n"
-        "- Evidence: is support cited or available, or is it bare assertion?\n"
-        "- Hidden premise: what unstated assumption must hold?\n"
-        "- Falsifiability: what observation would show it false? If none exists, "
-        "it is vacuous.\n"
-        "- Equivocation: does a key term shift meaning or hide behind a buzzword?\n"
-        "- Base rate / magnitude: is there a real quantity and a comparison, or "
-        "just a direction?\n"
-        "- Counterexample: is there an obvious case where it fails?\n"
-        "- Causality vs correlation: does it assert cause from mere association?\n\n"
-        "For each axis that bears on the claim, give a one-sentence finding and a "
-        'severity: "fatal" (this axis alone guts the claim), "weakens" (survives '
-        'only in narrower form), "clears" (no problem here).\n\n'
-        "Then deliver a verdict:\n"
-        '- "hollow": unfalsifiable, equivocating, or pure assertion with no '
-        "defensible core.\n"
-        '- "partial": a narrower, qualified claim survives after stripping the '
-        "unsupported parts.\n"
-        '- "substantive": falsifiable, evidence exists or is clearly obtainable, '
-        "no equivocation, survives counterexample.\n\n"
-        'If "partial" or "substantive", give the surviving_claim (the exact '
-        'narrowed/defensible version). If "hollow", surviving_claim is null.\n'
-        "Set needs_another_round=true ONLY if a narrower surviving_claim was "
-        "produced that itself deserves a fresh pass.\n\n"
-        "Return ONLY JSON:\n"
-        '{"critique":[{"axis":string,"finding":string,"severity":"fatal"|'
-        '"weakens"|"clears"}],"verdict":"substantive"|"partial"|"hollow",'
-        '"surviving_claim":string|null,"reason":string,'
-        '"needs_another_round":boolean}'
-    )
-    user = (
-        f"CLAIM:\n{claim}\n\nPRODUCER STEELMAN:\n{steelman}\n\n"
-        f"PRODUCER CONDITIONS:\n{conditions}"
-    )
-    return call_json(system, user, "critic")
-
-
-def assay_claim(claim, max_rounds):
-    """One claim through the producer<->critic loop. Never raises."""
-    try:
-        current = claim
-        rounds = 0
-        last = None
-        steelman_shown = None
-        while rounds < max_rounds:
-            p = produce(current)
-            if rounds == 0:
-                steelman_shown = p.get("steelman")
-            cr = critique(current, p.get("steelman", ""), p.get("conditions", ""))
-            last = cr
-            rounds += 1
-            if (
-                cr.get("needs_another_round")
-                and cr.get("surviving_claim")
-                and rounds < max_rounds
-            ):
-                current = cr["surviving_claim"]
-                continue
-            break
-        result = {"claim": claim, "steelman": steelman_shown, "rounds": rounds}
-        result.update(last or {})
-        return result
-    except Exception as e:
-        return {
-            "claim": claim,
-            "steelman": None,
-            "rounds": 0,
-            "critique": [],
-            "verdict": "error",
-            "surviving_claim": None,
-            "reason": f"assay failed: {e}",
-        }
-
-
-# ── report ───────────────────────────────────────────────────────────────────
-
-def print_method(max_rounds):
-    print(bold("\nTHE ASSAY — a dialectical filter"))
-    print(dim("decompose → producer–critic → filter\n"))
-    print(dim("fixed critique axes:  " + "  ·  ".join(AXES)))
-    print(
-        dim(
-            "convergence rule:     producer steelmans (blind to axes) → critic "
-            f"attacks on axes → loop on the surviving claim until no new "
-            f"fatal/weakening finding, or {max_rounds} rounds."
-        )
-    )
-
-
-def print_report(results):
-    survivors = [r for r in results if r["verdict"] in ("substantive", "partial")]
-    dissolved = [r for r in results if r["verdict"] == "hollow"]
-    errors = [r for r in results if r["verdict"] == "error"]
-
-    print(bold("\n" + "═" * 70))
-    print(
-        bold(
-            f"{green(str(len(survivors)))} of {len(results)} claims survive the "
-            f"dialectic · {red(str(len(dissolved)))} dissolve"
-            + (f" · {grey(str(len(errors)) + ' unparsed')}" if errors else "")
-        )
-    )
-    print(bold("═" * 70))
-
-    for r in results:
-        col = VERDICT_COLOR.get(r["verdict"], grey)
-        glyph = {"substantive": "✓", "partial": "≈", "hollow": "✕", "error": "?"}.get(
-            r["verdict"], "?"
-        )
-        print("\n" + col(f"{glyph} [{r['verdict'].upper()}] ") + r["claim"])
-        if r.get("surviving_claim") and r["verdict"] != "substantive":
-            print(yellow(f"    survives as: “{r['surviving_claim']}”"))
-        for cr in r.get("critique") or []:
-            sev = cr.get("severity", "weakens")
-            sc = SEV_COLOR.get(sev, yellow)
-            print(
-                "    "
-                + sc(f"{sev:<8}")
-                + dim(f"{cr.get('axis',''):<24}")
-                + cr.get("finding", "")
-            )
-        if r.get("reason"):
-            print(dim(f"    verdict — {r['reason']}"))
-        if r.get("rounds", 0) > 1:
-            print(grey(f"    converged in {r['rounds']} rounds"))
-
-    if survivors:
-        print(green(bold("\nThe residue:")))
-        for r in survivors:
-            print(green("  — " + (r.get("surviving_claim") or r["claim"])))
-    print()
-
-
-# ── main ─────────────────────────────────────────────────────────────────────
-
-def read_source(args):
-    if args.text:
-        return args.text
-    if args.path:
-        with open(args.path, "r", encoding="utf-8") as f:
-            return f.read()
-    if not sys.stdin.isatty():
-        piped = sys.stdin.read().strip()
-        if piped:
-            return piped
-    return DEFAULT_INPUT
-
-
-def main():
-    global USE_COLOR, MODEL, client
-
-    parser = argparse.ArgumentParser(description="Dialectical filter for prose.")
-    parser.add_argument("path", nargs="?", help="text file to assay")
-    parser.add_argument("--text", help="inline text to assay")
-    parser.add_argument("--model", help=f"model id (default {MODEL})")
-    parser.add_argument(
-        "--max-rounds", type=int, default=2, help="producer–critic rounds per claim"
-    )
-    parser.add_argument("--no-color", action="store_true", help="disable ANSI colour")
-    args = parser.parse_args()
-
-    if args.no_color:
-        USE_COLOR = False
-    if args.model:
-        MODEL = args.model
-
-    if not os.environ.get("ANTHROPIC_API_KEY"):
-        sys.exit("Set ANTHROPIC_API_KEY in your environment first.")
-    client = anthropic.Anthropic()
-
-    source = read_source(args)
-    print_method(args.max_rounds)
-    print(dim("\nsource:\n  " + source.replace("\n", "\n  ")))
-
-    print(bold("\n── stage 1: decompose ──"))
-    claims = decompose(source)
-    if not claims:
-        sys.exit("No claims extracted.")
-    print(bold(f"\nextracted {len(claims)} atomic claims:"))
-    for i, cl in enumerate(claims, 1):
-        print(f"  {i}. {cl}")
-
-    print(bold("\n── stage 2: dialectic (producer ↔ critic) ──"))
-    results = []
-    for i, cl in enumerate(claims, 1):
-        print(bold(f"\n▸ claim {i}/{len(claims)}: {cl}"))
-        results.append(assay_claim(cl, args.max_rounds))
-
-    print(bold("\n── stage 3: filter ──"))
-    print_report(results)
-
-
-if __name__ == "__main__":
-    main()
+# assay
+
+A dialectical filter for claims. It takes prose — a strategy memo, a pundit's "predictions," a
+summary of a talk — breaks it into atomic claims, and tests each one. It doesn't tell you what to
+think; it makes the structure of a claim visible so you can decide.
+
+The tool answers three **different** questions, one per mode, and it lets the answers disagree:
+
+- **Faithfulness** — did the source actually say this? *(sense / attribution)*
+- **Substance** — is the claim well-formed and falsifiable, the kind of thing that *could* be true? *(structure)*
+- **Grounding** — is it actually true, against external evidence? *(reference / truth-makers)*
+
+A claim can be faithfully reported, internally well-reasoned, and still false. Keeping those three
+apart is most of what careful reasoning requires, and the tool is built to keep them apart on
+purpose rather than collapsing them into a single "is this good?"
+
+## Install
+
+```bash
+pip install anthropic
+export ANTHROPIC_API_KEY=sk-ant-...
+```
+
+Python 3.9+. A `setup.sh` is included as a one-shot convenience for the above. Optionally pin a
+default model:
+
+```bash
+export ANTHROPIC_MODEL=claude-opus-4-8
+```
+
+Input is a file argument, `--text "..."`, or piped on stdin.
+
+## Usage
+
+### Substance (default) — is the claim well-formed?
+
+```bash
+python3 assay.py memo.txt
+```
+
+Decomposes the prose into atomic claims, then runs a **producer–critic** dialectic on each. A
+Producer states the strongest version of the claim, *blind to the critique axes*; a Critic attacks
+it on seven fixed axes; the loop repeats on the surviving claim until the Critic raises no new fatal
+ or weakening finding, or `--max-rounds` is hit. Verdict: `substantive` · `partial` · `hollow`.
+
+Fixed critique axes:
+ Evidence · Hidden premise · Falsifiability · Equivocation · Base rate / magnitude · Counterexample · Causality vs correlation.
+
+### Faithfulness — did the source actually say it?
+
+```bash
+python3 assay.py summary.txt --source transcript.txt
+```
+
+For each claim in the summary, a **Defender** finds verbatim support in the source and a **Critic**
+judges whether the summary represents it accurately, watching for overstatement, fabrication,
+distortion, context-stripping, misattribution, and cherry-picking. Verdict:
+`faithful` · `partial` · `overstated` · `absent` · `contradicted`.
+
+This checks attribution — *whether the speaker said it* — never whether it's true. A
+faithfully-reported claim can still be wrong.
+
+### Grounding — is it actually true?
+
+```bash
+python3 assay.py claims.txt --evidence
+```
+
+For each claim, Claude searches the web for real evidence — the actual truth-makers, not anyone's
+assertion that the claim is true — weighs what it finds, and returns
+`supported` · `mixed` · `refuted` · `unverifiable`, with the sources used.
+This is the only mode that touches truth.
+
+### Chaining the three
+
+To critique a pundit properly, run the modes in order: **faithfulness** (are we critiquing what they
+actually said?) → **substance** (is it well-formed and falsifiable?) → **grounding** (is it borne
+out by evidence?). Each answers a question the previous one can't.
+
+## Flags
+
+| flag | effect |
+|---|---|
+| `path` / `--text` / stdin | the input prose |
+| `--source FILE` | faithfulness mode: check the input against FILE |
+| `--evidence` | evidence-grounding mode (web search) |
+| `--model ID` | model id (default `claude-sonnet-4-6`) |
+| `--max-rounds N` | producer–critic rounds per claim (substance only, default 2) |
+| `-v`, `--verbose` | show every Claude call: prompts and raw streamed response |
+| `--no-color` | disable ANSI colour |
+
+## Output
+
+By default you see the dialectical *result* of each step — the steelman, the critique by axis, the
+ verdict — plus a summary at the end. This is "what a careful reader would conclude." `-v` instead
+ shows every Claude call as it happens: system prompt, user prompt, and the response streamed live —
+ "how the machine got there." Pipe verbose to a file (`> log.txt`) when you want the full trace.
+
+## Honest limits
+
+- **The Critic is itself an LLM.** Its precision varies; it can wave through a hollow claim or
+over-attack a sound one. The skill the tool is really training is catching where the machine critic
+is wrong — don't treat its verdict as final.
+- **Predictions come back `unverifiable` under `--evidence`, by design.** You can't ground a claim
+about the future in present evidence. That's the correct result, not a failure — it's the line
+between "falsifiable in principle" (which substance mode checks) and "settled by current evidence."
+- **Source URLs in `--evidence` are written by the model** from its search results. They should be
+real, but the rigorous version reads them from the API's citation blocks rather than trusting the
+model to retype them — the same substrate-vs-report distinction this whole tool is about, applied to
+its own output.
+- **Cost scales with claims.** Substance is roughly `1 + 2 × claims` calls; faithfulness sends the
+full source twice per claim; grounding runs one search-enabled call per claim. Tune on
+`--model claude-haiku-4-5-20251001`, then re-run on a stronger model for the verdict you'll trust.
+
+## Why
+
+The goal isn't only to apply logic and reasoning — it's to make their distinctions legible. The
+three modes turn an abstract epistemic point into three columns you can watch disagree: a claim can
+be *accurately reported*, *well-reasoned*, and *false* all at once. Seeing those come apart on a
+real example teaches the distinction better than any definition of it.

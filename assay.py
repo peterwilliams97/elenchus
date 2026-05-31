@@ -90,12 +90,20 @@ VERDICT_COLOR = {
 }
 SEV_COLOR = {"fatal": red, "weakens": yellow, "clears": green}
 
-GROUND_COLOR = {
-    "grounded": green,
+FAITH_COLOR = {
+    "faithful": green,
     "partial": yellow,
     "overstated": yellow,
-    "unsupported": red,
+    "absent": red,
     "contradicted": red,
+    "error": grey,
+}
+
+EVIDENCE_COLOR = {
+    "supported": green,
+    "mixed": yellow,
+    "refuted": red,
+    "unverifiable": grey,
     "error": grey,
 }
 
@@ -247,9 +255,11 @@ def critique(claim, steelman, conditions):
         "You are the Critic. Assess one claim against these FIXED AXES, in order:\n"
         "- Evidence: is support cited or available, or is it bare assertion?\n"
         "- Hidden premise: what unstated assumption must hold?\n"
-        "- Falsifiability: what observation would show it false? If none exists, it is vacuous.\n"
+        "- Falsifiability: what observation would show it false? If none exists, "
+        "it is vacuous.\n"
         "- Equivocation: does a key term shift meaning or hide behind a buzzword?\n"
-        "- Base rate / magnitude: is there a real quantity and a comparison, or just a direction?\n"
+        "- Base rate / magnitude: is there a real quantity and a comparison, or "
+        "just a direction?\n"
         "- Counterexample: is there an obvious case where it fails?\n"
         "- Causality vs correlation: does it assert cause from mere association?\n\n"
         "For each axis that bears on the claim, give a one-sentence finding and a "
@@ -297,14 +307,14 @@ def render_round(n, steelman, cr):
     for f in cr.get("critique") or []:
         _render_finding(f)
     verdict = cr.get("verdict", "?")
-    print("      " + VERDICT_COLOR.get(verdict, grey)(f"verdict: {verdict.upper()}"), flush=True)
+    print("      " + VERDICT_COLOR.get(verdict, grey)(f"verdict: {verdict.upper()}"))
     if cr.get("reason"):
         print(dim(textwrap.fill(cr["reason"], width=100,
-                                initial_indent=" " * 8, subsequent_indent=" " * 8)), flush=True)
+                                initial_indent=" " * 8, subsequent_indent=" " * 8)))
     sc = cr.get("surviving_claim")
     if sc and verdict != "substantive":
         print(yellow(textwrap.fill(f'survives as: "{sc}"', width=100,
-                                   initial_indent=" " * 6, subsequent_indent=" " * 8)), flush=True)
+                                   initial_indent=" " * 6, subsequent_indent=" " * 8)))
 
 
 def assay_claim(claim, max_rounds):
@@ -407,7 +417,7 @@ def print_report(results):
         print(green(bold("\nThe residue:")))
         for r in survivors:
             print(green("  — " + (r.get("surviving_claim") or r["claim"])))
-    print()
+    print(flush=True)
 
 
 # ── grounding mode (is summary A grounded by source B?) ──────────────────────
@@ -427,7 +437,7 @@ def split_summary(text):
     return lines if len(lines) >= 2 else [text]
 
 
-def ground_defender(claim, source):
+def faithfulness_defender(claim, source):
     """Find the strongest verbatim support for the claim in the source only."""
     system = (
         "You are the Defender. You are given a SUMMARY CLAIM and a SOURCE "
@@ -438,119 +448,212 @@ def ground_defender(claim, source):
         '{"found": boolean, "quotes": [string], "best_case": string}. No markdown.'
     )
     user = f"SUMMARY CLAIM:\n{claim}\n\nSOURCE:\n{source}"
-    return call_json(system, user, "grounding defender")
+    return call_json(system, user, "faithfulness defender")
 
 
-def ground_critic(claim, source, defender):
-    """Judge whether the cited evidence supports the claim AS STATED."""
+def faithfulness_critic(claim, source, defender):
+    """Judge whether the summary faithfully represents the source AS STATED.
+    This is sense-preservation / attribution — NOT truth. It answers 'did the
+    speaker say this', never 'is it true'."""
     system = (
-        "You are the Grounding Critic. Decide whether the SUMMARY CLAIM is "
-        "faithfully supported by the SOURCE, using the Defender's cited quotes. "
-        "Watch specifically for the ways a summary distorts a source:\n"
+        "You are the Faithfulness Critic. Decide whether the SUMMARY CLAIM "
+        "faithfully represents what the speaker said in the SOURCE, using the "
+        "Defender's cited quotes. You are checking sense-preservation, not truth: "
+        "your only question is whether the summary reports the speaker accurately, "
+        "never whether the speaker was right. Watch for the ways a summary distorts "
+        "a source:\n"
         "- Fabrication: the claim is simply not in the source.\n"
         "- Overstatement: the source hedged or qualified it; the summary made it "
         "absolute ('kind of over' → 'over'; 'I might' → 'will').\n"
         "- Distortion: the meaning was changed.\n"
-        "- Context-stripping: a conditional or hypothetical is presented as an "
+        "- Context-stripping: a conditional or hypothetical presented as an "
         "unconditional belief.\n"
         "- Misattribution: the speaker was quoting or steelmanning someone else, "
         "and the summary attributes it as the speaker's own view.\n"
-        "- Cherry-pick: technically present but unrepresentative of the source's "
-        "overall stance.\n\n"
-        "Verify the Defender's quotes actually appear to come from the source and "
-        "actually support the claim; do not take the Defender's word for it.\n\n"
+        "- Cherry-pick: present but unrepresentative of the source's stance.\n\n"
+        "Verify the Defender's quotes actually appear in the source; do not take "
+        "the Defender's word for it.\n\n"
         "Verdict:\n"
-        '- "grounded": the source asserts the claim as stated.\n'
+        '- "faithful": the summary reports the claim as the speaker stated it.\n'
         '- "partial": the source supports a weaker/narrower version.\n'
-        '- "overstated": supported in kind but the summary strengthened it.\n'
-        '- "unsupported": not present in the source.\n'
-        '- "contradicted": the source says the opposite or materially against it.\n\n'
+        '- "overstated": same in kind but the summary strengthened it.\n'
+        '- "absent": not in the source.\n'
+        '- "contradicted": the source says the opposite.\n\n'
         "For 'partial' or 'overstated', give what_source_actually_says (the faithful "
         "version). Return ONLY JSON:\n"
-        '{"findings":[{"mode":string,"finding":string}],"verdict":"grounded"|'
-        '"partial"|"overstated"|"unsupported"|"contradicted","evidence":string,'
-        '"what_source_actually_says":string|null,"note":string}'
+        '{"findings":[{"mode":string,"finding":string}],"verdict":"faithful"|'
+        '"partial"|"overstated"|"absent"|"contradicted","evidence":string,'
+        '"what_source_actually_says":string|null}'
     )
     quotes = "\n".join(f"- “{q}”" for q in defender.get("quotes", [])) or "(none)"
     user = (
         f"SUMMARY CLAIM:\n{claim}\n\nDEFENDER FOUND SUPPORT: {defender.get('found')}\n"
         f"DEFENDER QUOTES:\n{quotes}\n\nSOURCE:\n{source}"
     )
-    return call_json(system, user, "grounding critic")
+    return call_json(system, user, "faithfulness critic")
 
 
-def render_grounding(claim, cr):
+def render_faithfulness(claim, cr):
     verdict = cr.get("verdict", "?")
-    col = GROUND_COLOR.get(verdict, grey)
-    glyph = {"grounded": "✓", "partial": "≈", "overstated": "▲",
-             "unsupported": "✕", "contradicted": "⚡", "error": "?"}.get(verdict, "?")
-    print("\n" + col(f"{glyph} [{verdict.upper()}] ") + claim)
-    for f in cr.get("findings") or []:
-        mode = f.get("mode", "")
-        print("      " + dim(f"{mode:<18}")
-              + textwrap.fill(f.get("finding", ""), width=100, subsequent_indent=" " * 24))
-    if cr.get("evidence"):
-        print(dim(textwrap.fill("source: " + cr["evidence"], width=100,
-                                initial_indent=" " * 6, subsequent_indent=" " * 6)))
+    col = FAITH_COLOR.get(verdict, grey)
+    glyph = {"faithful": "✓", "partial": "≈", "overstated": "▲",
+             "absent": "✕", "contradicted": "⚡", "error": "?"}.get(verdict, "?")
+    print("\n" + col(f"{glyph} {verdict.upper():<12}") + claim)
     if cr.get("what_source_actually_says"):
-        print(yellow(textwrap.fill('faithful version: "' + cr["what_source_actually_says"] + '"',
-                                   width=100, initial_indent=" " * 6, subsequent_indent=" " * 8)))
+        print(yellow("  source actually says: ")
+              + textwrap.fill('"' + cr["what_source_actually_says"] + '"',
+                              width=96, subsequent_indent="  "))
 
 
-def ground_claim(claim, source):
+def faithfulness_claim(claim, source):
     """Never raises."""
     try:
-        d = ground_defender(claim, source)
-        cr = ground_critic(claim, source, d)
+        d = faithfulness_defender(claim, source)
+        cr = faithfulness_critic(claim, source, d)
         cr["claim"] = claim
         return cr
     except Exception as e:
         return {"claim": claim, "findings": [], "verdict": "error",
-                "evidence": None, "what_source_actually_says": None,
-                "note": f"grounding failed: {e}"}
+                "evidence": None, "what_source_actually_says": None}
 
 
-def print_ground_report(results):
-    n = len(results)
-    grounded = [r for r in results if r["verdict"] == "grounded"]
-    failed = [r for r in results
-              if r["verdict"] in ("overstated", "unsupported", "contradicted")]
-    fully = len(grounded) == n and n > 0
-    print(bold("\n" + "═" * 70))
-    print(bold("Is the summary fully grounded by the source?  ")
+def print_faithfulness_report(results):
+    from collections import Counter
+    counts = Counter(r["verdict"] for r in results)
+    faithful = counts.get("faithful", 0)
+    fully = faithful == len(results) and results
+    print(bold("\n" + "─" * 60))
+    print(bold("Does the summary faithfully represent the source?  ")
           + (green("YES") if fully else red("NO")))
-    print(
-        f"{green(str(len(grounded)))} grounded · "
-        f"{yellow(str(len([r for r in results if r['verdict']=='partial'])))} partial · "
-        f"{yellow(str(len([r for r in results if r['verdict']=='overstated'])))} overstated · "
-        f"{red(str(len([r for r in results if r['verdict']=='unsupported'])))} unsupported · "
-        f"{red(str(len([r for r in results if r['verdict']=='contradicted'])))} contradicted"
-        + (f" · {grey(str(len([r for r in results if r['verdict']=='error'])) + ' error')}"
-           if any(r['verdict'] == 'error' for r in results) else "")
-    )
-    print(bold("═" * 70))
-    if failed:
-        print(red(bold("\nWhere the summary departs from the source:")))
-        for r in failed:
-            print(red(f"  {r['verdict'].upper()}: ") + r["claim"])
-            if r.get("what_source_actually_says"):
-                print(dim('      source actually supports: "'
-                          + r["what_source_actually_says"] + '"'))
+    print("  " + " · ".join(
+        f"{FAITH_COLOR.get(k, grey)(str(v))} {k}" for k, v in counts.items()))
     print()
 
 
-def run_grounding(summary_text, source, max_rounds):
+def run_faithfulness(summary_text, source):
     claims = split_summary(summary_text)
-    print(bold(f"\nsummary contains {len(claims)} claims; checking each against "
-               f"a {len(source.split())}-word source\n"))
+    print(dim(f"\n{len(claims)} claims vs a {len(source.split())}-word source\n"))
     results = []
     for i, cl in enumerate(claims, 1):
-        print(bold(f"▸ claim {i}/{len(claims)}: {cl}"))
-        r = ground_claim(cl, source)
+        if VERBOSE:
+            print(bold(f"\n▸ claim {i}/{len(claims)}: {cl}"))
+        r = faithfulness_claim(cl, source)
         results.append(r)
         if not VERBOSE:
-            render_grounding(cl, r)
-    print_ground_report(results)
+            render_faithfulness(cl, r)
+    print_faithfulness_report(results)
+
+
+# ── evidence-grounding mode (is the claim true, per the world?) ──────────────
+
+def call_claude_tools(system, prompt, label, max_uses=5):
+    """One call with web search enabled. Anthropic runs the searches server-side
+    and the model returns its final answer. Returns the model's text."""
+    global CALL_NO
+    CALL_NO += 1
+    if VERBOSE:
+        print()
+        print(cyan(f"┌─ call #{CALL_NO} · {label} · {MODEL} (web search)"))
+        print(grey("│ user:"))
+        for line in prompt.splitlines():
+            print(grey("│   " + line))
+    resp = client.messages.create(
+        model=MODEL,
+        max_tokens=1500,
+        system=system,
+        messages=[{"role": "user", "content": prompt}],
+        tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": max_uses}],
+    )
+    texts = []
+    for block in resp.content:
+        bt = getattr(block, "type", None)
+        if bt == "text":
+            texts.append(block.text)
+        elif bt == "server_tool_use" and VERBOSE:
+            inp = getattr(block, "input", None) or {}
+            q = inp.get("query", "") if isinstance(inp, dict) else ""
+            print(grey(f"│   searched: {q}"))
+    if VERBOSE:
+        print(cyan("├─ response:"))
+        print(grey("│ " + "".join(texts).replace("\n", "\n│ ")))
+        print(cyan("└─"))
+    return "".join(texts)
+
+
+def evidence_ground(claim):
+    """The real grounding step: check the claim against external truth-makers."""
+    system = (
+        "You are the Evidence Grounder. Decide whether the CLAIM is TRUE, using web "
+        "search to find real, current evidence — the actual truth-makers, not "
+        "anyone's assertion that it is true. Search for data, primary sources, and "
+        "credible reporting; weigh what you find. Then judge:\n"
+        '- "supported": credible evidence backs the claim.\n'
+        '- "mixed": evidence cuts both ways, or supports only a qualified version.\n'
+        '- "refuted": credible evidence contradicts the claim.\n'
+        '- "unverifiable": a prediction, opinion, or otherwise not checkable against '
+        "current evidence.\n\n"
+        "Keep finding to one sentence. List the sources you actually used, with real "
+        "URLs from your search results. Return ONLY JSON after searching:\n"
+        '{"verdict":"supported"|"mixed"|"refuted"|"unverifiable","finding":string,'
+        '"sources":[{"title":string,"url":string}]}'
+    )
+    try:
+        out = call_claude_tools(system, f"CLAIM:\n{claim}", "evidence grounding")
+        return parse_json(out)
+    except Exception:
+        out = call_claude_tools(
+            system + "\n\nReturn ONLY the JSON object and nothing else.",
+            f"CLAIM:\n{claim}", "evidence grounding (retry)",
+        )
+        return parse_json(out)
+
+
+def evidence_claim(claim):
+    """Never raises."""
+    try:
+        r = evidence_ground(claim)
+        r["claim"] = claim
+        return r
+    except Exception as e:
+        return {"claim": claim, "verdict": "error",
+                "finding": f"grounding failed: {e}", "sources": []}
+
+
+def render_evidence(r):
+    v = r.get("verdict", "?")
+    col = EVIDENCE_COLOR.get(v, grey)
+    glyph = {"supported": "✓", "mixed": "≈", "refuted": "✕",
+             "unverifiable": "—", "error": "?"}.get(v, "?")
+    print("\n" + col(f"{glyph} {v.upper():<12}") + r["claim"])
+    if r.get("finding"):
+        print("  " + textwrap.fill(r["finding"], width=96, subsequent_indent="  "))
+    for s in r.get("sources") or []:
+        label = (s.get("title", "") + " — ") if s.get("title") else ""
+        print(dim("  · " + label + s.get("url", "")))
+
+
+def print_evidence_report(results):
+    from collections import Counter
+    counts = Counter(r["verdict"] for r in results)
+    print(bold("\n" + "─" * 60))
+    print(bold("evidence grounding:  ")
+          + " · ".join(f"{EVIDENCE_COLOR.get(k, grey)(str(v))} {k}"
+                       for k, v in counts.items()))
+    print()
+
+
+def run_evidence(text):
+    claims = split_summary(text)
+    print(dim(f"\ngrounding {len(claims)} claims against external evidence\n"))
+    results = []
+    for i, cl in enumerate(claims, 1):
+        if VERBOSE:
+            print(bold(f"\n▸ claim {i}/{len(claims)}: {cl}"))
+        r = evidence_claim(cl)
+        results.append(r)
+        if not VERBOSE:
+            render_evidence(r)
+    print_evidence_report(results)
 
 
 # ── main ─────────────────────────────────────────────────────────────────────
@@ -580,8 +683,13 @@ def main():
     )
     parser.add_argument(
         "--source",
-        help="source/transcript file → grounding mode: check whether the summary "
-        "(path/--text/stdin) is faithfully grounded by this source",
+        help="source/transcript file → faithfulness mode: does the summary "
+        "(path/--text/stdin) faithfully represent this source?",
+    )
+    parser.add_argument(
+        "--evidence", action="store_true",
+        help="evidence-grounding mode: check each claim against external evidence "
+        "(web search) — is it actually true?",
     )
     parser.add_argument(
         "-v", "--verbose", action="store_true",
@@ -600,7 +708,14 @@ def main():
         sys.exit("Set ANTHROPIC_API_KEY in your environment first.")
     client = anthropic.Anthropic()
 
-    # ── grounding mode ──
+    # ── evidence-grounding mode ──
+    if args.evidence:
+        print(bold("\nTHE ASSAY — evidence grounding"))
+        print(dim("is each claim true, per external evidence?"), flush=True)
+        run_evidence(read_source(args))
+        return
+
+    # ── faithfulness mode ──
     if args.source:
         with open(args.source, "r", encoding="utf-8") as f:
             src = f.read()
@@ -613,12 +728,12 @@ def main():
             summary = sys.stdin.read()
         else:
             sys.exit(
-                "Grounding mode needs a summary too. Provide it as a file, --text, "
-                "or stdin, plus --source TRANSCRIPT."
+                "Faithfulness mode needs a summary too. Provide it as a file, "
+                "--text, or stdin, plus --source TRANSCRIPT."
             )
-        print(bold("\nTHE ASSAY — grounding check"))
-        print(dim("is summary A faithfully grounded by source B?"))
-        run_grounding(summary, src, args.max_rounds)
+        print(bold("\nTHE ASSAY — faithfulness check"))
+        print(dim("does the summary faithfully represent the source? (not: is it true)"), flush=True)
+        run_faithfulness(summary, src)
         return
 
     source = read_source(args)
