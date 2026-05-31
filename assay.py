@@ -90,6 +90,15 @@ VERDICT_COLOR = {
 }
 SEV_COLOR = {"fatal": red, "weakens": yellow, "clears": green}
 
+GROUND_COLOR = {
+    "grounded": green,
+    "partial": yellow,
+    "overstated": yellow,
+    "unsupported": red,
+    "contradicted": red,
+    "error": grey,
+}
+
 CALL_NO = 0
 VERBOSE = False  # -v/--verbose: show every call's prompts + raw streamed response
 
@@ -238,11 +247,9 @@ def critique(claim, steelman, conditions):
         "You are the Critic. Assess one claim against these FIXED AXES, in order:\n"
         "- Evidence: is support cited or available, or is it bare assertion?\n"
         "- Hidden premise: what unstated assumption must hold?\n"
-        "- Falsifiability: what observation would show it false? If none exists, "
-        "it is vacuous.\n"
+        "- Falsifiability: what observation would show it false? If none exists, it is vacuous.\n"
         "- Equivocation: does a key term shift meaning or hide behind a buzzword?\n"
-        "- Base rate / magnitude: is there a real quantity and a comparison, or "
-        "just a direction?\n"
+        "- Base rate / magnitude: is there a real quantity and a comparison, or just a direction?\n"
         "- Counterexample: is there an obvious case where it fails?\n"
         "- Causality vs correlation: does it assert cause from mere association?\n\n"
         "For each axis that bears on the claim, give a one-sentence finding and a "
@@ -290,14 +297,14 @@ def render_round(n, steelman, cr):
     for f in cr.get("critique") or []:
         _render_finding(f)
     verdict = cr.get("verdict", "?")
-    print("      " + VERDICT_COLOR.get(verdict, grey)(f"verdict: {verdict.upper()}"))
+    print("      " + VERDICT_COLOR.get(verdict, grey)(f"verdict: {verdict.upper()}"), flush=True)
     if cr.get("reason"):
         print(dim(textwrap.fill(cr["reason"], width=100,
-                                initial_indent=" " * 8, subsequent_indent=" " * 8)))
+                                initial_indent=" " * 8, subsequent_indent=" " * 8)), flush=True)
     sc = cr.get("surviving_claim")
     if sc and verdict != "substantive":
         print(yellow(textwrap.fill(f'survives as: "{sc}"', width=100,
-                                   initial_indent=" " * 6, subsequent_indent=" " * 8)))
+                                   initial_indent=" " * 6, subsequent_indent=" " * 8)), flush=True)
 
 
 def assay_claim(claim, max_rounds):
@@ -403,6 +410,149 @@ def print_report(results):
     print()
 
 
+# ── grounding mode (is summary A grounded by source B?) ──────────────────────
+
+def split_summary(text):
+    """Split an authored summary into its claims as written, preserving the
+    author's items (handles numbered lists, including run-together ones)."""
+    text = text.strip()
+    parts = re.split(r'(?:(?<=[\.\?\!"\)\u201d])|^|\n)\s*\d{1,2}[\.\)]\s*', text)
+    parts = [p.strip() for p in parts if p.strip()]
+    if len(parts) >= 2:
+        return parts
+    parts = [p.strip() for p in re.split(r'(?:^|\n)\s*[-*\u2022]\s+', text) if p.strip()]
+    if len(parts) >= 2:
+        return parts
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    return lines if len(lines) >= 2 else [text]
+
+
+def ground_defender(claim, source):
+    """Find the strongest verbatim support for the claim in the source only."""
+    system = (
+        "You are the Defender. You are given a SUMMARY CLAIM and a SOURCE "
+        "transcript. Find the STRONGEST evidence in the SOURCE that the speaker "
+        "actually asserts this claim. Quote spans VERBATIM from the SOURCE only — "
+        "never paraphrase, never use outside knowledge. If there is no support, "
+        'set found=false and quotes=[]. Return ONLY JSON: '
+        '{"found": boolean, "quotes": [string], "best_case": string}. No markdown.'
+    )
+    user = f"SUMMARY CLAIM:\n{claim}\n\nSOURCE:\n{source}"
+    return call_json(system, user, "grounding defender")
+
+
+def ground_critic(claim, source, defender):
+    """Judge whether the cited evidence supports the claim AS STATED."""
+    system = (
+        "You are the Grounding Critic. Decide whether the SUMMARY CLAIM is "
+        "faithfully supported by the SOURCE, using the Defender's cited quotes. "
+        "Watch specifically for the ways a summary distorts a source:\n"
+        "- Fabrication: the claim is simply not in the source.\n"
+        "- Overstatement: the source hedged or qualified it; the summary made it "
+        "absolute ('kind of over' → 'over'; 'I might' → 'will').\n"
+        "- Distortion: the meaning was changed.\n"
+        "- Context-stripping: a conditional or hypothetical is presented as an "
+        "unconditional belief.\n"
+        "- Misattribution: the speaker was quoting or steelmanning someone else, "
+        "and the summary attributes it as the speaker's own view.\n"
+        "- Cherry-pick: technically present but unrepresentative of the source's "
+        "overall stance.\n\n"
+        "Verify the Defender's quotes actually appear to come from the source and "
+        "actually support the claim; do not take the Defender's word for it.\n\n"
+        "Verdict:\n"
+        '- "grounded": the source asserts the claim as stated.\n'
+        '- "partial": the source supports a weaker/narrower version.\n'
+        '- "overstated": supported in kind but the summary strengthened it.\n'
+        '- "unsupported": not present in the source.\n'
+        '- "contradicted": the source says the opposite or materially against it.\n\n'
+        "For 'partial' or 'overstated', give what_source_actually_says (the faithful "
+        "version). Return ONLY JSON:\n"
+        '{"findings":[{"mode":string,"finding":string}],"verdict":"grounded"|'
+        '"partial"|"overstated"|"unsupported"|"contradicted","evidence":string,'
+        '"what_source_actually_says":string|null,"note":string}'
+    )
+    quotes = "\n".join(f"- “{q}”" for q in defender.get("quotes", [])) or "(none)"
+    user = (
+        f"SUMMARY CLAIM:\n{claim}\n\nDEFENDER FOUND SUPPORT: {defender.get('found')}\n"
+        f"DEFENDER QUOTES:\n{quotes}\n\nSOURCE:\n{source}"
+    )
+    return call_json(system, user, "grounding critic")
+
+
+def render_grounding(claim, cr):
+    verdict = cr.get("verdict", "?")
+    col = GROUND_COLOR.get(verdict, grey)
+    glyph = {"grounded": "✓", "partial": "≈", "overstated": "▲",
+             "unsupported": "✕", "contradicted": "⚡", "error": "?"}.get(verdict, "?")
+    print("\n" + col(f"{glyph} [{verdict.upper()}] ") + claim)
+    for f in cr.get("findings") or []:
+        mode = f.get("mode", "")
+        print("      " + dim(f"{mode:<18}")
+              + textwrap.fill(f.get("finding", ""), width=100, subsequent_indent=" " * 24))
+    if cr.get("evidence"):
+        print(dim(textwrap.fill("source: " + cr["evidence"], width=100,
+                                initial_indent=" " * 6, subsequent_indent=" " * 6)))
+    if cr.get("what_source_actually_says"):
+        print(yellow(textwrap.fill('faithful version: "' + cr["what_source_actually_says"] + '"',
+                                   width=100, initial_indent=" " * 6, subsequent_indent=" " * 8)))
+
+
+def ground_claim(claim, source):
+    """Never raises."""
+    try:
+        d = ground_defender(claim, source)
+        cr = ground_critic(claim, source, d)
+        cr["claim"] = claim
+        return cr
+    except Exception as e:
+        return {"claim": claim, "findings": [], "verdict": "error",
+                "evidence": None, "what_source_actually_says": None,
+                "note": f"grounding failed: {e}"}
+
+
+def print_ground_report(results):
+    n = len(results)
+    grounded = [r for r in results if r["verdict"] == "grounded"]
+    failed = [r for r in results
+              if r["verdict"] in ("overstated", "unsupported", "contradicted")]
+    fully = len(grounded) == n and n > 0
+    print(bold("\n" + "═" * 70))
+    print(bold("Is the summary fully grounded by the source?  ")
+          + (green("YES") if fully else red("NO")))
+    print(
+        f"{green(str(len(grounded)))} grounded · "
+        f"{yellow(str(len([r for r in results if r['verdict']=='partial'])))} partial · "
+        f"{yellow(str(len([r for r in results if r['verdict']=='overstated'])))} overstated · "
+        f"{red(str(len([r for r in results if r['verdict']=='unsupported'])))} unsupported · "
+        f"{red(str(len([r for r in results if r['verdict']=='contradicted'])))} contradicted"
+        + (f" · {grey(str(len([r for r in results if r['verdict']=='error'])) + ' error')}"
+           if any(r['verdict'] == 'error' for r in results) else "")
+    )
+    print(bold("═" * 70))
+    if failed:
+        print(red(bold("\nWhere the summary departs from the source:")))
+        for r in failed:
+            print(red(f"  {r['verdict'].upper()}: ") + r["claim"])
+            if r.get("what_source_actually_says"):
+                print(dim('      source actually supports: "'
+                          + r["what_source_actually_says"] + '"'))
+    print()
+
+
+def run_grounding(summary_text, source, max_rounds):
+    claims = split_summary(summary_text)
+    print(bold(f"\nsummary contains {len(claims)} claims; checking each against "
+               f"a {len(source.split())}-word source\n"))
+    results = []
+    for i, cl in enumerate(claims, 1):
+        print(bold(f"▸ claim {i}/{len(claims)}: {cl}"))
+        r = ground_claim(cl, source)
+        results.append(r)
+        if not VERBOSE:
+            render_grounding(cl, r)
+    print_ground_report(results)
+
+
 # ── main ─────────────────────────────────────────────────────────────────────
 
 def read_source(args):
@@ -429,6 +579,11 @@ def main():
         "--max-rounds", type=int, default=2, help="producer–critic rounds per claim"
     )
     parser.add_argument(
+        "--source",
+        help="source/transcript file → grounding mode: check whether the summary "
+        "(path/--text/stdin) is faithfully grounded by this source",
+    )
+    parser.add_argument(
         "-v", "--verbose", action="store_true",
         help="show every Claude call: prompts and raw streamed response",
     )
@@ -444,6 +599,27 @@ def main():
     if not os.environ.get("ANTHROPIC_API_KEY"):
         sys.exit("Set ANTHROPIC_API_KEY in your environment first.")
     client = anthropic.Anthropic()
+
+    # ── grounding mode ──
+    if args.source:
+        with open(args.source, "r", encoding="utf-8") as f:
+            src = f.read()
+        if args.text:
+            summary = args.text
+        elif args.path:
+            with open(args.path, "r", encoding="utf-8") as f:
+                summary = f.read()
+        elif not sys.stdin.isatty():
+            summary = sys.stdin.read()
+        else:
+            sys.exit(
+                "Grounding mode needs a summary too. Provide it as a file, --text, "
+                "or stdin, plus --source TRANSCRIPT."
+            )
+        print(bold("\nTHE ASSAY — grounding check"))
+        print(dim("is summary A faithfully grounded by source B?"))
+        run_grounding(summary, src, args.max_rounds)
+        return
 
     source = read_source(args)
     print_method(args.max_rounds)
