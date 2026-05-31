@@ -32,6 +32,7 @@ import json
 import os
 import re
 import sys
+import textwrap
 
 try:
     import anthropic
@@ -90,6 +91,7 @@ VERDICT_COLOR = {
 SEV_COLOR = {"fatal": red, "weakens": yellow, "clears": green}
 
 CALL_NO = 0
+VERBOSE = False  # -v/--verbose: show every call's prompts + raw streamed response
 
 # ── Claude plumbing ──────────────────────────────────────────────────────────
 
@@ -97,20 +99,23 @@ client = None  # constructed in main(), after arg parsing
 
 
 def call_claude(system, prompt, label):
-    """Make one streaming call, printing the whole exchange as it happens."""
+    """One streaming call. In verbose mode the whole exchange is printed as it
+    happens; in default mode the call is silent (the dialectic results are
+    rendered by the stage functions instead)."""
     global CALL_NO
     CALL_NO += 1
-    print()
-    print(cyan(f"┌─ call #{CALL_NO} · {label} · {MODEL}"))
-    print(grey("│ system:"))
-    for line in system.splitlines():
-        print(grey("│   " + line))
-    print(grey("│ user:"))
-    for line in prompt.splitlines():
-        print(grey("│   " + line))
-    print(cyan("├─ response:"))
-    sys.stdout.write("│ ")
-    sys.stdout.flush()
+    if VERBOSE:
+        print()
+        print(cyan(f"┌─ call #{CALL_NO} · {label} · {MODEL}"))
+        print(grey("│ system:"))
+        for line in system.splitlines():
+            print(grey("│   " + line))
+        print(grey("│ user:"))
+        for line in prompt.splitlines():
+            print(grey("│   " + line))
+        print(cyan("├─ response:"))
+        sys.stdout.write("│ ")
+        sys.stdout.flush()
 
     parts = []
     with client.messages.stream(
@@ -120,12 +125,14 @@ def call_claude(system, prompt, label):
         messages=[{"role": "user", "content": prompt}],
     ) as stream:
         for chunk in stream.text_stream:
-            # keep the left gutter on newlines so streamed output stays aligned
-            sys.stdout.write(chunk.replace("\n", "\n│ "))
-            sys.stdout.flush()
+            if VERBOSE:
+                # keep the left gutter on newlines so streamed output stays aligned
+                sys.stdout.write(chunk.replace("\n", "\n│ "))
+                sys.stdout.flush()
             parts.append(chunk)
-    print()
-    print(cyan("└─"))
+    if VERBOSE:
+        print()
+        print(cyan("└─"))
     return "".join(parts)
 
 
@@ -265,6 +272,34 @@ def critique(claim, steelman, conditions):
     return call_json(system, user, "critic")
 
 
+def _render_finding(f):
+    sev = f.get("severity", "weakens")
+    axis = f.get("axis", "")
+    finding = textwrap.fill(
+        f.get("finding", ""), width=100, subsequent_indent=" " * 40
+    )
+    print("      " + SEV_COLOR.get(sev, yellow)(f"{sev:<8}") + dim(f"{axis:<26}") + finding)
+
+
+def render_round(n, steelman, cr):
+    """Default-mode view of one producer<->critic round: the dialectical moves a
+    human would make and read, with the prompt machinery left out."""
+    print(bold(f"    round {n}"))
+    if steelman:
+        print(dim("      steelman  ") + textwrap.fill(steelman, width=100, subsequent_indent=" " * 16))
+    for f in cr.get("critique") or []:
+        _render_finding(f)
+    verdict = cr.get("verdict", "?")
+    print("      " + VERDICT_COLOR.get(verdict, grey)(f"verdict: {verdict.upper()}"))
+    if cr.get("reason"):
+        print(dim(textwrap.fill(cr["reason"], width=100,
+                                initial_indent=" " * 8, subsequent_indent=" " * 8)))
+    sc = cr.get("surviving_claim")
+    if sc and verdict != "substantive":
+        print(yellow(textwrap.fill(f'survives as: "{sc}"', width=100,
+                                   initial_indent=" " * 6, subsequent_indent=" " * 8)))
+
+
 def assay_claim(claim, max_rounds):
     """One claim through the producer<->critic loop. Never raises."""
     try:
@@ -279,12 +314,16 @@ def assay_claim(claim, max_rounds):
             cr = critique(current, p.get("steelman", ""), p.get("conditions", ""))
             last = cr
             rounds += 1
+            if not VERBOSE:
+                render_round(rounds, p.get("steelman"), cr)
             if (
                 cr.get("needs_another_round")
                 and cr.get("surviving_claim")
                 and rounds < max_rounds
             ):
                 current = cr["surviving_claim"]
+                if not VERBOSE:
+                    print(dim("    → re-running on the narrowed claim"))
                 continue
             break
         result = {"claim": claim, "steelman": steelman_shown, "rounds": rounds}
@@ -332,7 +371,10 @@ def print_report(results):
     )
     print(bold("═" * 70))
 
-    for r in results:
+    # In default mode the per-round detail was already shown live, so the
+    # report is just the headline + residue. Verbose mode prints the full
+    # per-claim breakdown here since its live output was raw JSON.
+    for r in (results if VERBOSE else []):
         col = VERDICT_COLOR.get(r["verdict"], grey)
         glyph = {"substantive": "✓", "partial": "≈", "hollow": "✕", "error": "?"}.get(
             r["verdict"], "?"
@@ -377,7 +419,7 @@ def read_source(args):
 
 
 def main():
-    global USE_COLOR, MODEL, client
+    global USE_COLOR, MODEL, client, VERBOSE
 
     parser = argparse.ArgumentParser(description="Dialectical filter for prose.")
     parser.add_argument("path", nargs="?", help="text file to assay")
@@ -386,9 +428,14 @@ def main():
     parser.add_argument(
         "--max-rounds", type=int, default=2, help="producer–critic rounds per claim"
     )
+    parser.add_argument(
+        "-v", "--verbose", action="store_true",
+        help="show every Claude call: prompts and raw streamed response",
+    )
     parser.add_argument("--no-color", action="store_true", help="disable ANSI colour")
     args = parser.parse_args()
 
+    VERBOSE = args.verbose
     if args.no_color:
         USE_COLOR = False
     if args.model:
