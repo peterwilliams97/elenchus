@@ -1,0 +1,7 @@
+setup.sh
+assay
+__pycache__/
+*.pyc
+.DS_Store
+log*.txt
+fixtures/

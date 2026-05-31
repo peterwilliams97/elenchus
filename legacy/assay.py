@@ -276,11 +276,27 @@ def critique(claim, steelman, conditions):
         'narrowed/defensible version). If "hollow", surviving_claim is null.\n'
         "Set needs_another_round=true ONLY if a narrower surviving_claim was "
         "produced that itself deserves a fresh pass.\n\n"
+        "CONDITION DISCIPLINE — distinguish legitimate narrowing from laundering:\n"
+        "- Legitimate narrowing: you restrict the claim to conditions the speaker "
+        "stated or clearly implied (e.g. 'in large enterprises', 'by 2027').\n"
+        "- Condition laundering: you introduce qualifiers the speaker never stated, "
+        "solely to dodge a counterexample or fill a gap in evidence ('assuming "
+        "perfect market conditions', 'for sufficiently motivated users'). This is "
+        "loss of content, not rigor — it manufactures defensibility rather than "
+        "finding it. When a surviving claim survives ONLY through laundered "
+        "conditions, the Falsifiability axis must fire (the claim is now "
+        "untestable as stated) and the verdict should lean 'hollow', not be "
+        "rewarded as 'partial' or 'substantive'.\n\n"
+        "Count the number of conditions introduced in surviving_claim that were "
+        "NOT present in the original claim or speaker's words. Set "
+        "survives_only_by_conditioning=true if the claim would revert to 'hollow' "
+        "without those added conditions.\n\n"
         "Return ONLY JSON:\n"
         '{"critique":[{"axis":string,"finding":string,"severity":"fatal"|'
         '"weakens"|"clears"}],"verdict":"substantive"|"partial"|"hollow",'
         '"surviving_claim":string|null,"reason":string,'
-        '"needs_another_round":boolean}'
+        '"needs_another_round":boolean,'
+        '"added_conditions":integer,"survives_only_by_conditioning":boolean}'
     )
     user = (
         f"CLAIM:\n{claim}\n\nPRODUCER STEELMAN:\n{steelman}\n\n"
@@ -315,6 +331,9 @@ def render_round(n, steelman, cr):
     if sc and verdict != "substantive":
         print(yellow(textwrap.fill(f'survives as: "{sc}"', width=100,
                                    initial_indent=" " * 6, subsequent_indent=" " * 8)))
+    added = cr.get("added_conditions", 0)
+    if added and cr.get("survives_only_by_conditioning"):
+        print(red(f"      ⚠ condition-laundering: {added} added condition(s) not in speaker's words"))
 
 
 def assay_claim(claim, max_rounds):
@@ -337,12 +356,28 @@ def assay_claim(claim, max_rounds):
                 cr.get("needs_another_round")
                 and cr.get("surviving_claim")
                 and rounds < max_rounds
+                and not cr.get("survives_only_by_conditioning")
             ):
                 current = cr["surviving_claim"]
                 if not VERBOSE:
                     print(dim("    → re-running on the narrowed claim"))
                 continue
             break
+        # Downgrade at loop exit if the final round survived only by laundered
+        # conditions — whether or not another round was requested. A claim that
+        # needs invented qualifiers to survive is not partial.
+        if last and last.get("survives_only_by_conditioning"):
+            if not VERBOSE:
+                print(dim(
+                    "    → downgraded: survives only by added conditions "
+                    "(condition laundering — Falsifiability axis applies)"
+                ))
+            last = dict(last)
+            last["verdict"] = "hollow"
+            last["reason"] = (
+                (last.get("reason") or "") +
+                " Survives only by conditions the speaker never stated."
+            )
         result = {"claim": claim, "steelman": steelman_shown, "rounds": rounds}
         result.update(last or {})
         return result
@@ -470,17 +505,26 @@ def faithfulness_critic(claim, source, defender):
         "unconditional belief.\n"
         "- Misattribution: the speaker was quoting or steelmanning someone else, "
         "and the summary attributes it as the speaker's own view.\n"
-        "- Cherry-pick: present but unrepresentative of the source's stance.\n\n"
+        "- Cherry-pick: present but unrepresentative of the source's stance.\n"
+        "- Literalization: the summary states as a sincere literal assertion "
+        "something the speaker meant as provocation, hyperbole, or irony. The "
+        "words may appear in the source but the asserted proposition does not — "
+        "the speaker's force or register was rhetorical, not declarative. When "
+        "this occurs the verdict is NOT 'faithful'; use 'overstated', and ALWAYS "
+        "populate what_source_actually_says with the proposition the speaker "
+        "actually asserted (i.e. what they meant, not what they said literally).\n\n"
         "Verify the Defender's quotes actually appear in the source; do not take "
         "the Defender's word for it.\n\n"
         "Verdict:\n"
-        '- "faithful": the summary reports the claim as the speaker stated it.\n'
+        '- "faithful": the summary reports the claim as the speaker stated it,\n'
+        "  including the register and force with which they stated it.\n"
         '- "partial": the source supports a weaker/narrower version.\n'
-        '- "overstated": same in kind but the summary strengthened it.\n'
+        '- "overstated": same in kind but the summary strengthened it — or\n'
+        "  literalized a rhetorical/ironic claim (see Literalization above).\n"
         '- "absent": not in the source.\n'
         '- "contradicted": the source says the opposite.\n\n'
         "For 'partial' or 'overstated', give what_source_actually_says (the faithful "
-        "version). Return ONLY JSON:\n"
+        "version, including the correct register). Return ONLY JSON:\n"
         '{"findings":[{"mode":string,"finding":string}],"verdict":"faithful"|'
         '"partial"|"overstated"|"absent"|"contradicted","evidence":string,'
         '"what_source_actually_says":string|null}'
@@ -642,14 +686,34 @@ def print_evidence_report(results):
     print()
 
 
-def run_evidence(text):
+def run_evidence(text, source=None):
+    """Ground each claim against external evidence.
+
+    When source is provided, first reconstruct the asserted proposition via the
+    faithfulness pass (what_source_actually_says when set, else the raw claim),
+    then ground that proposition. This avoids grounding a literalized or overstated
+    paraphrase instead of what the speaker actually asserted.
+    """
     claims = split_summary(text)
     print(dim(f"\ngrounding {len(claims)} claims against external evidence\n"))
+    if source:
+        print(dim("(consulting source to ground the asserted proposition, not literal words)\n"))
     results = []
     for i, cl in enumerate(claims, 1):
         if VERBOSE:
             print(bold(f"\n▸ claim {i}/{len(claims)}: {cl}"))
-        r = evidence_claim(cl)
+        # Reconstruct the asserted proposition when a source is available.
+        proposition = cl
+        if source:
+            fc = faithfulness_claim(cl, source)
+            intended = fc.get("what_source_actually_says")
+            if intended and fc.get("verdict") in ("partial", "overstated"):
+                proposition = intended
+                if not VERBOSE:
+                    print(dim(f"  grounding intended proposition: {proposition}"))
+        r = evidence_claim(proposition)
+        # Keep the original claim label in the result for display continuity.
+        r["claim"] = cl
         results.append(r)
         if not VERBOSE:
             render_evidence(r)
@@ -712,7 +776,11 @@ def main():
     if args.evidence:
         print(bold("\nTHE ASSAY — evidence grounding"))
         print(dim("is each claim true, per external evidence?"), flush=True)
-        run_evidence(read_source(args))
+        ev_source = None
+        if args.source:
+            with open(args.source, "r", encoding="utf-8") as f:
+                ev_source = f.read()
+        run_evidence(read_source(args), source=ev_source)
         return
 
     # ── faithfulness mode ──

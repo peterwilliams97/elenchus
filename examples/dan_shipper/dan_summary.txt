@@ -1,0 +1,13 @@
+
+1. The future of work will happen inside Codex or Claude Code.
+2. Every company will have one "super-agent" inside their Slack that every employee talks to regularly.
+3. SaaS is not dead—in fact, Dan is bullish on SaaS stocks. His contrarian take: "I would buy SaaS stocks right now."
+4. SaaS economics will shift: users will bring their own AI tokens into apps, which actually improves SaaS margins.
+5. PMs will thrive in the AI era.
+6. Full-stack designers will become superheroes.
+7. The AI job apocalypse is not happening.
+8. Forward deployed engineer is the new most essential role.
+9. CLIs are over.
+10. Automation is a lie.
+11. We will read way more AI-generated writing and we will like it.
+12. We'll be building software for humans and agents to use together.

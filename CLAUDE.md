@@ -4,107 +4,162 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`assay.py` — a single-file CLI that runs prose through a three-stage dialectical filter using the
-Claude API: **decompose** (extract atomic claims) → **dialectic** (producer↔critic loop per claim)
-→ **filter** (surface the substantive residue).
+`assay.go` — a self-contained Go CLI that runs prose through a three-stage dialectical filter using
+the Claude API:
+**decompose** (extract atomic claims) →
+**dialectic** (producer↔critic loop per claim) →
+**filter** (surface the substantive residue).
+Build with `./build.sh` or `go build`.
 
-Three operating modes:
+Three operating modes, plus Go-only extras:
 
 - **Dialectic** (default) — assay prose for logical integrity
-- **Faithfulness** (`--source`) — check whether a summary accurately represents a source transcript
-- **Evidence-grounding** (`--evidence`) — check each claim against external evidence via web search
+- **Faithfulness** (`-source`) — check whether a summary accurately represents a source transcript
+- **Evidence-grounding** (`-evidence`) — check each claim against external evidence via web search
+- **Audit** (`-audit -source`) — all three modes in one cross-tab (Go only)
+- **Markdown output** (`-md`) — emit markdown tables instead of terminal colour (Go only)
+
+`assay.py` is kept for historical comparison only — do not edit it. It will be removed and
+referenced by git SHA.
+
+### Tracks
+
+**Rigour-application map** — a parallel track (no Go code yet) that classifies `(task, phase)` →
+`{advantage, disadvantage, irrelevant}` from a labeled decision log. Phase 0 is data collection;
+`rigour-map/decision_log.jsonl` is the corpus. Open decision: seed the classifier now vs. log
+unaided first to protect the disagreement baseline — not yet resolved.
 
 ## Running it
 
 ```sh
-# install dependency
-pip install anthropic
-
-# set key (or use setup.sh, but note it contains a live key — don't commit changes to it)
 export ANTHROPIC_API_KEY=sk-ant-...
 
-# run with built-in example
-python3 assay.py
+./build.sh                                             # test + build → ./assay
 
-# run on a file
-python3 assay.py path/to/prose.txt
-
-# run on inline text
-python3 assay.py --text "Our AI-first strategy will..."
-
-# pipe stdin
-echo "some prose" | python3 assay.py
-
-# faithfulness mode: does SUMMARY faithfully represent SOURCE?
-python3 assay.py summary.txt --source transcript.txt
-
-# evidence-grounding mode: is each claim actually true?
-python3 assay.py claims.txt --evidence
-
-# options
-python3 assay.py --model claude-opus-4-8 --max-rounds 3 --no-color --verbose
+./assay memo.txt                                       # substance (default)
+./assay -source transcript.txt summary.txt             # faithfulness
+./assay -evidence claims.txt                           # grounding
+./assay -source transcript.txt -evidence summary.txt   # grounding on intended proposition
+./assay -audit -source transcript.txt -md summary.txt  # all three, markdown cross-tab
+./assay -v memo.txt                                    # verbose: show every API call
+./assay -model claude-opus-4-8 -max-rounds 3 memo.txt
 ```
 
 `ANTHROPIC_MODEL` env var overrides the default model (`claude-sonnet-4-6`).
 
 ## Architecture
 
-Everything lives in `assay.py`. The call graph by mode:
+Everything lives in `assay.go`. The call graph by mode:
 
-**Dialectic (default)**
+**Dialectic (default) — `runSubstance`**
 ```
-main()
-  read_source()          # args.text | args.path | stdin | DEFAULT_INPUT
-  decompose(source)      # → list[str] of atomic claims via call_json()
-  for claim in claims:
-    assay_claim(claim, max_rounds)
-      produce(claim)     # steelman, blind to critique axes
-      critique(claim, steelman, conditions)  # 7 fixed axes → verdict + surviving_claim
-      loop if needs_another_round and rounds < max_rounds
-  print_report(results)
-```
-
-**Faithfulness (`--source TRANSCRIPT`)**
-```
-run_faithfulness(summary, source)
-  split_summary(summary_text)   # splits numbered/bulleted lists or lines
+main() → runSubstance(input)
+  decompose(input)       # → []string of atomic claims via callJSON()
   for claim:
-    faithfulness_claim(claim, source)
-      faithfulness_defender()   # find strongest verbatim support in source
-      faithfulness_critic()     # judge accuracy: faithful|partial|overstated|absent|contradicted
-  print_faithfulness_report(results)
+    assayClaim(claim)
+      callJSON(producerSys, ...)   # steelman, blind to critique axes
+      callJSON(substanceCriticSys, ...)  # 7 fixed axes → verdict + surviving_claim
+                                         # + added_conditions + survives_only_by_conditioning
+      loop if NeedsAnother && !SurvivesOnlyByConditions && rounds < maxRounds
+      → downgrade to hollow at loop exit if SurvivesOnlyByConditions
+  termSubstance / mdSubstance
 ```
 
-**Evidence-grounding (`--evidence`)**
+**Faithfulness — `runFaithfulness`**
 ```
-run_evidence(text)
-  split_summary(text)
+main() → runFaithfulness(input, src)
+  splitSummary(input)    # splits numbered/bulleted lists or lines
   for claim:
-    evidence_claim(claim)
-      evidence_ground()         # web search via call_claude_tools(); verdict: supported|mixed|refuted|unverifiable
-  print_evidence_report(results)
+    faithClaim(claim, src)
+      callJSON(faithDefenderSys, ...)  # find strongest verbatim support
+      callJSON(faithCriticSys, ...)    # verdict: faithful|partial|overstated|absent|contradicted
+                                       # Literalization mode: rhetorical claim → overstated
+  termFaith / mdFaith
 ```
 
-**Key design constraint:** the Producer prompt deliberately does NOT include the critique axes
-(Evidence, Hidden premise, Falsifiability, Equivocation, Base rate/magnitude, Counterexample,
-Causality vs correlation). This blindness is intentional — the Producer must steelman without
-knowing how it will be attacked.
+**Evidence-grounding — `runEvidence`**
+```
+main() → runEvidence(input, src)
+  splitSummary(input)
+  for claim:
+    if src != "": faithClaim(claim, src)
+      → use SourceSays when verdict is partial|overstated
+        (grounds the intended proposition, not literal words)
+    evidenceClaim(proposition)
+      callClaude(..., withTools=true)  # web_search_20250305; verdict: supported|mixed|refuted|unverifiable
+  termEvidence / mdEvidence
+```
 
-**API plumbing:** `call_claude()` streams from the Anthropic API. `call_json()` wraps it with
-retry logic — on JSON parse failure it appends a strict JSON-only instruction and retries once.
-`parse_json()` handles markdown fences and trailing commas before calling `json.loads`.
-`call_claude_tools()` is used only by evidence-grounding mode; it enables the `web_search_20250305`
-tool and reads `resp.content` blocks (non-streaming).
+**Audit — `runAudit`** (Go only)
+```
+main() → runAudit(input, src)
+  splitSummary(input)    # shared decomposition across all three modes
+  for claim: faithClaim + assayClaim + evidenceClaim
+  mdAudit(claims, fs, ss, es)  # always markdown
+```
+
+**Key design constraint:** `producerSys` deliberately omits the critique axes. The Producer must
+steelman without knowing how it will be attacked.
+
+**API plumbing:** `callClaude` makes a non-streaming POST to the Anthropic API. `callJSON` wraps it
+with one retry on JSON parse failure, dispatching through `cfg.call` (nil in production → falls back
+to `callClaude`; set to a stub in tests). `extractJSON` / `unmarshalLoose` handle markdown fences
+and trailing commas. Web search uses `withTools=true`, which adds `web_search_20250305` to the
+request; tool-use blocks are consumed silently (or logged in `-v`).
 
 **Verdicts:**
 - Dialectic: `"substantive"` | `"partial"` | `"hollow"` | `"error"`. Only `substantive` and
-  `partial` appear in the final residue. `partial` claims carry a `surviving_claim` with the
-  narrowed defensible version.
+  `partial` appear in the final residue. `partial` claims carry `SurvivingClaim`.
 - Faithfulness: `"faithful"` | `"partial"` | `"overstated"` | `"absent"` | `"contradicted"`
 - Evidence: `"supported"` | `"mixed"` | `"refuted"` | `"unverifiable"`
 
-**`--verbose`** (`VERBOSE` global) controls whether streaming API calls print their full
-exchange to the terminal. Off by default; in default mode the dialectic stages render their
-own structured output instead. In verbose mode `print_report` renders the full per-claim
-breakdown; in default mode it only shows the headline + residue (per-round detail was already
-shown live).
+**`maxTokens = 1500`** caps every Claude response. Raise this constant if critiques truncate.
+
+## Hard rule: never fabricate inputs, and propagate provenance to conclusions
+This is a claim-validation tool. Its credibility is its substrate. Fabricated inputs don't just
+weaken a result — they invert the tool's entire purpose.
+
+- NEVER synthesize a fixture, test input, sample document, dataset, or "example" of a real artifact.
+   If a real one is required and cannot be fetched or obtained, STOP and report
+  "could not obtain real <X>" for that item. Do not substitute a fabricated stand-in.
+- Fetching real public documents into a gitignored folder is correct — that is analysis, not
+  redistribution. "Do not COMMIT copyrighted docs" never means "do not USE real docs."
+- A populated results table is NOT success. Any eval, calibration, or verdict is only as valid as
+  its inputs. Before reporting a finding, signal, or recommendation, confirm every input is real and
+  state its provenance (source + a verifiable snippet).
+- Propagate provenance: if ANY input is synthetic, unverified, or fictional, mark every downstream
+  conclusion INVALID / inconclusive. Never present it as a finding.
+- "Looks like the real thing" ≠ "is the real thing." Optimize for the substrate, not the artifact.
+
+## Testing
+
+`./build.sh` runs `go test ./...` then builds the binary.
+
+Test coverage in `assay_test.go`:
+- **Pure functions:** `splitSummary` (newlines, run-together, bullets, blank lines, single-line),
+  `extractJSON` (fences, embedded braces, preamble), `unmarshalLoose` (trailing commas, new
+  condition-laundering fields), `mdCell`, `tally`.
+- **Prompt presence:** `TestFaithCriticSysLiteralization`, `TestSubstanceCriticSysConditionDiscipline`
+  — assert the calibration-fix instructions are in the prompts.
+- **Integration via stub:** the three key behaviour tests use `cfg.call` (the injection seam) to
+  return canned JSON without network calls, then drive the real method:
+  - `TestConditionLaunderingDowngrade` — `c.assayClaim` downgrades partial→hollow when
+    `survives_only_by_conditioning=true`.
+  - `TestConditionLaunderingLoopStop` — loop exits after one critic call (not two) when
+    `survives_only_by_conditioning=true && needs_another_round=true`.
+  - `TestRunEvidencePropositionSubstitution` — `c.runEvidence` grounds `what_source_actually_says`
+    (not the literal claim) when faithfulness returns overstated.
+
+For end-to-end validation use `examples/dan_shipper/` with `-model claude-haiku-4-5-20251001` for
+speed, then re-run on the default model for the verdict to trust.
+
+## Working disciplines
+
+- Every output is assayable, and decision-carrying outputs get run through `./assay` before they're
+  trusted. Internal/planning work uses faithfulness (`-source`) and substance modes; grounding
+  (`-evidence`) is expected to return `unverifiable` on intentions and predictions — that's the
+  correct result, not a failure. Grounding only earns its keep on factual claims about the world.
+- Grounded-summary discipline: every summary names the fuller source it compresses and is
+  self-screened against the faithfulness critic's seven distortion modes before it's emitted — watch
+  overstatement (hedges → certainties) and literalization (provocation → literal commitment)
+  hardest. Summaries that carry decisions get the full `./assay -source notes.txt summary.txt` pass.
