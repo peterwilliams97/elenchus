@@ -21,6 +21,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -32,14 +33,20 @@ const (
 
 var httpClient = &http.Client{Timeout: 150 * time.Second}
 
+// ── config ────────────────────────────────────────────────────────────────────
+
 type cfg struct {
-	model      string
-	apiKey     string
-	maxRounds  int
-	maxClaims  int
-	verbose    bool
-	noColor    bool
-	asMarkdown bool
+	model        string
+	apiKey       string
+	maxRounds    int
+	maxClaims    int
+	verbose      bool
+	noColor      bool
+	asMarkdown   bool
+	showProgress bool
+	quiet        bool
+	usageOut     string
+	usage        *usageCounters
 	// call is the API dispatch function. When nil, callClaude is used (production).
 	// Tests set this to a stub to avoid network calls.
 	call func(system, prompt string, withTools bool) (string, error)
@@ -60,13 +67,22 @@ func main() {
 	flag.BoolVar(&c.noColor, "no-color", false, "disable ANSI colour")
 	flag.IntVar(&c.maxRounds, "max-rounds", 2, "producer-critic rounds per claim (substance)")
 	flag.IntVar(&c.maxClaims, "max-claims", 0, "bound evidence grounding (0 = unlimited)")
+	flag.BoolVar(&c.showProgress, "progress", true, "show per-claim progress on stderr (default on)")
+	flag.BoolVar(&c.quiet, "quiet", false, "suppress progress + heartbeat; keep final USAGE line")
+	flag.StringVar(&c.usageOut, "usage-out", "", "append one JSON record per run to this file")
 	flag.Parse()
 
 	c.apiKey = os.Getenv("ANTHROPIC_API_KEY")
 	if c.apiKey == "" {
 		fatal("set ANTHROPIC_API_KEY in your environment first.")
 	}
+	c.usage = newUsageCounters()
 	input := readInput(text)
+
+	stopHeartbeat := func() {}
+	if !c.quiet && c.showProgress {
+		stopHeartbeat = startHeartbeat(c.model, c.usage)
+	}
 
 	switch {
 	case audit:
@@ -85,6 +101,38 @@ func main() {
 	default:
 		c.runSubstance(input)
 	}
+
+	stopHeartbeat()
+	printUsageLine(c.model, c.usage, c.usageOut)
+}
+
+// ── progress helpers ─────────────────────────────────────────────────────────
+
+func (c cfg) progressEnabled() bool { return !c.quiet && c.showProgress }
+
+func (c cfg) progressPre(i, n int, mode, claim string) time.Time {
+	if !c.progressEnabled() {
+		return time.Time{}
+	}
+	label := fmt.Sprintf("[%d/%d] %s claim %d…", i+1, n, mode, i+1)
+	if len(claim) > 60 {
+		label += " " + claim[:57] + "…"
+	} else {
+		label += " " + claim
+	}
+	fmt.Fprintln(os.Stderr, label)
+	if c.usage != nil {
+		c.usage.setLabel(fmt.Sprintf("%s %d/%d", mode, i+1, n))
+	}
+	return time.Now()
+}
+
+func (c cfg) progressPost(i, n int, mode, verdict string, start time.Time) {
+	if !c.progressEnabled() || start.IsZero() {
+		return
+	}
+	elapsed := time.Since(start).Round(10 * time.Millisecond)
+	fmt.Fprintf(os.Stderr, "[%d/%d] %s → %s (%s)\n", i+1, n, mode, verdict, elapsed)
 }
 
 // ── runners ──────────────────────────────────────────────────────────────────
@@ -96,7 +144,9 @@ func (c cfg) runSubstance(input string) {
 		if c.verbose {
 			fmt.Println(c.bold(fmt.Sprintf("▸ claim %d/%d: %s", i+1, len(claims), cl)))
 		}
+		t := c.progressPre(i, len(claims), "substance", cl)
 		results[i] = c.assayClaim(cl)
+		c.progressPost(i, len(claims), "substance", results[i].Verdict, t)
 	}
 	if c.asMarkdown {
 		fmt.Print(mdSubstance(results))
@@ -109,7 +159,9 @@ func (c cfg) runFaithfulness(input, src string) {
 	claims := splitSummary(input)
 	results := make([]faith, len(claims))
 	for i, cl := range claims {
+		t := c.progressPre(i, len(claims), "faithfulness", cl)
 		results[i] = c.faithClaim(cl, src)
+		c.progressPost(i, len(claims), "faithfulness", results[i].Verdict, t)
 	}
 	if c.asMarkdown {
 		fmt.Print(mdFaith(results))
@@ -142,16 +194,18 @@ func (c cfg) runEvidence(input, src string) {
 			results[i] = evidence{Claim: cl, Verdict: "skipped (over cap)", Finding: ""}
 			continue
 		}
+		t := c.progressPre(i, len(claims), "evidence", cl)
 		proposition := cl
 		if src != "" {
-			// Reconstruct the asserted proposition via the faithfulness pass so
-			// we ground what the speaker actually meant, not a literalized paraphrase.
+			// Reconstruct the asserted proposition via the faithfulness pass so we ground what the
+			// speaker actually meant, not a literalized paraphrase.
 			fc := c.faithClaim(cl, src)
 			proposition = intendedProposition(fc, cl)
 		}
 		r := c.evidenceClaim(proposition)
 		r.Claim = cl // keep original label for display
 		results[i] = r
+		c.progressPost(i, len(claims), "evidence", results[i].Verdict, t)
 	}
 	if c.asMarkdown {
 		fmt.Print(mdEvidence(results))
@@ -189,14 +243,31 @@ func (c cfg) computeAudit(claims []string, src string) ([]faith, []substance, []
 // but skips the producer-critic loop and just runs one substance pass per claim, since the audit is
 // more about cross-filter patterns than squeezing out every last drop of rigor from each claim.
 func (c cfg) runAudit(input, src string) {
-	claims := splitSummary(input) // shared decomposition across all three modes
-	if !c.asMarkdown {
-		// Print progress ahead of the blocking calls so the user sees motion.
-		for i := range claims {
-			fmt.Println(c.grey(fmt.Sprintf("auditing %d/%d…", i+1, len(claims))))
+	claims := splitSummary(input)
+	n := len(claims)
+	fs := make([]faith, n)
+	ss := make([]substance, n)
+	es := make([]evidence, n)
+	for i, cl := range claims {
+		t := c.progressPre(i, n, "audit", cl)
+		if !c.progressEnabled() && !c.asMarkdown {
+			// Legacy pre-progress path: print motion ahead of blocking calls.
+			fmt.Fprintln(os.Stderr, c.grey(fmt.Sprintf("auditing %d/%d…", i+1, n)))
 		}
+		fs[i] = c.faithClaim(cl, src)
+		ss[i] = c.assayClaim(cl)
+		if c.maxClaims > 0 && i >= c.maxClaims {
+			es[i] = evidence{Claim: cl, Verdict: "skipped (over cap)"}
+		} else {
+			proposition := intendedProposition(fs[i], cl)
+			r := c.evidenceClaim(proposition)
+			r.Claim = cl
+			es[i] = r
+		}
+		verdictSummary := fmt.Sprintf("faith=%s sub=%s ev=%s",
+			fs[i].Verdict, ss[i].Verdict, es[i].Verdict)
+		c.progressPost(i, n, "audit", verdictSummary, t)
 	}
-	fs, ss, es := c.computeAudit(claims, src)
 	fmt.Print(mdAudit(claims, fs, ss, es)) // audit is always markdown
 }
 
@@ -212,6 +283,8 @@ func (c cfg) decompose(text string) []string {
 	return arr
 }
 
+// assayClaim is the substance pass: given a claim, run it through producer-critic rounds to see if
+// it can be substantiated.
 func (c cfg) assayClaim(claim string) substance {
 	current, rounds, steel := claim, 0, ""
 	var last substanceJSON
@@ -238,8 +311,8 @@ func (c cfg) assayClaim(claim string) substance {
 		}
 		break
 	}
-	// Downgrade at loop exit if the final round survived only by laundered
-	// conditions. A claim that needs invented qualifiers to survive is not partial.
+	// Downgrade at loop exit if the final round survived only by laundered conditions. A claim that
+	// Sneeds invented qualifiers to survive is not partial.
 	if last.SurvivesOnlyByConditions {
 		last.Verdict = "hollow"
 		last.Reason = last.Reason + " Survives only by conditions the speaker never stated."
@@ -455,6 +528,30 @@ func (c cfg) callClaude(system, prompt string, withTools bool) (string, error) {
 	if ar.Error != nil {
 		return "", fmt.Errorf("api error: %s", ar.Error.Message)
 	}
+
+	// Accumulate usage from this call.
+	if c.usage != nil && ar.Usage != nil {
+		webSearches := 0
+		if ar.Usage.ServerToolUse != nil {
+			webSearches = ar.Usage.ServerToolUse.WebSearchRequests
+		}
+		// Fall back to counting web_search tool_use blocks if server_tool_use absent.
+		if webSearches == 0 {
+			for _, b := range ar.Content {
+				if b.Type == "server_tool_use" || b.Type == "tool_use" {
+					var name struct {
+						Name string `json:"name"`
+					}
+					if json.Unmarshal(b.Input, &name) == nil && name.Name == "web_search" {
+						webSearches++
+					}
+				}
+			}
+		}
+		c.usage.add(ar.Usage.InputTokens, ar.Usage.OutputTokens,
+			ar.Usage.CacheReadInputTokens, ar.Usage.CacheCreationInputTokens, webSearches)
+	}
+
 	var sb strings.Builder
 	for _, b := range ar.Content {
 		switch b.Type {
@@ -494,8 +591,18 @@ type apiTool struct {
 	Name    string `json:"name"`
 	MaxUses int    `json:"max_uses,omitempty"`
 }
+type apiUsage struct {
+	InputTokens              int `json:"input_tokens"`
+	OutputTokens             int `json:"output_tokens"`
+	CacheReadInputTokens     int `json:"cache_read_input_tokens"`
+	CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
+	ServerToolUse            *struct {
+		WebSearchRequests int `json:"web_search_requests"`
+	} `json:"server_tool_use"`
+}
 type apiResp struct {
 	Content []apiBlock `json:"content"`
+	Usage   *apiUsage  `json:"usage"`
 	Error   *struct {
 		Message string `json:"message"`
 	} `json:"error"`
@@ -880,4 +987,182 @@ func readInput(text string) string {
 		}
 	}
 	return defaultInput
+}
+
+// ── usage accounting ─────────────────────────────────────────────────────────
+
+// priceEntry holds per-million-token rates and per-search cost for one model.
+// Source: https://www.anthropic.com/pricing (retrieved 2026-06-01).
+// Set a field to -1 to mark it unknown (triggers est_usd=n/a for that model).
+type priceEntry struct {
+	InputPerMtok       float64 // $ per 1M input tokens
+	OutputPerMtok      float64 // $ per 1M output tokens
+	CacheReadPerMtok   float64 // $ per 1M cache-read tokens
+	CacheCreatePerMtok float64 // $ per 1M cache-creation tokens
+	WebSearchPer1k     float64 // $ per 1k web-search requests
+}
+
+// priceTable maps model id → rates.
+// Source: https://www.anthropic.com/pricing (retrieved 2026-06-01).
+// TODO: update rates whenever Anthropic revises pricing.
+var priceTable = map[string]priceEntry{
+	"claude-opus-4-8": {
+		InputPerMtok: 15.00, OutputPerMtok: 75.00,
+		CacheReadPerMtok: 1.50, CacheCreatePerMtok: 18.75,
+		WebSearchPer1k: 10.00,
+	},
+	"claude-sonnet-4-6": {
+		InputPerMtok: 3.00, OutputPerMtok: 15.00,
+		CacheReadPerMtok: 0.30, CacheCreatePerMtok: 3.75,
+		WebSearchPer1k: 10.00,
+	},
+	"claude-haiku-4-5-20251001": {
+		InputPerMtok: 0.80, OutputPerMtok: 4.00,
+		CacheReadPerMtok: 0.08, CacheCreatePerMtok: 1.00,
+		WebSearchPer1k: 10.00,
+	},
+}
+
+// priceTableDate is stamped alongside any dollar figure in output.
+const priceTableDate = "2026-06-01"
+
+// usageCounters accumulates API usage across all callClaude invocations.
+type usageCounters struct {
+	mu                sync.Mutex
+	calls             int
+	inputTokens       int
+	outputTokens      int
+	cacheReadTokens   int
+	cacheCreateTokens int
+	webSearches       int
+	start             time.Time
+	currentClaim      string // label of the in-flight claim for heartbeat display
+}
+
+func newUsageCounters() *usageCounters {
+	return &usageCounters{start: time.Now()}
+}
+
+func (u *usageCounters) add(in, out, cacheRead, cacheCreate, webSearches int) {
+	u.mu.Lock()
+	u.calls++
+	u.inputTokens += in
+	u.outputTokens += out
+	u.cacheReadTokens += cacheRead
+	u.cacheCreateTokens += cacheCreate
+	u.webSearches += webSearches
+	u.mu.Unlock()
+}
+
+func (u *usageCounters) setLabel(label string) {
+	u.mu.Lock()
+	u.currentClaim = label
+	u.mu.Unlock()
+}
+
+// snapshot returns a consistent read without holding the lock across formatting.
+func (u *usageCounters) snapshot() (calls, in, out, cacheRead, cacheCreate, webSearches int, label string, elapsed time.Duration) {
+	u.mu.Lock()
+	calls = u.calls
+	in = u.inputTokens
+	out = u.outputTokens
+	cacheRead = u.cacheReadTokens
+	cacheCreate = u.cacheCreateTokens
+	webSearches = u.webSearches
+	label = u.currentClaim
+	elapsed = time.Since(u.start)
+	u.mu.Unlock()
+	return
+}
+
+// estimateCost returns (estUSD string, ok bool). When prices are unknown or
+// unset, ok is false and the string carries the reason sentinel.
+func estimateCost(model string, in, out, cacheRead, cacheCreate, webSearches int) (string, bool) {
+	p, found := priceTable[model]
+	if !found {
+		return fmt.Sprintf("n/a(model not in price table) in=%d out=%d cache_read=%d cache_create=%d",
+			in, out, cacheRead, cacheCreate), false
+	}
+	if p.InputPerMtok < 0 {
+		return "TODO(prices unset)", false
+	}
+	usd := float64(in)*p.InputPerMtok/1e6 +
+		float64(out)*p.OutputPerMtok/1e6 +
+		float64(cacheRead)*p.CacheReadPerMtok/1e6 +
+		float64(cacheCreate)*p.CacheCreatePerMtok/1e6 +
+		float64(webSearches)*p.WebSearchPer1k/1000
+	return fmt.Sprintf("$%.4f (rates %s)", usd, priceTableDate), true
+}
+
+// heartbeatLine produces a one-line cumulative status for the 60s ticker.
+func heartbeatLine(model string, u *usageCounters) string {
+	calls, in, out, cacheRead, cacheCreate, webSearches, label, elapsed := u.snapshot()
+	cost, _ := estimateCost(model, in, out, cacheRead, cacheCreate, webSearches)
+	return fmt.Sprintf("[heartbeat] elapsed=%s calls=%d in=%d out=%d web=%d est=%s claim=%q",
+		elapsed.Round(time.Second), calls, in, out, webSearches, cost, label)
+}
+
+// startHeartbeat starts a background goroutine that prints a one-line status
+// to stderr every 60 seconds. Cancel it via the returned cancel func.
+func startHeartbeat(model string, u *usageCounters) func() {
+	done := make(chan struct{})
+	go func() {
+		t := time.NewTicker(60 * time.Second)
+		defer t.Stop()
+		for {
+			select {
+			case <-done:
+				return
+			case <-t.C:
+				fmt.Fprintln(os.Stderr, heartbeatLine(model, u))
+			}
+		}
+	}()
+	return func() { close(done) }
+}
+
+// printUsageLine writes the final greppable USAGE line to stderr.
+func printUsageLine(model string, u *usageCounters, usageOutFile string) {
+	calls, in, out, cacheRead, cacheCreate, webSearches, _, elapsed := u.snapshot()
+	cost, _ := estimateCost(model, in, out, cacheRead, cacheCreate, webSearches)
+	line := fmt.Sprintf(
+		"USAGE model=%s calls=%d in=%d out=%d cache_read=%d cache_create=%d web_searches=%d wall=%ds est_usd=%s",
+		model, calls, in, out, cacheRead, cacheCreate, webSearches,
+		int(elapsed.Seconds()), cost,
+	)
+	fmt.Fprintln(os.Stderr, line)
+
+	if usageOutFile != "" {
+		type usageRecord struct {
+			Model             string  `json:"model"`
+			Calls             int     `json:"calls"`
+			InputTokens       int     `json:"input_tokens"`
+			OutputTokens      int     `json:"output_tokens"`
+			CacheReadTokens   int     `json:"cache_read_tokens"`
+			CacheCreateTokens int     `json:"cache_create_tokens"`
+			WebSearches       int     `json:"web_searches"`
+			WallSeconds       float64 `json:"wall_seconds"`
+			EstUSD            *string `json:"est_usd"`
+		}
+		estStr, ok := estimateCost(model, in, out, cacheRead, cacheCreate, webSearches)
+		var estPtr *string
+		if ok {
+			estPtr = &estStr
+		}
+		rec := usageRecord{
+			Model: model, Calls: calls,
+			InputTokens: in, OutputTokens: out,
+			CacheReadTokens: cacheRead, CacheCreateTokens: cacheCreate,
+			WebSearches: webSearches, WallSeconds: elapsed.Seconds(),
+			EstUSD: estPtr,
+		}
+		data, _ := json.Marshal(rec)
+		f, err := os.OpenFile(usageOutFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: cannot open -usage-out %q: %v\n", usageOutFile, err)
+			return
+		}
+		defer f.Close()
+		fmt.Fprintln(f, string(data))
+	}
 }

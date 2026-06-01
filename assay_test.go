@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -529,5 +531,179 @@ func TestFixtureIngestion(t *testing.T) {
 			t.Logf("%s: %d bytes → %d segments, avg %d b/seg, max seg %d b (first: %.80q)",
 				name, len(data), len(got), avgSeg, maxSeg, strings.TrimSpace(got[0]))
 		})
+	}
+}
+
+// ── usage accounting tests ────────────────────────────────────────────────────
+
+// TestUsageAccumulatorSumsCorrectly drives callJSON through the stub seam and asserts the
+// usageCounters accumulate correctly from canned API-response-shaped JSON. Because the stub
+// bypasses callClaude entirely, we drive the accumulator directly to test the math.
+func TestUsageAccumulatorSumsCorrectly(t *testing.T) {
+	u := newUsageCounters()
+	u.add(100, 50, 10, 5, 1)
+	u.add(200, 80, 20, 8, 2)
+
+	calls, in, out, cacheRead, cacheCreate, webSearches, _, _ := u.snapshot()
+	if calls != 2 {
+		t.Errorf("calls: want 2, got %d", calls)
+	}
+	if in != 300 {
+		t.Errorf("inputTokens: want 300, got %d", in)
+	}
+	if out != 130 {
+		t.Errorf("outputTokens: want 130, got %d", out)
+	}
+	if cacheRead != 30 {
+		t.Errorf("cacheReadTokens: want 30, got %d", cacheRead)
+	}
+	if cacheCreate != 13 {
+		t.Errorf("cacheCreateTokens: want 13, got %d", cacheCreate)
+	}
+	if webSearches != 3 {
+		t.Errorf("webSearches: want 3, got %d", webSearches)
+	}
+}
+
+// TestStdoutPurity drives a stubbed runEvidence and asserts that stdout carries only the markdown
+// table — no progress or USAGE lines — protecting -md harness integrity. stderr is not checked here
+// since progress intentionally goes there.
+func TestStdoutPurity(t *testing.T) {
+	// Capture stdout.
+	origStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stdout = w
+
+	stub := func(system, prompt string, withTools bool) (string, error) {
+		switch {
+		case strings.Contains(system, "You are the Defender"):
+			return `{"found":true,"quotes":["q"],"best_case":"direct"}`, nil
+		case strings.Contains(system, "You are the Faithfulness Critic"):
+			return `{"findings":[],"verdict":"faithful","evidence":"e","what_source_actually_says":null}`, nil
+		case strings.Contains(system, "You are the Evidence Grounder"):
+			return `{"verdict":"supported","finding":"found","sources":[]}`, nil
+		default:
+			return `[]`, nil
+		}
+	}
+	c := cfg{
+		call:         stub,
+		asMarkdown:   true,
+		showProgress: true, // progress ON — but it must go to stderr, not stdout
+		usage:        newUsageCounters(),
+	}
+	c.runEvidence("1. Claim one.\n2. Claim two.", "")
+
+	w.Close()
+	os.Stdout = origStdout
+
+	captured, _ := io.ReadAll(r)
+	out := string(captured)
+
+	// stdout must contain the markdown table header
+	if !strings.Contains(out, "## Grounding") {
+		t.Errorf("stdout should contain markdown table, got: %.200q", out)
+	}
+	// stdout must NOT contain progress or USAGE lines
+	for _, bad := range []string{"[1/", "[2/", "USAGE ", "[heartbeat]"} {
+		if strings.Contains(out, bad) {
+			t.Errorf("stdout contains progress/USAGE marker %q — violates stdout purity", bad)
+		}
+	}
+}
+
+// TestPriceLookupKnownModel checks that a known model returns a numeric estimate.
+func TestPriceLookupKnownModel(t *testing.T) {
+	est, ok := estimateCost("claude-sonnet-4-6", 1_000_000, 1_000_000, 0, 0, 0)
+	if !ok {
+		t.Errorf("want ok=true for known model, got false; est=%q", est)
+	}
+	if !strings.HasPrefix(est, "$") {
+		t.Errorf("want dollar-prefixed estimate, got %q", est)
+	}
+	if !strings.Contains(est, priceTableDate) {
+		t.Errorf("want price table date %q in estimate %q", priceTableDate, est)
+	}
+}
+
+// TestPriceLookupUnknownModel checks that an unknown model returns tokens-present, cost flagged n/a.
+func TestPriceLookupUnknownModel(t *testing.T) {
+	est, ok := estimateCost("claude-unknown-9999", 500, 200, 0, 0, 0)
+	if ok {
+		t.Errorf("want ok=false for unknown model, got true; est=%q", est)
+	}
+	if !strings.Contains(est, "n/a") {
+		t.Errorf("want 'n/a' in estimate for unknown model, got %q", est)
+	}
+	// Measured token counts must appear in the string so the caller can still see them.
+	if !strings.Contains(est, "in=500") {
+		t.Errorf("want input token count in estimate, got %q", est)
+	}
+}
+
+// TestPriceLookupUnsetPrices verifies that a model entry with InputPerMtok<0 prints the TODO
+// sentinel rather than a fabricated number.
+func TestPriceLookupUnsetPrices(t *testing.T) {
+	// Temporarily install a model entry with unset prices.
+	priceTable["__test_unset__"] = priceEntry{InputPerMtok: -1}
+	defer delete(priceTable, "__test_unset__")
+
+	est, ok := estimateCost("__test_unset__", 100, 50, 0, 0, 0)
+	if ok {
+		t.Errorf("want ok=false for unset prices, got true; est=%q", est)
+	}
+	if !strings.Contains(est, "TODO") {
+		t.Errorf("want TODO sentinel for unset prices, got %q", est)
+	}
+}
+
+// TestUsageOutFile verifies that printUsageLine appends a valid JSON record when -usage-out is set.
+func TestUsageOutFile(t *testing.T) {
+	tmp, err := os.CreateTemp(t.TempDir(), "usage*.jsonl")
+	if err != nil {
+		t.Fatalf("temp file: %v", err)
+	}
+	tmp.Close()
+
+	u := newUsageCounters()
+	u.add(1000, 500, 100, 50, 2)
+	printUsageLine("claude-sonnet-4-6", u, tmp.Name())
+
+	data, err := os.ReadFile(tmp.Name())
+	if err != nil {
+		t.Fatalf("read usage file: %v", err)
+	}
+	line := strings.TrimSpace(string(data))
+	if line == "" {
+		t.Fatal("usage file is empty")
+	}
+	var rec struct {
+		Model        string   `json:"model"`
+		Calls        int      `json:"calls"`
+		InputTokens  int      `json:"input_tokens"`
+		OutputTokens int      `json:"output_tokens"`
+		WebSearches  int      `json:"web_searches"`
+		EstUSD       *string  `json:"est_usd"`
+		WallSeconds  float64  `json:"wall_seconds"`
+	}
+	if err := json.Unmarshal([]byte(line), &rec); err != nil {
+		t.Fatalf("unmarshal usage record: %v; raw=%q", err, line)
+	}
+	if rec.Model != "claude-sonnet-4-6" {
+		t.Errorf("model: want claude-sonnet-4-6, got %q", rec.Model)
+	}
+	if rec.Calls != 1 {
+		t.Errorf("calls: want 1, got %d", rec.Calls)
+	}
+	if rec.InputTokens != 1000 {
+		t.Errorf("input_tokens: want 1000, got %d", rec.InputTokens)
+	}
+	if rec.EstUSD == nil {
+		t.Error("est_usd should be non-null for known model")
+	} else if !strings.HasPrefix(*rec.EstUSD, "$") {
+		t.Errorf("est_usd should start with $, got %q", *rec.EstUSD)
 	}
 }
