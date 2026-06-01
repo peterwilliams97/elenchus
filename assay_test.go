@@ -472,7 +472,10 @@ func TestMaxClaimsCapComputeAudit(t *testing.T) {
 // Goal: confirm the regex boundaries don't panic or hang on large, heterogeneous real-world inputs.
 // Expected files that are missing are t.Skip'd — never substituted.
 func TestFixtureIngestion(t *testing.T) {
-	const dir = "fixtures/raw"
+	const (
+		dir        = "fixtures/raw"
+		maxSegSize = 4096 // no legitimate atomic-claim line exceeds 4 KB; table blobs do
+	)
 
 	// The canonical set. Each missing file gets its own skip, not a test failure.
 	expected := []string{
@@ -507,9 +510,24 @@ func TestFixtureIngestion(t *testing.T) {
 			got := splitSummary(content)
 			if len(got) == 0 {
 				t.Errorf("%s: splitSummary returned 0 items on %d-byte input", name, len(data))
+				return
 			}
-			t.Logf("%s: %d bytes → %d segments (first: %.80q)",
-				name, len(data), len(got), strings.TrimSpace(got[0]))
+			// Sanity guard: no single segment may exceed maxSegSize.
+			// A giant segment means the file contains table blobs or unbroken prose
+			// that splitSummary can't decompose — the fixture is not usable as input.
+			var maxSeg int
+			for _, seg := range got {
+				if len(seg) > maxSeg {
+					maxSeg = len(seg)
+				}
+				if len(seg) > maxSegSize {
+					t.Errorf("%s: segment of %d bytes exceeds %d-byte limit — fixture likely contains table blobs or unbroken runs; re-extract",
+						name, len(seg), maxSegSize)
+				}
+			}
+			avgSeg := len(data) / len(got)
+			t.Logf("%s: %d bytes → %d segments, avg %d b/seg, max seg %d b (first: %.80q)",
+				name, len(data), len(got), avgSeg, maxSeg, strings.TrimSpace(got[0]))
 		})
 	}
 }
