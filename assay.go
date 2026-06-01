@@ -218,7 +218,9 @@ func (c cfg) progressDone(i, n int, verdict, claim string, start time.Time) {
 // printSummary emits the final SUMMARY block to stderr after a run completes.
 func printSummary(fixture, mode, model string, rt *runTally, u *usageCounters, chainFile string) {
 	total, verified, counts := rt.snapshot()
-	errored := total - verified
+	errored := counts["error"]
+	seen := verified + errored + counts["skipped (over cap)"]
+	pending := total - seen
 	_, in, out, cr, cc, ws, _, elapsed := u.snapshot()
 	cost, _ := estimateCost(model, in, out, cr, cc, ws)
 
@@ -242,19 +244,18 @@ func printSummary(fixture, mode, model string, rt *runTally, u *usageCounters, c
 			parts = append(parts, fmt.Sprintf("%s %d", v, n))
 		}
 	}
-	if counts["error"] > 0 {
-		parts = append(parts, fmt.Sprintf("error %d", counts["error"]))
+	if errored > 0 {
+		parts = append(parts, fmt.Sprintf("error %d", errored))
 	}
 
 	fmt.Fprintf(os.Stderr, "\nSUMMARY %s %s\n", fixture, mode)
-	fmt.Fprintf(os.Stderr, "  cases %d · verified %d · errored %d\n", total, verified, errored)
+	fmt.Fprintf(os.Stderr, "  cases %d · verified %d · errored %d · pending %d\n", total, verified, errored, pending)
 	fmt.Fprintf(os.Stderr, "  %s\n", strings.Join(parts, " · "))
 	fmt.Fprintf(os.Stderr, "  wall %s · est_usd %s\n", elapsed.Round(time.Second), cost)
 	if chainFile != "" {
 		fmt.Fprintf(os.Stderr, "  detail: %s\n", chainFile)
 	}
 }
-
 
 // ── runners ──────────────────────────────────────────────────────────────────
 
@@ -1371,24 +1372,10 @@ func heartbeatLine(model string, u *usageCounters, rt *runTally) string {
 	tallyPart := ""
 	if rt != nil {
 		total, verified, counts := rt.snapshot()
-		errored := (total - verified) - counts["skipped (over cap)"]
-		if errored < 0 {
-			errored = 0
-		}
-		seen := 0
-		for _, v := range counts {
-			seen += v
-		}
-		seen += verified - func() int {
-			n := 0
-			for _, v := range counts {
-				n += v
-			}
-			return n
-		}()
-		// Compute seen as verified + all error/skipped.
-		seen = verified + counts["error"] + counts["skipped (over cap)"]
-		tallyPart = fmt.Sprintf(" verified=%d errored=%d seen=%d/%d", verified, errored, seen, total)
+		errored := counts["error"]
+		seen := verified + errored + counts["skipped (over cap)"]
+		pending := total - seen
+		tallyPart = fmt.Sprintf(" verified=%d errored=%d pending=%d seen=%d/%d", verified, errored, pending, seen, total)
 	}
 	return fmt.Sprintf("[heartbeat] elapsed=%s calls=%d in=%d out=%d web=%d est=%s%s claim=%q",
 		elapsed.Round(time.Second), calls, in, out, webSearches, cost, tallyPart, label)

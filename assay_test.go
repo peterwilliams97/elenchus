@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -471,13 +472,50 @@ func TestMaxClaimsCapComputeAudit(t *testing.T) {
 	}
 }
 
+// finitVerbRe matches common English finite verbs — used by the structural guard in
+// TestFixtureIngestion to detect non-claim-shaped segments.
+var finiteVerbRe = regexp.MustCompile(`(?i)\b(was|were|is|are|had|has|have|do|does|did|` +
+	`drove|increased|decreased|grew|fell|rose|reached|expects?|believes?|saw|made|added|` +
+	`continued|launched|closed|expanded|achieved|contributed|included|required|completed|` +
+	`provides?|offers?|enabled|scaled|improved|extended|adopted|generated|brought|` +
+	`maintained|executed|delivered|reported|gained|held|remained|declined|acquired|` +
+	`boosted|converted|supported|showed|reflects?|represents?|will|would|should|may|might|can|could)\b`)
+
+// isNonClaimShaped returns true when a segment is structurally a label, table cell, fragment,
+// or bare number rather than a natural-language claim. The structural guard in TestFixtureIngestion
+// uses this to catch fixtures that haven't been properly normalized.
+func isNonClaimShaped(seg string) bool {
+	words := strings.Fields(seg)
+	if len(words) < 4 {
+		return true
+	}
+	// All-uppercase (table column header or label)
+	allCaps := true
+	for _, w := range words {
+		if strings.IndexFunc(w, func(r rune) bool { return r >= 'a' && r <= 'z' }) >= 0 {
+			allCaps = false
+			break
+		}
+	}
+	if allCaps {
+		return true
+	}
+	// No finite verb → bare noun phrase or label
+	if !finiteVerbRe.MatchString(seg) {
+		return true
+	}
+	return false
+}
+
 // TestFixtureIngestion iterates fixtures/raw and passes each real file through splitSummary.
-// Goal: confirm the regex boundaries don't panic or hang on large, heterogeneous real-world inputs.
+// Goal: confirm the regex boundaries don't panic or hang on large, heterogeneous real-world inputs,
+// and that fixture normalization has removed table cells and hard-wrapped fragments.
 // Expected files that are missing are t.Skip'd — never substituted.
 func TestFixtureIngestion(t *testing.T) {
 	const (
-		dir        = "fixtures/raw"
-		maxSegSize = 4096 // no legitimate atomic-claim line exceeds 4 KB; table blobs do
+		dir                = "fixtures/raw"
+		maxSegSize         = 4096  // no legitimate atomic-claim line exceeds 4 KB; table blobs do
+		maxNonClaimPct     = 15    // >15% non-claim-shaped segments → fixture needs re-normalization
 	)
 
 	// The canonical set. Each missing file gets its own skip, not a test failure.
@@ -515,7 +553,7 @@ func TestFixtureIngestion(t *testing.T) {
 				t.Errorf("%s: splitSummary returned 0 items on %d-byte input", name, len(data))
 				return
 			}
-			// Sanity guard: no single segment may exceed maxSegSize.
+			// Guard 1: no single segment may exceed maxSegSize.
 			// A giant segment means the file contains table blobs or unbroken prose
 			// that splitSummary can't decompose — the fixture is not usable as input.
 			var maxSeg int
@@ -524,13 +562,33 @@ func TestFixtureIngestion(t *testing.T) {
 					maxSeg = len(seg)
 				}
 				if len(seg) > maxSegSize {
-					t.Errorf("%s: segment of %d bytes exceeds %d-byte limit — fixture likely contains table blobs or unbroken runs; re-extract",
+					t.Errorf("%s: segment of %d bytes exceeds %d-byte limit — fixture likely contains table blobs or unbroken runs; re-normalize",
 						name, len(seg), maxSegSize)
 				}
 			}
+
+			// Guard 2: structural claim-shape check — catches table cells, headers, and
+			// hard-wrapped fragments that pipe-count and digit-density proxies miss.
+			// Fail loudly if >maxNonClaimPct% of segments are non-claim-shaped.
+			var nonClaimCount int
+			var nonClaimExamples []string
+			for _, seg := range got {
+				if isNonClaimShaped(seg) {
+					nonClaimCount++
+					if len(nonClaimExamples) < 5 {
+						nonClaimExamples = append(nonClaimExamples, seg)
+					}
+				}
+			}
+			nonClaimPct := nonClaimCount * 100 / len(got)
+			if nonClaimPct > maxNonClaimPct {
+				t.Errorf("%s: %d%% of segments (%d/%d) are non-claim-shaped (threshold %d%%) — fixture contains table cells, headers, or hard-wrapped fragments; re-normalize. Examples: %q",
+					name, nonClaimPct, nonClaimCount, len(got), maxNonClaimPct, nonClaimExamples)
+			}
+
 			avgSeg := len(data) / len(got)
-			t.Logf("%s: %d bytes → %d segments, avg %d b/seg, max seg %d b (first: %.80q)",
-				name, len(data), len(got), avgSeg, maxSeg, strings.TrimSpace(got[0]))
+			t.Logf("%s: %d bytes → %d segments, avg %d b/seg, max seg %d b, non-claim %d%% (first: %.80q)",
+				name, len(data), len(got), avgSeg, maxSeg, nonClaimPct, strings.TrimSpace(got[0]))
 		})
 	}
 }
@@ -766,28 +824,55 @@ func TestProgressOneLine(t *testing.T) {
 	}
 }
 
-// TestRunTallyCorrect confirms verified/errored/total counts from a mix of real verdicts and errors.
+// TestRunTallyCorrect confirms verified/errored/pending/total counts mid-run and at completion.
 func TestRunTallyCorrect(t *testing.T) {
 	rt := newRunTally(5)
+
+	// Mid-run: 2 records in, 3 pending.
 	rt.record("supported")
-	rt.record("mixed")
 	rt.record("error")
+	{
+		total, verified, counts := rt.snapshot()
+		errored := counts["error"]
+		seen := verified + errored + counts["skipped (over cap)"]
+		pending := total - seen
+		if total != 5 {
+			t.Errorf("mid: total: want 5, got %d", total)
+		}
+		if verified != 1 {
+			t.Errorf("mid: verified: want 1, got %d", verified)
+		}
+		if errored != 1 {
+			t.Errorf("mid: errored: want 1, got %d", errored)
+		}
+		if pending != 3 {
+			t.Errorf("mid: pending: want 3, got %d", pending)
+		}
+		if seen != 2 {
+			t.Errorf("mid: seen: want 2, got %d", seen)
+		}
+	}
+
+	// Complete the run: 3 more records.
+	rt.record("mixed")
 	rt.record("refuted")
 	rt.record("error")
 
 	total, verified, counts := rt.snapshot()
+	errored := counts["error"]
+	seen := verified + errored + counts["skipped (over cap)"]
+	pending := total - seen
 	if total != 5 {
 		t.Errorf("total: want 5, got %d", total)
 	}
 	if verified != 3 {
 		t.Errorf("verified: want 3, got %d", verified)
 	}
-	errored := total - verified
 	if errored != 2 {
 		t.Errorf("errored: want 2, got %d", errored)
 	}
-	if counts["error"] != 2 {
-		t.Errorf("counts[error]: want 2, got %d", counts["error"])
+	if pending != 0 {
+		t.Errorf("pending: want 0, got %d", pending)
 	}
 	if counts["supported"] != 1 {
 		t.Errorf("counts[supported]: want 1, got %d", counts["supported"])
