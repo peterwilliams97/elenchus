@@ -28,6 +28,7 @@ for s in fixtures/summaries/*_faithful.md fixtures/summaries/*_distorted.md; do
 done
 
 step=0
+errored_steps=0
 wall_start=$(date +%s)
 
 # Single-document modes run on all seven (substance always; grounding where world-facts exist).
@@ -37,15 +38,23 @@ for f in fixtures/raw/*.md; do
 
   step=$((step + 1))
   t0=$(date +%s)
-  echo "[${step}/${total_steps}] $(date '+%H:%M:%S') substance  ${b}"
-  ./assay -md -model "$MODEL" -usage-out "$USAGE_JSONL" "$f" > "$OUT/${b}.substance.md"
-  echo "[${step}/${total_steps}] done  substance  ${b}  +$(($(date +%s) - t0))s"
+  printf "[%d/%d] %s substance  %s\n" "$step" "$total_steps" "$(date '+%H:%M:%S')" "$b"
+  if ./assay -md -model "$MODEL" -usage-out "$USAGE_JSONL" -chain-dir "$OUT" "$f" > "$OUT/${b}.substance.md"; then
+    printf "[%d/%d] done  substance  %s  +%ds\n" "$step" "$total_steps" "$b" "$(($(date +%s) - t0))"
+  else
+    errored_steps=$((errored_steps + 1))
+    printf "[%d/%d] ERROR substance  %s  +%ds\n" "$step" "$total_steps" "$b" "$(($(date +%s) - t0))"
+  fi
 
   step=$((step + 1))
   t0=$(date +%s)
-  echo "[${step}/${total_steps}] $(date '+%H:%M:%S') grounding  ${b}"
-  ./assay -md -model "$MODEL" -usage-out "$USAGE_JSONL" -evidence "$f" > "$OUT/${b}.grounding.md"
-  echo "[${step}/${total_steps}] done  grounding  ${b}  +$(($(date +%s) - t0))s"
+  printf "[%d/%d] %s grounding  %s\n" "$step" "$total_steps" "$(date '+%H:%M:%S')" "$b"
+  if ./assay -md -model "$MODEL" -usage-out "$USAGE_JSONL" -chain-dir "$OUT" -evidence "$f" > "$OUT/${b}.grounding.md"; then
+    printf "[%d/%d] done  grounding  %s  +%ds\n" "$step" "$total_steps" "$b" "$(($(date +%s) - t0))"
+  else
+    errored_steps=$((errored_steps + 1))
+    printf "[%d/%d] ERROR grounding  %s  +%ds\n" "$step" "$total_steps" "$b" "$(($(date +%s) - t0))"
+  fi
 done
 
 # Faithfulness + audit only where a summary probe exists (the source is the real fixture;
@@ -59,9 +68,13 @@ for s in fixtures/summaries/*_faithful.md fixtures/summaries/*_distorted.md; do
 
   step=$((step + 1))
   t0=$(date +%s)
-  echo "[${step}/${total_steps}] $(date '+%H:%M:%S') audit      ${name}  (source: ${area})"
-  ./assay -md -model "$MODEL" -usage-out "$USAGE_JSONL" -audit -source "$src" "$s" > "$OUT/${name}.audit.md"
-  echo "[${step}/${total_steps}] done  audit      ${name}  +$(($(date +%s) - t0))s"
+  printf "[%d/%d] %s audit      %s  (source: %s)\n" "$step" "$total_steps" "$(date '+%H:%M:%S')" "$name" "$area"
+  if ./assay -md -model "$MODEL" -usage-out "$USAGE_JSONL" -chain-dir "$OUT" -audit -source "$src" "$s" > "$OUT/${name}.audit.md"; then
+    printf "[%d/%d] done  audit      %s  +%ds\n" "$step" "$total_steps" "$name" "$(($(date +%s) - t0))"
+  else
+    errored_steps=$((errored_steps + 1))
+    printf "[%d/%d] ERROR audit      %s  +%ds\n" "$step" "$total_steps" "$name" "$(($(date +%s) - t0))"
+  fi
 done
 
 wall_end=$(date +%s)
@@ -69,15 +82,16 @@ wall_total=$((wall_end - wall_start))
 
 echo ""
 echo "wrote $OUT"
-echo "total steps: ${step}/${total_steps}  wall: ${wall_total}s"
+
+# Grand SUMMARY across all steps.
 echo ""
+echo "SUMMARY all steps"
+printf "  steps %d/%d · errored_steps %d · wall %ds\n" "$step" "$total_steps" "$errored_steps" "$wall_total"
 
 # Sum eval/usage.jsonl into a grand total. Uses jq if available, else awk.
 if [ -f "$USAGE_JSONL" ]; then
-  echo "=== usage summary (from $USAGE_JSONL) ==="
+  echo "  === token totals (from $USAGE_JSONL) ==="
   if command -v jq >/dev/null 2>&1; then
-    priced_rows=$(jq -r 'select(.est_usd != null and (.est_usd | startswith("$"))) | .est_usd' \
-      "$USAGE_JSONL" 2>/dev/null | wc -l | tr -d ' ')
     jq -rs '
       map(select(.est_usd != null and (.est_usd | startswith("$")))) as $priced |
       {
@@ -116,6 +130,7 @@ if [ -f "$USAGE_JSONL" ]; then
       }
     ' "$USAGE_JSONL"
   fi
+  echo "  chain JSONL: $OUT/*.jsonl"
 fi
 
 echo ""
