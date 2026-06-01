@@ -470,52 +470,46 @@ func TestMaxClaimsCapComputeAudit(t *testing.T) {
 
 // TestFixtureIngestion iterates fixtures/raw and passes each real file through splitSummary.
 // Goal: confirm the regex boundaries don't panic or hang on large, heterogeneous real-world inputs.
-// Files missing from the directory (fetch failures) are skipped with t.Skip — never substituted.
+// Expected files that are missing are t.Skip'd — never substituted.
 func TestFixtureIngestion(t *testing.T) {
 	const dir = "fixtures/raw"
-	entries, err := os.ReadDir(dir)
-	if os.IsNotExist(err) {
-		t.Skipf("fixtures/raw not present — run curl downloads to populate")
-	}
-	if err != nil {
-		t.Fatalf("ReadDir %s: %v", dir, err)
-	}
-	if len(entries) == 0 {
-		t.Skipf("fixtures/raw is empty — no fixtures were successfully fetched")
+
+	// The canonical set. Each missing file gets its own skip, not a test failure.
+	expected := []string{
+		"legal.md",
+		"accounting.md",
+		"sales.md",
+		"marketing.md",
+		"pm.md",
+		"engineering.md",
+		"contract.md",
 	}
 
-	cases := []struct {
-		name string // expected base filename
-	}{
-		{"legal.txt"},
-		{"accounting.txt"},
-		{"pm.md"},
-		{"engineering.html"},
-		{"contract.xml"},
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		t.Skipf("fixtures/raw not present — run fetch script to populate")
 	}
 
-	for _, tc := range cases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			path := filepath.Join(dir, tc.name)
+	for _, name := range expected {
+		name := name
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join(dir, name)
 			data, err := os.ReadFile(path)
 			if os.IsNotExist(err) {
-				t.Skipf("%s not present — fetch failed or was not attempted", tc.name)
+				t.Skipf("%s not present — fetch failed or not yet attempted", name)
 			}
 			if err != nil {
 				t.Fatalf("ReadFile %s: %v", path, err)
 			}
 			if len(data) == 0 {
-				t.Skipf("%s is empty — fetch may have failed silently", tc.name)
+				t.Skipf("%s is empty — fetch may have failed silently", name)
 			}
 			content := string(data)
-			// splitSummary must not panic or hang regardless of content shape.
 			got := splitSummary(content)
 			if len(got) == 0 {
-				t.Errorf("%s: splitSummary returned 0 items on %d-byte input", tc.name, len(data))
+				t.Errorf("%s: splitSummary returned 0 items on %d-byte input", name, len(data))
 			}
 			t.Logf("%s: %d bytes → %d segments (first: %.80q)",
-				tc.name, len(data), len(got), strings.TrimSpace(got[0]))
+				name, len(data), len(got), strings.TrimSpace(got[0]))
 		})
 	}
 }

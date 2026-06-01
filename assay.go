@@ -118,10 +118,10 @@ func (c cfg) runFaithfulness(input, src string) {
 	}
 }
 
-// intendedProposition returns what_source_actually_says when the faithfulness
-// pass flagged the claim as partial or overstated and populated that field.
-// Otherwise it returns the original claim unchanged. Using this in both
-// runEvidence and the audit grounding pass keeps the two paths in sync.
+// intendedProposition returns what_source_actually_says when the faithfulness pass flagged the
+// claim as partial or overstated and populated that field.
+// Otherwise it returns the original claim unchanged. Using this in both runEvidence and the audit
+// grounding pass keeps the two paths in sync.
 func intendedProposition(fc faith, claim string) string {
 	if fc.SourceSays != "" && (fc.Verdict == "partial" || fc.Verdict == "overstated") {
 		return fc.SourceSays
@@ -129,6 +129,10 @@ func intendedProposition(fc faith, claim string) string {
 	return claim
 }
 
+// runEvidence grounds each claim via web search. If a source transcript is provided, it first runs
+// the faithfulness pass to reconstruct the intended proposition, so we ground what the speaker
+// actually meant, not a literalized paraphrase. The audit grounding pass shares this same logic via
+// intendedProposition, so the audit's grounding column agrees with -evidence -source.
 func (c cfg) runEvidence(input, src string) {
 	claims := splitSummary(input)
 	results := make([]evidence, len(claims))
@@ -156,10 +160,10 @@ func (c cfg) runEvidence(input, src string) {
 	}
 }
 
-// computeAudit runs faithfulness, substance, and evidence for each claim and
-// returns the three result slices. The evidence pass grounds the INTENDED
-// proposition (via intendedProposition) rather than the literal summary claim,
-// so the audit grounding column agrees with -evidence -source.
+// computeAudit runs faithfulness, substance, and evidence for each claim and returns the three
+// result slices. The evidence pass grounds the INTENDED proposition (via intendedProposition)
+// rather than the literal summary claim, so the audit grounding column agrees with
+// -evidence -source.
 func (c cfg) computeAudit(claims []string, src string) ([]faith, []substance, []evidence) {
 	fs := make([]faith, len(claims))
 	ss := make([]substance, len(claims))
@@ -226,7 +230,9 @@ func (c cfg) assayClaim(claim string) substance {
 		rounds++
 		// Only continue to the next round when the critic wants one AND the
 		// claim didn't survive purely through condition laundering.
-		if last.NeedsAnother && last.SurvivingClaim != "" && rounds < c.maxRounds && !last.SurvivesOnlyByConditions {
+		if last.NeedsAnother && last.SurvivingClaim != "" &&
+			rounds < c.maxRounds &&
+			!last.SurvivesOnlyByConditions {
 			current = last.SurvivingClaim
 			continue
 		}
@@ -264,6 +270,11 @@ func (c cfg) faithClaim(claim, src string) faith {
 	return faith{Claim: claim, Verdict: fj.Verdict, Evidence: fj.Evidence, SourceSays: fj.SourceSays}
 }
 
+// evidenceClaim is the grounding pass: check the claim against current evidence via web search. If
+// a source transcript is provided, it first runs the faithfulness pass to reconstruct the intended
+// proposition, so we ground what the speaker actually meant, not a literalized paraphrase. The
+// audit grounding pass shares this same logic via intendedProposition, so the audit's grounding
+// column agrees with -evidence -source.
 func (c cfg) evidenceClaim(claim string) evidence {
 	var e evidenceJSON
 	if err := c.callJSON(evidenceSys, "CLAIM:\n"+claim, true, &e); err != nil {

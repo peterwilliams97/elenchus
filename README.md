@@ -142,6 +142,6 @@ real example teaches the distinction better than any definition of it.
 
 ## Worked example
 
-See [`examples/dan_shipper/`](examples/dan_shipper/) — Dan Shipper's 12 predictions about the
-future of work, run through all three filters with a cross-tabulated results table and
-pattern-reading guide.
+See [`examples/dan_shipper/`](examples/dan_shipper/) — Dan Shipper's 12 predictions about the future
+of work, run through all three filters with a cross-tabulated results table and pattern-reading
+guide.
