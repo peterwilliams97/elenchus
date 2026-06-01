@@ -14,6 +14,40 @@ A claim can be faithfully reported, internally well-reasoned, and still false. K
 apart is most of what careful reasoning requires, and the tool is built to keep them apart on
 purpose rather than collapsing them into a single "is this good?"
 
+## What assay is for
+
+assay is a mirror, not a crutch. It is built for people trained in classical rigour — the
+trivium, the scientific method, an arts or science degree — who have landed in technical
+workplaces and cannot see where that training applies. The training is invisible to the person
+who holds it. assay instantiates the rigour they already have as three concrete columns —
+faithfulness, substance, grounding — on a real work artifact, so the transferable skill becomes
+visible to its owner. The recognition is the product; the verdict on any one claim is secondary.
+
+The tool's own headline is a claim it cannot settle from the armchair: that making already-held
+rigour visible this way causes a trained user to recognise the skill as transferable. That is a
+grounding claim about effects on people, so by assay's own axis boundary (see CLAUDE.md) it is
+settled only by watching trained users use the tool — never by reasoning about it. It is carried
+as a hypothesis awaiting evidence, not a finding. The causality-vs-correlation and falsifiability
+presses it invites are the shape of the honest limit, not objections to answer.
+
+## Who this is for
+
+People trained in classical rigour — arts and science graduates, the trivium and the scientific
+method — who have landed in modern technical workplaces and can't see where their training applies.
+
+The training is invisible to the person who has it. A philosophy graduate in a standup does not
+think "this is dialectic"; they think they have a humanities degree while everyone else has the
+useful skills. But separating what was said from what is well-formed from what is true — the move
+the trivium drilled — is exactly the move a room full of fluent engineers will skip, because fluency
+feels like knowledge and agreement feels like corroboration.
+
+This tool is a mirror, not a crutch. It does not supply rigour you lack; it instantiates rigour you
+already have as three concrete columns on a real work artifact, so the transferable skill becomes
+visible to its owner. You watch the columns disagree on something from your actual job, and you
+recognise: I already know how to do this, and it is worth doing here.
+
+That recognition is the product. The verdict on any given claim is secondary.
+
 ## Install
 
 ```bash

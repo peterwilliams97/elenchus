@@ -132,6 +132,11 @@ weaken a result — they invert the tool's entire purpose.
 
 ## Testing
 
+Run `go test ./...` after every code change — including fixture edits, prompt tweaks, and
+test-file changes. `./build.sh` is the gate check (runs `go test ./...` then builds), but
+`go test ./...` alone is faster during iteration. Never report a change as done without a
+passing run.
+
 `./build.sh` runs `go test ./...` then builds the binary.
 
 Test coverage in `assay_test.go`:
@@ -151,6 +156,22 @@ Test coverage in `assay_test.go`:
 
 For end-to-end validation use `examples/dan_shipper/` with `-model claude-haiku-4-5-20251001` for
 speed, then re-run on the default model for the verdict to trust.
+
+## The axis boundary (durable design note)
+
+The three columns are not equally reachable from any one competence:
+- Close reading reaches FAITHFULNESS.
+- Dialectic reaches SUBSTANCE.
+- Reasoning can REFUTE a grounding claim (an internal contradiction kills it with no lookup) but
+  can NEVER CONFIRM one. Positive grounding always needs the truth-maker — a retrieval, not a
+  deduction, however rigorous.
+
+The characteristic failure is laundering confidence: scoring real wins on faithfulness and
+substance, then pronouncing on grounding with borrowed authority the first two columns never
+licensed. Fluency on the reachable columns manufactures unearned confidence on the unreachable
+one. The discipline is not "apply more rigour" — it is knowing the boundary of what your rigour
+can settle and going to the truth-maker past that line. Two of assay's three columns cannot reach
+the thing the third column is for. See examples/url-length for a worked demonstration.
 
 ## Working disciplines
 
