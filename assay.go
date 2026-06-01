@@ -255,7 +255,6 @@ func printSummary(fixture, mode, model string, rt *runTally, u *usageCounters, c
 	}
 }
 
-
 // ── runners ──────────────────────────────────────────────────────────────────
 
 func (c *cfg) runSubstance(input string) {
@@ -1120,13 +1119,13 @@ func readInput(text string) string {
 // chainRecord is the common envelope written for every case. Mode-specific fields
 // are embedded as a json.RawMessage under "detail" to keep the schema flat.
 type chainRecord struct {
-	Idx     int             `json:"idx"`
-	Total   int             `json:"total"`
-	Mode    string          `json:"mode"`
-	Claim   string          `json:"claim"`
-	Verdict string          `json:"verdict"`
-	ElapsedS float64        `json:"elapsed_s"`
-	Detail  json.RawMessage `json:"detail"`
+	Idx      int             `json:"idx"`
+	Total    int             `json:"total"`
+	Mode     string          `json:"mode"`
+	Claim    string          `json:"claim"`
+	Verdict  string          `json:"verdict"`
+	ElapsedS float64         `json:"elapsed_s"`
+	Detail   json.RawMessage `json:"detail"`
 }
 
 // appendChain appends one JSON record to c.chainFile. Errors are logged to
@@ -1153,12 +1152,12 @@ func (c *cfg) appendChain(rec chainRecord) {
 }
 
 type substanceDetail struct {
-	Steelman      string        `json:"steelman"`
-	CritiqueByAxis []critiqueItem `json:"critique_by_axis"`
-	SurvivingClaim string       `json:"surviving_claim,omitempty"`
-	AddedConditions int         `json:"added_conditions,omitempty"`
-	Rounds        int           `json:"rounds"`
-	Reason        string        `json:"reason,omitempty"`
+	Steelman        string         `json:"steelman"`
+	CritiqueByAxis  []critiqueItem `json:"critique_by_axis"`
+	SurvivingClaim  string         `json:"surviving_claim,omitempty"`
+	AddedConditions int            `json:"added_conditions,omitempty"`
+	Rounds          int            `json:"rounds"`
+	Reason          string         `json:"reason,omitempty"`
 }
 
 type faithDetail struct {
@@ -1169,31 +1168,31 @@ type faithDetail struct {
 }
 
 type evidenceDetail struct {
-	Finding  string   `json:"finding,omitempty"`
-	Sources  []source `json:"sources,omitempty"`
-	ErrorCause string `json:"error_cause,omitempty"`
+	Finding    string   `json:"finding,omitempty"`
+	Sources    []source `json:"sources,omitempty"`
+	ErrorCause string   `json:"error_cause,omitempty"`
 }
 
 type auditDetail struct {
-	Faith     faithDetail    `json:"faith"`
+	Faith     faithDetail     `json:"faith"`
 	Substance substanceDetail `json:"substance"`
-	Evidence  evidenceDetail `json:"evidence"`
+	Evidence  evidenceDetail  `json:"evidence"`
 }
 
 func substanceChainRecord(i, total int, claim string, s substance, start time.Time) chainRecord {
 	det := substanceDetail{
-		Steelman:      s.Steelman,
+		Steelman:       s.Steelman,
 		CritiqueByAxis: s.Critique,
 		SurvivingClaim: s.SurvivingClaim,
-		Rounds:        s.Rounds,
-		Reason:        s.Reason,
+		Rounds:         s.Rounds,
+		Reason:         s.Reason,
 	}
 	raw, _ := json.Marshal(det)
 	return chainRecord{
 		Idx: i, Total: total, Mode: "substance",
 		Claim: claim, Verdict: s.Verdict,
 		ElapsedS: time.Since(start).Seconds(),
-		Detail: raw,
+		Detail:   raw,
 	}
 }
 
@@ -1207,7 +1206,7 @@ func faithChainRecord(i, total int, claim string, f faith, start time.Time) chai
 		Idx: i, Total: total, Mode: "faithfulness",
 		Claim: claim, Verdict: f.Verdict,
 		ElapsedS: time.Since(start).Seconds(),
-		Detail: raw,
+		Detail:   raw,
 	}
 }
 
@@ -1226,7 +1225,7 @@ func evidenceChainRecord(i, total int, claim string, e evidence, start time.Time
 		Idx: i, Total: total, Mode: "grounding",
 		Claim: claim, Verdict: e.Verdict,
 		ElapsedS: time.Since(start).Seconds(),
-		Detail: raw,
+		Detail:   raw,
 	}
 }
 
@@ -1237,11 +1236,11 @@ func auditChainRecord(i, n int, claim string, f faith, s substance, e evidence, 
 			SourceSays:    f.SourceSays,
 		},
 		Substance: substanceDetail{
-			Steelman:      s.Steelman,
+			Steelman:       s.Steelman,
 			CritiqueByAxis: s.Critique,
 			SurvivingClaim: s.SurvivingClaim,
-			Rounds:        s.Rounds,
-			Reason:        s.Reason,
+			Rounds:         s.Rounds,
+			Reason:         s.Reason,
 		},
 		Evidence: evidenceDetail{
 			Finding: e.Finding,
@@ -1254,7 +1253,7 @@ func auditChainRecord(i, n int, claim string, f faith, s substance, e evidence, 
 		Idx: i, Total: n, Mode: "audit",
 		Claim: claim, Verdict: verdictSummary,
 		ElapsedS: time.Since(start).Seconds(),
-		Detail: raw,
+		Detail:   raw,
 	}
 }
 

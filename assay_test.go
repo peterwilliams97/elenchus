@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -471,13 +472,50 @@ func TestMaxClaimsCapComputeAudit(t *testing.T) {
 	}
 }
 
+// finitVerbRe matches common English finite verbs — used by the structural guard in
+// TestFixtureIngestion to detect non-claim-shaped segments.
+var finiteVerbRe = regexp.MustCompile(`(?i)\b(was|were|is|are|had|has|have|do|does|did|` +
+	`drove|increased|decreased|grew|fell|rose|reached|expects?|believes?|saw|made|added|` +
+	`continued|launched|closed|expanded|achieved|contributed|included|required|completed|` +
+	`provides?|offers?|enabled|scaled|improved|extended|adopted|generated|brought|` +
+	`maintained|executed|delivered|reported|gained|held|remained|declined|acquired|` +
+	`boosted|converted|supported|showed|reflects?|represents?|will|would|should|may|might|can|could)\b`)
+
+// isNonClaimShaped returns true when a segment is structurally a label, table cell, fragment,
+// or bare number rather than a natural-language claim. The structural guard in TestFixtureIngestion
+// uses this to catch fixtures that haven't been properly normalized.
+func isNonClaimShaped(seg string) bool {
+	words := strings.Fields(seg)
+	if len(words) < 4 {
+		return true
+	}
+	// All-uppercase (table column header or label)
+	allCaps := true
+	for _, w := range words {
+		if strings.IndexFunc(w, func(r rune) bool { return r >= 'a' && r <= 'z' }) >= 0 {
+			allCaps = false
+			break
+		}
+	}
+	if allCaps {
+		return true
+	}
+	// No finite verb → bare noun phrase or label
+	if !finiteVerbRe.MatchString(seg) {
+		return true
+	}
+	return false
+}
+
 // TestFixtureIngestion iterates fixtures/raw and passes each real file through splitSummary.
-// Goal: confirm the regex boundaries don't panic or hang on large, heterogeneous real-world inputs.
+// Goal: confirm the regex boundaries don't panic or hang on large, heterogeneous real-world inputs,
+// and that fixture normalization has removed table cells and hard-wrapped fragments.
 // Expected files that are missing are t.Skip'd — never substituted.
 func TestFixtureIngestion(t *testing.T) {
 	const (
-		dir        = "fixtures/raw"
-		maxSegSize = 4096 // no legitimate atomic-claim line exceeds 4 KB; table blobs do
+		dir            = "fixtures/raw"
+		maxSegSize     = 4096 // no legitimate atomic-claim line exceeds 4 KB; table blobs do
+		maxNonClaimPct = 15   // >15% non-claim-shaped segments → fixture needs re-normalization
 	)
 
 	// The canonical set. Each missing file gets its own skip, not a test failure.
@@ -528,9 +566,20 @@ func TestFixtureIngestion(t *testing.T) {
 						name, len(seg), maxSegSize)
 				}
 			}
+			var nonClaim int
+			for _, seg := range got {
+				if isNonClaimShaped(seg) {
+					nonClaim++
+				}
+			}
+			nonClaimPct := nonClaim * 100 / len(got)
+			if nonClaimPct > maxNonClaimPct {
+				t.Errorf("%s: %d%% of segments are non-claim-shaped (threshold %d%%) — fixture needs re-normalization",
+					name, nonClaimPct, maxNonClaimPct)
+			}
 			avgSeg := len(data) / len(got)
-			t.Logf("%s: %d bytes → %d segments, avg %d b/seg, max seg %d b (first: %.80q)",
-				name, len(data), len(got), avgSeg, maxSeg, strings.TrimSpace(got[0]))
+			t.Logf("%s: %d bytes → %d segments, avg %d b/seg, max seg %d b, non-claim %d%% (first: %.80q)",
+				name, len(data), len(got), avgSeg, maxSeg, nonClaimPct, strings.TrimSpace(got[0]))
 		})
 	}
 }
@@ -682,13 +731,13 @@ func TestUsageOutFile(t *testing.T) {
 		t.Fatal("usage file is empty")
 	}
 	var rec struct {
-		Model        string   `json:"model"`
-		Calls        int      `json:"calls"`
-		InputTokens  int      `json:"input_tokens"`
-		OutputTokens int      `json:"output_tokens"`
-		WebSearches  int      `json:"web_searches"`
-		EstUSD       *string  `json:"est_usd"`
-		WallSeconds  float64  `json:"wall_seconds"`
+		Model        string  `json:"model"`
+		Calls        int     `json:"calls"`
+		InputTokens  int     `json:"input_tokens"`
+		OutputTokens int     `json:"output_tokens"`
+		WebSearches  int     `json:"web_searches"`
+		EstUSD       *string `json:"est_usd"`
+		WallSeconds  float64 `json:"wall_seconds"`
 	}
 	if err := json.Unmarshal([]byte(line), &rec); err != nil {
 		t.Fatalf("unmarshal usage record: %v; raw=%q", err, line)
