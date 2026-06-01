@@ -19,6 +19,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -46,15 +47,52 @@ type cfg struct {
 	showProgress bool
 	quiet        bool
 	usageOut     string
+	chainFile    string // Tier-2 JSONL destination; set by runners before case loop
 	usage        *usageCounters
+	tally        *runTally
 	// call is the API dispatch function. When nil, callClaude is used (production).
 	// Tests set this to a stub to avoid network calls.
 	call func(system, prompt string, withTools bool) (string, error)
 }
 
+// runTally tracks verified/errored counts across a single assay run for the SUMMARY block.
+type runTally struct {
+	mu       sync.Mutex
+	total    int
+	verified int // cases that got a real verdict (not "error")
+	counts   map[string]int
+}
+
+func newRunTally(total int) *runTally {
+	return &runTally{total: total, counts: make(map[string]int)}
+}
+
+func (rt *runTally) record(verdict string) {
+	rt.mu.Lock()
+	if verdict == "error" {
+		rt.counts["error"]++
+	} else {
+		rt.verified++
+		rt.counts[verdict]++
+	}
+	rt.mu.Unlock()
+}
+
+func (rt *runTally) snapshot() (total, verified int, counts map[string]int) {
+	rt.mu.Lock()
+	cp := make(map[string]int, len(rt.counts))
+	for k, v := range rt.counts {
+		cp[k] = v
+	}
+	total = rt.total
+	verified = rt.verified
+	rt.mu.Unlock()
+	return total, verified, cp
+}
+
 func main() {
 	var c cfg
-	var src, text string
+	var src, text, chainDir string
 	var ev, audit bool
 	flag.StringVar(&c.model, "model", envOr("ANTHROPIC_MODEL", defaultModel), "model id")
 	flag.StringVar(&src, "source", "", "transcript file → faithfulness mode")
@@ -68,8 +106,9 @@ func main() {
 	flag.IntVar(&c.maxRounds, "max-rounds", 2, "producer-critic rounds per claim (substance)")
 	flag.IntVar(&c.maxClaims, "max-claims", 0, "bound evidence grounding (0 = unlimited)")
 	flag.BoolVar(&c.showProgress, "progress", true, "show per-claim progress on stderr (default on)")
-	flag.BoolVar(&c.quiet, "quiet", false, "suppress progress + heartbeat; keep final USAGE line")
+	flag.BoolVar(&c.quiet, "quiet", false, "suppress per-case lines + heartbeat; keeps SUMMARY and writes Tier-2")
 	flag.StringVar(&c.usageOut, "usage-out", "", "append one JSON record per run to this file")
+	flag.StringVar(&chainDir, "chain-dir", "", "directory for Tier-2 JSONL verification chain (default: eval/<stamp>/)")
 	flag.Parse()
 
 	c.apiKey = os.Getenv("ANTHROPIC_API_KEY")
@@ -79,9 +118,39 @@ func main() {
 	c.usage = newUsageCounters()
 	input := readInput(text)
 
+	// Derive the fixture base name for Tier-2 JSONL naming.
+	fixtureName := "stdin"
+	if a := flag.Arg(0); a != "" {
+		fixtureName = strings.TrimSuffix(filepath.Base(a), filepath.Ext(a))
+	}
+
+	// Resolve the chain directory: explicit flag > default eval/<stamp>/.
+	if chainDir == "" {
+		stamp := time.Now().Format("20060102-1504")
+		chainDir = filepath.Join("eval", stamp+"-"+c.model)
+	}
+	if err := os.MkdirAll(chainDir, 0o755); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: cannot create chain-dir %q: %v\n", chainDir, err)
+		chainDir = ""
+	}
+
+	// Build the mode suffix for the JSONL filename.
+	modeSuffix := "substance"
+	switch {
+	case audit:
+		modeSuffix = "audit"
+	case ev:
+		modeSuffix = "grounding"
+	case src != "":
+		modeSuffix = "faithfulness"
+	}
+	if chainDir != "" {
+		c.chainFile = filepath.Join(chainDir, fixtureName+"."+modeSuffix+".jsonl")
+	}
+
 	stopHeartbeat := func() {}
 	if !c.quiet && c.showProgress {
-		stopHeartbeat = startHeartbeat(c.model, c.usage)
+		stopHeartbeat = startHeartbeat(c.model, c.usage, func() *runTally { return c.tally })
 	}
 
 	switch {
@@ -103,6 +172,12 @@ func main() {
 	}
 
 	stopHeartbeat()
+
+	// Print SUMMARY block to stderr (always, even in quiet mode — spec requires it).
+	if c.tally != nil {
+		printSummary(fixtureName, modeSuffix, c.model, c.tally, c.usage, c.chainFile)
+	}
+
 	printUsageLine(c.model, c.usage, c.usageOut)
 }
 
@@ -110,43 +185,91 @@ func main() {
 
 func (c cfg) progressEnabled() bool { return !c.quiet && c.showProgress }
 
-func (c cfg) progressPre(i, n int, mode, claim string) time.Time {
-	if !c.progressEnabled() {
-		return time.Time{}
-	}
-	label := fmt.Sprintf("[%d/%d] %s claim %d…", i+1, n, mode, i+1)
-	if len(claim) > 60 {
-		label += " " + claim[:57] + "…"
-	} else {
-		label += " " + claim
-	}
-	fmt.Fprintln(os.Stderr, label)
+// progressStart records the start time and sets the heartbeat label. It does NOT print a pre-call
+// line — the completion line printed by progressDone covers liveness (60s heartbeat fills the gap).
+func (c cfg) progressStart(i, n int, mode string) time.Time {
 	if c.usage != nil {
 		c.usage.setLabel(fmt.Sprintf("%s %d/%d", mode, i+1, n))
 	}
 	return time.Now()
 }
 
-func (c cfg) progressPost(i, n int, mode, verdict string, start time.Time) {
-	if !c.progressEnabled() || start.IsZero() {
+// progressDone prints one completion line per case to stderr (Tier 1). Always emitted unless quiet.
+// ✓ = real verdict; ✗ = error / no verdict.
+func (c cfg) progressDone(i, n int, verdict, claim string, start time.Time) {
+	if c.tally != nil {
+		c.tally.record(verdict)
+	}
+	if !c.progressEnabled() {
 		return
 	}
 	elapsed := time.Since(start).Round(10 * time.Millisecond)
-	fmt.Fprintf(os.Stderr, "[%d/%d] %s → %s (%s)\n", i+1, n, mode, verdict, elapsed)
+	sym := "✓"
+	if verdict == "error" {
+		sym = "✗"
+	}
+	label := claim
+	if len(label) > 60 {
+		label = label[:57] + "…"
+	}
+	fmt.Fprintf(os.Stderr, "[%3d/%d] %s %-13s %q  %s\n", i+1, n, sym, verdict, label, elapsed)
 }
+
+// printSummary emits the final SUMMARY block to stderr after a run completes.
+func printSummary(fixture, mode, model string, rt *runTally, u *usageCounters, chainFile string) {
+	total, verified, counts := rt.snapshot()
+	errored := total - verified
+	_, in, out, cr, cc, ws, _, elapsed := u.snapshot()
+	cost, _ := estimateCost(model, in, out, cr, cc, ws)
+
+	// Build verdict breakdown line (skip "error" — covered by errored count).
+	var parts []string
+	verdictOrder := []string{"supported", "mixed", "refuted", "unverifiable",
+		"faithful", "partial", "overstated", "absent", "contradicted",
+		"substantive", "hollow", "skipped (over cap)"}
+	for _, v := range verdictOrder {
+		if n := counts[v]; n > 0 {
+			parts = append(parts, fmt.Sprintf("%s %d", v, n))
+		}
+	}
+	// Any verdict not in the ordered list still gets printed.
+	inOrder := make(map[string]bool)
+	for _, v := range verdictOrder {
+		inOrder[v] = true
+	}
+	for v, n := range counts {
+		if !inOrder[v] && v != "error" {
+			parts = append(parts, fmt.Sprintf("%s %d", v, n))
+		}
+	}
+	if counts["error"] > 0 {
+		parts = append(parts, fmt.Sprintf("error %d", counts["error"]))
+	}
+
+	fmt.Fprintf(os.Stderr, "\nSUMMARY %s %s\n", fixture, mode)
+	fmt.Fprintf(os.Stderr, "  cases %d · verified %d · errored %d\n", total, verified, errored)
+	fmt.Fprintf(os.Stderr, "  %s\n", strings.Join(parts, " · "))
+	fmt.Fprintf(os.Stderr, "  wall %s · est_usd %s\n", elapsed.Round(time.Second), cost)
+	if chainFile != "" {
+		fmt.Fprintf(os.Stderr, "  detail: %s\n", chainFile)
+	}
+}
+
 
 // ── runners ──────────────────────────────────────────────────────────────────
 
-func (c cfg) runSubstance(input string) {
+func (c *cfg) runSubstance(input string) {
 	claims := c.decompose(input)
+	c.tally = newRunTally(len(claims))
 	results := make([]substance, len(claims))
 	for i, cl := range claims {
 		if c.verbose {
 			fmt.Println(c.bold(fmt.Sprintf("▸ claim %d/%d: %s", i+1, len(claims), cl)))
 		}
-		t := c.progressPre(i, len(claims), "substance", cl)
+		t := c.progressStart(i, len(claims), "substance")
 		results[i] = c.assayClaim(cl)
-		c.progressPost(i, len(claims), "substance", results[i].Verdict, t)
+		c.appendChain(substanceChainRecord(i, len(claims), cl, results[i], t))
+		c.progressDone(i, len(claims), results[i].Verdict, cl, t)
 	}
 	if c.asMarkdown {
 		fmt.Print(mdSubstance(results))
@@ -155,13 +278,15 @@ func (c cfg) runSubstance(input string) {
 	}
 }
 
-func (c cfg) runFaithfulness(input, src string) {
+func (c *cfg) runFaithfulness(input, src string) {
 	claims := splitSummary(input)
+	c.tally = newRunTally(len(claims))
 	results := make([]faith, len(claims))
 	for i, cl := range claims {
-		t := c.progressPre(i, len(claims), "faithfulness", cl)
+		t := c.progressStart(i, len(claims), "faithfulness")
 		results[i] = c.faithClaim(cl, src)
-		c.progressPost(i, len(claims), "faithfulness", results[i].Verdict, t)
+		c.appendChain(faithChainRecord(i, len(claims), cl, results[i], t))
+		c.progressDone(i, len(claims), results[i].Verdict, cl, t)
 	}
 	if c.asMarkdown {
 		fmt.Print(mdFaith(results))
@@ -185,16 +310,18 @@ func intendedProposition(fc faith, claim string) string {
 // the faithfulness pass to reconstruct the intended proposition, so we ground what the speaker
 // actually meant, not a literalized paraphrase. The audit grounding pass shares this same logic via
 // intendedProposition, so the audit's grounding column agrees with -evidence -source.
-func (c cfg) runEvidence(input, src string) {
+func (c *cfg) runEvidence(input, src string) {
 	claims := splitSummary(input)
+	c.tally = newRunTally(len(claims))
 	results := make([]evidence, len(claims))
 	for i, cl := range claims {
 		// Skip evidence grounding if over the cap.
 		if c.maxClaims > 0 && i >= c.maxClaims {
 			results[i] = evidence{Claim: cl, Verdict: "skipped (over cap)", Finding: ""}
+			c.tally.record("skipped (over cap)")
 			continue
 		}
-		t := c.progressPre(i, len(claims), "evidence", cl)
+		t := c.progressStart(i, len(claims), "evidence")
 		proposition := cl
 		if src != "" {
 			// Reconstruct the asserted proposition via the faithfulness pass so we ground what the
@@ -205,7 +332,8 @@ func (c cfg) runEvidence(input, src string) {
 		r := c.evidenceClaim(proposition)
 		r.Claim = cl // keep original label for display
 		results[i] = r
-		c.progressPost(i, len(claims), "evidence", results[i].Verdict, t)
+		c.appendChain(evidenceChainRecord(i, len(claims), cl, results[i], t))
+		c.progressDone(i, len(claims), results[i].Verdict, cl, t)
 	}
 	if c.asMarkdown {
 		fmt.Print(mdEvidence(results))
@@ -242,18 +370,15 @@ func (c cfg) computeAudit(claims []string, src string) ([]faith, []substance, []
 // sequence, then cross-tabulating the results. It shares the same decomposition as runSubstance,
 // but skips the producer-critic loop and just runs one substance pass per claim, since the audit is
 // more about cross-filter patterns than squeezing out every last drop of rigor from each claim.
-func (c cfg) runAudit(input, src string) {
+func (c *cfg) runAudit(input, src string) {
 	claims := splitSummary(input)
 	n := len(claims)
+	c.tally = newRunTally(n)
 	fs := make([]faith, n)
 	ss := make([]substance, n)
 	es := make([]evidence, n)
 	for i, cl := range claims {
-		t := c.progressPre(i, n, "audit", cl)
-		if !c.progressEnabled() && !c.asMarkdown {
-			// Legacy pre-progress path: print motion ahead of blocking calls.
-			fmt.Fprintln(os.Stderr, c.grey(fmt.Sprintf("auditing %d/%d…", i+1, n)))
-		}
+		t := c.progressStart(i, n, "audit")
 		fs[i] = c.faithClaim(cl, src)
 		ss[i] = c.assayClaim(cl)
 		if c.maxClaims > 0 && i >= c.maxClaims {
@@ -266,7 +391,8 @@ func (c cfg) runAudit(input, src string) {
 		}
 		verdictSummary := fmt.Sprintf("faith=%s sub=%s ev=%s",
 			fs[i].Verdict, ss[i].Verdict, es[i].Verdict)
-		c.progressPost(i, n, "audit", verdictSummary, t)
+		c.appendChain(auditChainRecord(i, n, cl, fs[i], ss[i], es[i], t))
+		c.progressDone(i, n, verdictSummary, cl, t)
 	}
 	fmt.Print(mdAudit(claims, fs, ss, es)) // audit is always markdown
 }
@@ -989,6 +1115,149 @@ func readInput(text string) string {
 	return defaultInput
 }
 
+// ── Tier-2 verification chain (JSONL per case) ───────────────────────────────
+
+// chainRecord is the common envelope written for every case. Mode-specific fields
+// are embedded as a json.RawMessage under "detail" to keep the schema flat.
+type chainRecord struct {
+	Idx     int             `json:"idx"`
+	Total   int             `json:"total"`
+	Mode    string          `json:"mode"`
+	Claim   string          `json:"claim"`
+	Verdict string          `json:"verdict"`
+	ElapsedS float64        `json:"elapsed_s"`
+	Detail  json.RawMessage `json:"detail"`
+}
+
+// appendChain appends one JSON record to c.chainFile. Errors are logged to
+// stderr and silently dropped — chain failures must never abort the run.
+func (c *cfg) appendChain(rec chainRecord) {
+	if c.chainFile == "" {
+		return
+	}
+	if c.verbose {
+		fmt.Fprintf(os.Stderr, "[chain] %s idx=%d verdict=%s\n", c.chainFile, rec.Idx, rec.Verdict)
+	}
+	data, err := json.Marshal(rec)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: chain marshal idx=%d: %v\n", rec.Idx, err)
+		return
+	}
+	f, err := os.OpenFile(c.chainFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: chain open %q: %v\n", c.chainFile, err)
+		return
+	}
+	defer f.Close()
+	fmt.Fprintln(f, string(data))
+}
+
+type substanceDetail struct {
+	Steelman      string        `json:"steelman"`
+	CritiqueByAxis []critiqueItem `json:"critique_by_axis"`
+	SurvivingClaim string       `json:"surviving_claim,omitempty"`
+	AddedConditions int         `json:"added_conditions,omitempty"`
+	Rounds        int           `json:"rounds"`
+	Reason        string        `json:"reason,omitempty"`
+}
+
+type faithDetail struct {
+	DefenderSupport string `json:"defender_support,omitempty"`
+	CriticFinding   string `json:"critic_finding,omitempty"`
+	DistortionType  string `json:"distortion_type,omitempty"`
+	SourceSays      string `json:"source_says,omitempty"`
+}
+
+type evidenceDetail struct {
+	Finding  string   `json:"finding,omitempty"`
+	Sources  []source `json:"sources,omitempty"`
+	ErrorCause string `json:"error_cause,omitempty"`
+}
+
+type auditDetail struct {
+	Faith     faithDetail    `json:"faith"`
+	Substance substanceDetail `json:"substance"`
+	Evidence  evidenceDetail `json:"evidence"`
+}
+
+func substanceChainRecord(i, total int, claim string, s substance, start time.Time) chainRecord {
+	det := substanceDetail{
+		Steelman:      s.Steelman,
+		CritiqueByAxis: s.Critique,
+		SurvivingClaim: s.SurvivingClaim,
+		Rounds:        s.Rounds,
+		Reason:        s.Reason,
+	}
+	raw, _ := json.Marshal(det)
+	return chainRecord{
+		Idx: i, Total: total, Mode: "substance",
+		Claim: claim, Verdict: s.Verdict,
+		ElapsedS: time.Since(start).Seconds(),
+		Detail: raw,
+	}
+}
+
+func faithChainRecord(i, total int, claim string, f faith, start time.Time) chainRecord {
+	det := faithDetail{
+		CriticFinding: f.Evidence,
+		SourceSays:    f.SourceSays,
+	}
+	raw, _ := json.Marshal(det)
+	return chainRecord{
+		Idx: i, Total: total, Mode: "faithfulness",
+		Claim: claim, Verdict: f.Verdict,
+		ElapsedS: time.Since(start).Seconds(),
+		Detail: raw,
+	}
+}
+
+func evidenceChainRecord(i, total int, claim string, e evidence, start time.Time) chainRecord {
+	errCause := ""
+	if e.Verdict == "error" {
+		errCause = e.Finding
+	}
+	det := evidenceDetail{
+		Finding:    e.Finding,
+		Sources:    e.Sources,
+		ErrorCause: errCause,
+	}
+	raw, _ := json.Marshal(det)
+	return chainRecord{
+		Idx: i, Total: total, Mode: "grounding",
+		Claim: claim, Verdict: e.Verdict,
+		ElapsedS: time.Since(start).Seconds(),
+		Detail: raw,
+	}
+}
+
+func auditChainRecord(i, n int, claim string, f faith, s substance, e evidence, start time.Time) chainRecord {
+	det := auditDetail{
+		Faith: faithDetail{
+			CriticFinding: f.Evidence,
+			SourceSays:    f.SourceSays,
+		},
+		Substance: substanceDetail{
+			Steelman:      s.Steelman,
+			CritiqueByAxis: s.Critique,
+			SurvivingClaim: s.SurvivingClaim,
+			Rounds:        s.Rounds,
+			Reason:        s.Reason,
+		},
+		Evidence: evidenceDetail{
+			Finding: e.Finding,
+			Sources: e.Sources,
+		},
+	}
+	verdictSummary := fmt.Sprintf("faith=%s sub=%s ev=%s", f.Verdict, s.Verdict, e.Verdict)
+	raw, _ := json.Marshal(det)
+	return chainRecord{
+		Idx: i, Total: n, Mode: "audit",
+		Claim: claim, Verdict: verdictSummary,
+		ElapsedS: time.Since(start).Seconds(),
+		Detail: raw,
+	}
+}
+
 // ── usage accounting ─────────────────────────────────────────────────────────
 
 // priceEntry holds per-million-token rates and per-search cost for one model.
@@ -1095,16 +1364,40 @@ func estimateCost(model string, in, out, cacheRead, cacheCreate, webSearches int
 }
 
 // heartbeatLine produces a one-line cumulative status for the 60s ticker.
-func heartbeatLine(model string, u *usageCounters) string {
+// rt may be nil (e.g. when called before the runner initialises its tally).
+func heartbeatLine(model string, u *usageCounters, rt *runTally) string {
 	calls, in, out, cacheRead, cacheCreate, webSearches, label, elapsed := u.snapshot()
 	cost, _ := estimateCost(model, in, out, cacheRead, cacheCreate, webSearches)
-	return fmt.Sprintf("[heartbeat] elapsed=%s calls=%d in=%d out=%d web=%d est=%s claim=%q",
-		elapsed.Round(time.Second), calls, in, out, webSearches, cost, label)
+	tallyPart := ""
+	if rt != nil {
+		total, verified, counts := rt.snapshot()
+		errored := (total - verified) - counts["skipped (over cap)"]
+		if errored < 0 {
+			errored = 0
+		}
+		seen := 0
+		for _, v := range counts {
+			seen += v
+		}
+		seen += verified - func() int {
+			n := 0
+			for _, v := range counts {
+				n += v
+			}
+			return n
+		}()
+		// Compute seen as verified + all error/skipped.
+		seen = verified + counts["error"] + counts["skipped (over cap)"]
+		tallyPart = fmt.Sprintf(" verified=%d errored=%d seen=%d/%d", verified, errored, seen, total)
+	}
+	return fmt.Sprintf("[heartbeat] elapsed=%s calls=%d in=%d out=%d web=%d est=%s%s claim=%q",
+		elapsed.Round(time.Second), calls, in, out, webSearches, cost, tallyPart, label)
 }
 
 // startHeartbeat starts a background goroutine that prints a one-line status
 // to stderr every 60 seconds. Cancel it via the returned cancel func.
-func startHeartbeat(model string, u *usageCounters) func() {
+// rt is a pointer to the cfg's tally field — it may be nil at heartbeat start and populated later.
+func startHeartbeat(model string, u *usageCounters, getTally func() *runTally) func() {
 	done := make(chan struct{})
 	go func() {
 		t := time.NewTicker(60 * time.Second)
@@ -1114,7 +1407,7 @@ func startHeartbeat(model string, u *usageCounters) func() {
 			case <-done:
 				return
 			case <-t.C:
-				fmt.Fprintln(os.Stderr, heartbeatLine(model, u))
+				fmt.Fprintln(os.Stderr, heartbeatLine(model, u, getTally()))
 			}
 		}
 	}()

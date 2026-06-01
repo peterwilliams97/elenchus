@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestSplitSummaryNewlines(t *testing.T) {
@@ -607,8 +608,8 @@ func TestStdoutPurity(t *testing.T) {
 	if !strings.Contains(out, "## Grounding") {
 		t.Errorf("stdout should contain markdown table, got: %.200q", out)
 	}
-	// stdout must NOT contain progress or USAGE lines
-	for _, bad := range []string{"[1/", "[2/", "USAGE ", "[heartbeat]"} {
+	// stdout must NOT contain progress, per-case completion lines, or USAGE lines.
+	for _, bad := range []string{"✓", "✗", "USAGE ", "[heartbeat]", "SUMMARY "} {
 		if strings.Contains(out, bad) {
 			t.Errorf("stdout contains progress/USAGE marker %q — violates stdout purity", bad)
 		}
@@ -705,5 +706,147 @@ func TestUsageOutFile(t *testing.T) {
 		t.Error("est_usd should be non-null for known model")
 	} else if !strings.HasPrefix(*rec.EstUSD, "$") {
 		t.Errorf("est_usd should start with $, got %q", *rec.EstUSD)
+	}
+}
+
+// ── Tier-1/Tier-2 reporting tests ─────────────────────────────────────────────
+
+// TestProgressOneLine confirms that runEvidence emits exactly one stderr line per completed case
+// (no pre-call line) and that the line format matches the tier-1 spec.
+func TestProgressOneLine(t *testing.T) {
+	origStderr := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stderr = w
+
+	stub := func(system, prompt string, withTools bool) (string, error) {
+		switch {
+		case strings.Contains(system, "You are the Evidence Grounder"):
+			return `{"verdict":"supported","finding":"found","sources":[]}`, nil
+		default:
+			return `[]`, nil
+		}
+	}
+	c := cfg{
+		call:         stub,
+		showProgress: true,
+		usage:        newUsageCounters(),
+	}
+	c.runEvidence("1. Claim one.\n2. Claim two.", "")
+
+	w.Close()
+	os.Stderr = origStderr
+
+	captured, _ := io.ReadAll(r)
+	lines := strings.Split(strings.TrimSpace(string(captured)), "\n")
+
+	// Filter to just the per-case completion lines (start with "[").
+	var caseLines []string
+	for _, l := range lines {
+		if strings.HasPrefix(l, "[") && (strings.Contains(l, "✓") || strings.Contains(l, "✗")) {
+			caseLines = append(caseLines, l)
+		}
+	}
+	if len(caseLines) != 2 {
+		t.Errorf("want exactly 2 per-case lines, got %d; stderr:\n%s", len(caseLines), string(captured))
+	}
+	// No pre-call line: lines must not contain "claim N…" pattern.
+	for _, l := range lines {
+		if strings.Contains(l, "claim ") && strings.HasSuffix(strings.TrimSpace(l), "…") {
+			t.Errorf("found pre-call line in stderr: %q", l)
+		}
+	}
+	// Each case line must carry the verdict word.
+	for _, l := range caseLines {
+		if !strings.Contains(l, "supported") {
+			t.Errorf("case line missing verdict: %q", l)
+		}
+	}
+}
+
+// TestRunTallyCorrect confirms verified/errored/total counts from a mix of real verdicts and errors.
+func TestRunTallyCorrect(t *testing.T) {
+	rt := newRunTally(5)
+	rt.record("supported")
+	rt.record("mixed")
+	rt.record("error")
+	rt.record("refuted")
+	rt.record("error")
+
+	total, verified, counts := rt.snapshot()
+	if total != 5 {
+		t.Errorf("total: want 5, got %d", total)
+	}
+	if verified != 3 {
+		t.Errorf("verified: want 3, got %d", verified)
+	}
+	errored := total - verified
+	if errored != 2 {
+		t.Errorf("errored: want 2, got %d", errored)
+	}
+	if counts["error"] != 2 {
+		t.Errorf("counts[error]: want 2, got %d", counts["error"])
+	}
+	if counts["supported"] != 1 {
+		t.Errorf("counts[supported]: want 1, got %d", counts["supported"])
+	}
+}
+
+// TestChainJSONLWritten verifies that appendChain writes a valid JSONL record for a grounding case,
+// including error_cause on an errored case.
+func TestChainJSONLWritten(t *testing.T) {
+	dir := t.TempDir()
+	chainPath := filepath.Join(dir, "test.grounding.jsonl")
+
+	c := cfg{chainFile: chainPath, usage: newUsageCounters()}
+
+	// Write a normal supported case.
+	ev1 := evidence{Claim: "claim one", Verdict: "supported", Finding: "confirmed by data"}
+	c.appendChain(evidenceChainRecord(0, 2, "claim one", ev1, time.Now().Add(-2*time.Second)))
+
+	// Write an errored case.
+	ev2 := evidence{Claim: "claim two", Verdict: "error", Finding: "network timeout"}
+	c.appendChain(evidenceChainRecord(1, 2, "claim two", ev2, time.Now().Add(-1*time.Second)))
+
+	data, err := os.ReadFile(chainPath)
+	if err != nil {
+		t.Fatalf("read chain file: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("want 2 JSONL records, got %d; file:\n%s", len(lines), string(data))
+	}
+
+	// First record: supported.
+	var rec1 chainRecord
+	if err := json.Unmarshal([]byte(lines[0]), &rec1); err != nil {
+		t.Fatalf("unmarshal rec1: %v; raw=%q", err, lines[0])
+	}
+	if rec1.Verdict != "supported" {
+		t.Errorf("rec1 verdict: want supported, got %q", rec1.Verdict)
+	}
+	if rec1.Mode != "grounding" {
+		t.Errorf("rec1 mode: want grounding, got %q", rec1.Mode)
+	}
+	if rec1.ElapsedS <= 0 {
+		t.Errorf("rec1 elapsed_s should be positive, got %f", rec1.ElapsedS)
+	}
+
+	// Second record: error — detail must carry error_cause.
+	var rec2 chainRecord
+	if err := json.Unmarshal([]byte(lines[1]), &rec2); err != nil {
+		t.Fatalf("unmarshal rec2: %v; raw=%q", err, lines[1])
+	}
+	if rec2.Verdict != "error" {
+		t.Errorf("rec2 verdict: want error, got %q", rec2.Verdict)
+	}
+	var det evidenceDetail
+	if err := json.Unmarshal(rec2.Detail, &det); err != nil {
+		t.Fatalf("unmarshal rec2 detail: %v", err)
+	}
+	if det.ErrorCause != "network timeout" {
+		t.Errorf("rec2 error_cause: want 'network timeout', got %q", det.ErrorCause)
 	}
 }
