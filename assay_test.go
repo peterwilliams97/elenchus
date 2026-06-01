@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestSplitSummaryNewlines(t *testing.T) {
@@ -468,54 +471,382 @@ func TestMaxClaimsCapComputeAudit(t *testing.T) {
 	}
 }
 
-// TestFixtureIngestion iterates testdata/fixtures and passes each real file through splitSummary.
+// TestFixtureIngestion iterates fixtures/raw and passes each real file through splitSummary.
 // Goal: confirm the regex boundaries don't panic or hang on large, heterogeneous real-world inputs.
-// Files missing from the directory (fetch failures) are skipped with t.Skip — never substituted.
+// Expected files that are missing are t.Skip'd — never substituted.
 func TestFixtureIngestion(t *testing.T) {
-	const dir = "testdata/fixtures"
-	entries, err := os.ReadDir(dir)
-	if os.IsNotExist(err) {
-		t.Skipf("testdata/fixtures not present — run curl downloads to populate")
-	}
-	if err != nil {
-		t.Fatalf("ReadDir %s: %v", dir, err)
-	}
-	if len(entries) == 0 {
-		t.Skipf("testdata/fixtures is empty — no fixtures were successfully fetched")
+	const (
+		dir        = "fixtures/raw"
+		maxSegSize = 4096 // no legitimate atomic-claim line exceeds 4 KB; table blobs do
+	)
+
+	// The canonical set. Each missing file gets its own skip, not a test failure.
+	expected := []string{
+		"legal.md",
+		"accounting.md",
+		"sales.md",
+		"marketing.md",
+		"pm.md",
+		"engineering.md",
+		"contract.md",
 	}
 
-	cases := []struct {
-		name string // expected base filename
-	}{
-		{"legal.txt"},
-		{"accounting.txt"},
-		{"pm.md"},
-		{"engineering.html"},
-		{"contract.xml"},
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		t.Skipf("fixtures/raw not present — run fetch script to populate")
 	}
 
-	for _, tc := range cases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			path := filepath.Join(dir, tc.name)
+	for _, name := range expected {
+		name := name
+		t.Run(name, func(t *testing.T) {
+			path := filepath.Join(dir, name)
 			data, err := os.ReadFile(path)
 			if os.IsNotExist(err) {
-				t.Skipf("%s not present — fetch failed or was not attempted", tc.name)
+				t.Skipf("%s not present — fetch failed or not yet attempted", name)
 			}
 			if err != nil {
 				t.Fatalf("ReadFile %s: %v", path, err)
 			}
 			if len(data) == 0 {
-				t.Skipf("%s is empty — fetch may have failed silently", tc.name)
+				t.Skipf("%s is empty — fetch may have failed silently", name)
 			}
 			content := string(data)
-			// splitSummary must not panic or hang regardless of content shape.
 			got := splitSummary(content)
 			if len(got) == 0 {
-				t.Errorf("%s: splitSummary returned 0 items on %d-byte input", tc.name, len(data))
+				t.Errorf("%s: splitSummary returned 0 items on %d-byte input", name, len(data))
+				return
 			}
-			t.Logf("%s: %d bytes → %d segments (first: %.80q)",
-				tc.name, len(data), len(got), strings.TrimSpace(got[0]))
+			// Sanity guard: no single segment may exceed maxSegSize.
+			// A giant segment means the file contains table blobs or unbroken prose
+			// that splitSummary can't decompose — the fixture is not usable as input.
+			var maxSeg int
+			for _, seg := range got {
+				if len(seg) > maxSeg {
+					maxSeg = len(seg)
+				}
+				if len(seg) > maxSegSize {
+					t.Errorf("%s: segment of %d bytes exceeds %d-byte limit — fixture likely contains table blobs or unbroken runs; re-extract",
+						name, len(seg), maxSegSize)
+				}
+			}
+			avgSeg := len(data) / len(got)
+			t.Logf("%s: %d bytes → %d segments, avg %d b/seg, max seg %d b (first: %.80q)",
+				name, len(data), len(got), avgSeg, maxSeg, strings.TrimSpace(got[0]))
 		})
+	}
+}
+
+// ── usage accounting tests ────────────────────────────────────────────────────
+
+// TestUsageAccumulatorSumsCorrectly drives callJSON through the stub seam and asserts the
+// usageCounters accumulate correctly from canned API-response-shaped JSON. Because the stub
+// bypasses callClaude entirely, we drive the accumulator directly to test the math.
+func TestUsageAccumulatorSumsCorrectly(t *testing.T) {
+	u := newUsageCounters()
+	u.add(100, 50, 10, 5, 1)
+	u.add(200, 80, 20, 8, 2)
+
+	calls, in, out, cacheRead, cacheCreate, webSearches, _, _ := u.snapshot()
+	if calls != 2 {
+		t.Errorf("calls: want 2, got %d", calls)
+	}
+	if in != 300 {
+		t.Errorf("inputTokens: want 300, got %d", in)
+	}
+	if out != 130 {
+		t.Errorf("outputTokens: want 130, got %d", out)
+	}
+	if cacheRead != 30 {
+		t.Errorf("cacheReadTokens: want 30, got %d", cacheRead)
+	}
+	if cacheCreate != 13 {
+		t.Errorf("cacheCreateTokens: want 13, got %d", cacheCreate)
+	}
+	if webSearches != 3 {
+		t.Errorf("webSearches: want 3, got %d", webSearches)
+	}
+}
+
+// TestStdoutPurity drives a stubbed runEvidence and asserts that stdout carries only the markdown
+// table — no progress or USAGE lines — protecting -md harness integrity. stderr is not checked here
+// since progress intentionally goes there.
+func TestStdoutPurity(t *testing.T) {
+	// Capture stdout.
+	origStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stdout = w
+
+	stub := func(system, prompt string, withTools bool) (string, error) {
+		switch {
+		case strings.Contains(system, "You are the Defender"):
+			return `{"found":true,"quotes":["q"],"best_case":"direct"}`, nil
+		case strings.Contains(system, "You are the Faithfulness Critic"):
+			return `{"findings":[],"verdict":"faithful","evidence":"e","what_source_actually_says":null}`, nil
+		case strings.Contains(system, "You are the Evidence Grounder"):
+			return `{"verdict":"supported","finding":"found","sources":[]}`, nil
+		default:
+			return `[]`, nil
+		}
+	}
+	c := cfg{
+		call:         stub,
+		asMarkdown:   true,
+		showProgress: true, // progress ON — but it must go to stderr, not stdout
+		usage:        newUsageCounters(),
+	}
+	c.runEvidence("1. Claim one.\n2. Claim two.", "")
+
+	w.Close()
+	os.Stdout = origStdout
+
+	captured, _ := io.ReadAll(r)
+	out := string(captured)
+
+	// stdout must contain the markdown table header
+	if !strings.Contains(out, "## Grounding") {
+		t.Errorf("stdout should contain markdown table, got: %.200q", out)
+	}
+	// stdout must NOT contain progress, per-case completion lines, or USAGE lines.
+	for _, bad := range []string{"✓", "✗", "USAGE ", "[heartbeat]", "SUMMARY "} {
+		if strings.Contains(out, bad) {
+			t.Errorf("stdout contains progress/USAGE marker %q — violates stdout purity", bad)
+		}
+	}
+}
+
+// TestPriceLookupKnownModel checks that a known model returns a numeric estimate.
+func TestPriceLookupKnownModel(t *testing.T) {
+	est, ok := estimateCost("claude-sonnet-4-6", 1_000_000, 1_000_000, 0, 0, 0)
+	if !ok {
+		t.Errorf("want ok=true for known model, got false; est=%q", est)
+	}
+	if !strings.HasPrefix(est, "$") {
+		t.Errorf("want dollar-prefixed estimate, got %q", est)
+	}
+	if !strings.Contains(est, priceTableDate) {
+		t.Errorf("want price table date %q in estimate %q", priceTableDate, est)
+	}
+}
+
+// TestPriceLookupUnknownModel checks that an unknown model returns tokens-present, cost flagged n/a.
+func TestPriceLookupUnknownModel(t *testing.T) {
+	est, ok := estimateCost("claude-unknown-9999", 500, 200, 0, 0, 0)
+	if ok {
+		t.Errorf("want ok=false for unknown model, got true; est=%q", est)
+	}
+	if !strings.Contains(est, "n/a") {
+		t.Errorf("want 'n/a' in estimate for unknown model, got %q", est)
+	}
+	// Measured token counts must appear in the string so the caller can still see them.
+	if !strings.Contains(est, "in=500") {
+		t.Errorf("want input token count in estimate, got %q", est)
+	}
+}
+
+// TestPriceLookupUnsetPrices verifies that a model entry with InputPerMtok<0 prints the TODO
+// sentinel rather than a fabricated number.
+func TestPriceLookupUnsetPrices(t *testing.T) {
+	// Temporarily install a model entry with unset prices.
+	priceTable["__test_unset__"] = priceEntry{InputPerMtok: -1}
+	defer delete(priceTable, "__test_unset__")
+
+	est, ok := estimateCost("__test_unset__", 100, 50, 0, 0, 0)
+	if ok {
+		t.Errorf("want ok=false for unset prices, got true; est=%q", est)
+	}
+	if !strings.Contains(est, "TODO") {
+		t.Errorf("want TODO sentinel for unset prices, got %q", est)
+	}
+}
+
+// TestUsageOutFile verifies that printUsageLine appends a valid JSON record when -usage-out is set.
+func TestUsageOutFile(t *testing.T) {
+	tmp, err := os.CreateTemp(t.TempDir(), "usage*.jsonl")
+	if err != nil {
+		t.Fatalf("temp file: %v", err)
+	}
+	tmp.Close()
+
+	u := newUsageCounters()
+	u.add(1000, 500, 100, 50, 2)
+	printUsageLine("claude-sonnet-4-6", u, tmp.Name())
+
+	data, err := os.ReadFile(tmp.Name())
+	if err != nil {
+		t.Fatalf("read usage file: %v", err)
+	}
+	line := strings.TrimSpace(string(data))
+	if line == "" {
+		t.Fatal("usage file is empty")
+	}
+	var rec struct {
+		Model        string   `json:"model"`
+		Calls        int      `json:"calls"`
+		InputTokens  int      `json:"input_tokens"`
+		OutputTokens int      `json:"output_tokens"`
+		WebSearches  int      `json:"web_searches"`
+		EstUSD       *string  `json:"est_usd"`
+		WallSeconds  float64  `json:"wall_seconds"`
+	}
+	if err := json.Unmarshal([]byte(line), &rec); err != nil {
+		t.Fatalf("unmarshal usage record: %v; raw=%q", err, line)
+	}
+	if rec.Model != "claude-sonnet-4-6" {
+		t.Errorf("model: want claude-sonnet-4-6, got %q", rec.Model)
+	}
+	if rec.Calls != 1 {
+		t.Errorf("calls: want 1, got %d", rec.Calls)
+	}
+	if rec.InputTokens != 1000 {
+		t.Errorf("input_tokens: want 1000, got %d", rec.InputTokens)
+	}
+	if rec.EstUSD == nil {
+		t.Error("est_usd should be non-null for known model")
+	} else if !strings.HasPrefix(*rec.EstUSD, "$") {
+		t.Errorf("est_usd should start with $, got %q", *rec.EstUSD)
+	}
+}
+
+// ── Tier-1/Tier-2 reporting tests ─────────────────────────────────────────────
+
+// TestProgressOneLine confirms that runEvidence emits exactly one stderr line per completed case
+// (no pre-call line) and that the line format matches the tier-1 spec.
+func TestProgressOneLine(t *testing.T) {
+	origStderr := os.Stderr
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("pipe: %v", err)
+	}
+	os.Stderr = w
+
+	stub := func(system, prompt string, withTools bool) (string, error) {
+		switch {
+		case strings.Contains(system, "You are the Evidence Grounder"):
+			return `{"verdict":"supported","finding":"found","sources":[]}`, nil
+		default:
+			return `[]`, nil
+		}
+	}
+	c := cfg{
+		call:         stub,
+		showProgress: true,
+		usage:        newUsageCounters(),
+	}
+	c.runEvidence("1. Claim one.\n2. Claim two.", "")
+
+	w.Close()
+	os.Stderr = origStderr
+
+	captured, _ := io.ReadAll(r)
+	lines := strings.Split(strings.TrimSpace(string(captured)), "\n")
+
+	// Filter to just the per-case completion lines (start with "[").
+	var caseLines []string
+	for _, l := range lines {
+		if strings.HasPrefix(l, "[") && (strings.Contains(l, "✓") || strings.Contains(l, "✗")) {
+			caseLines = append(caseLines, l)
+		}
+	}
+	if len(caseLines) != 2 {
+		t.Errorf("want exactly 2 per-case lines, got %d; stderr:\n%s", len(caseLines), string(captured))
+	}
+	// No pre-call line: lines must not contain "claim N…" pattern.
+	for _, l := range lines {
+		if strings.Contains(l, "claim ") && strings.HasSuffix(strings.TrimSpace(l), "…") {
+			t.Errorf("found pre-call line in stderr: %q", l)
+		}
+	}
+	// Each case line must carry the verdict word.
+	for _, l := range caseLines {
+		if !strings.Contains(l, "supported") {
+			t.Errorf("case line missing verdict: %q", l)
+		}
+	}
+}
+
+// TestRunTallyCorrect confirms verified/errored/total counts from a mix of real verdicts and errors.
+func TestRunTallyCorrect(t *testing.T) {
+	rt := newRunTally(5)
+	rt.record("supported")
+	rt.record("mixed")
+	rt.record("error")
+	rt.record("refuted")
+	rt.record("error")
+
+	total, verified, counts := rt.snapshot()
+	if total != 5 {
+		t.Errorf("total: want 5, got %d", total)
+	}
+	if verified != 3 {
+		t.Errorf("verified: want 3, got %d", verified)
+	}
+	errored := total - verified
+	if errored != 2 {
+		t.Errorf("errored: want 2, got %d", errored)
+	}
+	if counts["error"] != 2 {
+		t.Errorf("counts[error]: want 2, got %d", counts["error"])
+	}
+	if counts["supported"] != 1 {
+		t.Errorf("counts[supported]: want 1, got %d", counts["supported"])
+	}
+}
+
+// TestChainJSONLWritten verifies that appendChain writes a valid JSONL record for a grounding case,
+// including error_cause on an errored case.
+func TestChainJSONLWritten(t *testing.T) {
+	dir := t.TempDir()
+	chainPath := filepath.Join(dir, "test.grounding.jsonl")
+
+	c := cfg{chainFile: chainPath, usage: newUsageCounters()}
+
+	// Write a normal supported case.
+	ev1 := evidence{Claim: "claim one", Verdict: "supported", Finding: "confirmed by data"}
+	c.appendChain(evidenceChainRecord(0, 2, "claim one", ev1, time.Now().Add(-2*time.Second)))
+
+	// Write an errored case.
+	ev2 := evidence{Claim: "claim two", Verdict: "error", Finding: "network timeout"}
+	c.appendChain(evidenceChainRecord(1, 2, "claim two", ev2, time.Now().Add(-1*time.Second)))
+
+	data, err := os.ReadFile(chainPath)
+	if err != nil {
+		t.Fatalf("read chain file: %v", err)
+	}
+	lines := strings.Split(strings.TrimSpace(string(data)), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("want 2 JSONL records, got %d; file:\n%s", len(lines), string(data))
+	}
+
+	// First record: supported.
+	var rec1 chainRecord
+	if err := json.Unmarshal([]byte(lines[0]), &rec1); err != nil {
+		t.Fatalf("unmarshal rec1: %v; raw=%q", err, lines[0])
+	}
+	if rec1.Verdict != "supported" {
+		t.Errorf("rec1 verdict: want supported, got %q", rec1.Verdict)
+	}
+	if rec1.Mode != "grounding" {
+		t.Errorf("rec1 mode: want grounding, got %q", rec1.Mode)
+	}
+	if rec1.ElapsedS <= 0 {
+		t.Errorf("rec1 elapsed_s should be positive, got %f", rec1.ElapsedS)
+	}
+
+	// Second record: error — detail must carry error_cause.
+	var rec2 chainRecord
+	if err := json.Unmarshal([]byte(lines[1]), &rec2); err != nil {
+		t.Fatalf("unmarshal rec2: %v; raw=%q", err, lines[1])
+	}
+	if rec2.Verdict != "error" {
+		t.Errorf("rec2 verdict: want error, got %q", rec2.Verdict)
+	}
+	var det evidenceDetail
+	if err := json.Unmarshal(rec2.Detail, &det); err != nil {
+		t.Fatalf("unmarshal rec2 detail: %v", err)
+	}
+	if det.ErrorCause != "network timeout" {
+		t.Errorf("rec2 error_cause: want 'network timeout', got %q", det.ErrorCause)
 	}
 }

@@ -19,8 +19,7 @@ Three operating modes, plus Go-only extras:
 - **Audit** (`-audit -source`) — all three modes in one cross-tab (Go only)
 - **Markdown output** (`-md`) — emit markdown tables instead of terminal colour (Go only)
 
-`assay.py` is kept for historical comparison only — do not edit it. It will be removed and
-referenced by git SHA.
+`assay.py` (the retired Python implementation) is archived at git SHA `469ebe4`.
 
 ### Tracks
 

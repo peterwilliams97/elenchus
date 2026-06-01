@@ -1,5 +1,5 @@
-setup.sh
-assay
+/assay
+/setup.sh
 __pycache__/
 *.pyc
 .DS_Store

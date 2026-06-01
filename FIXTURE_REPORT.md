@@ -1,58 +1,38 @@
-# Phase 2 Fixture Collection Report
+# Fixture Collection Report
 
-**Date:** 2026-05-31
-**Status:** HALTED — No real sources obtained
-**Reason:** Environment constraints + CLAUDE.md discipline
+## Current state — 2026-06-01
 
-## Attempted Sources
+**Status: 7/7 obtained.** All slots populated with real, verified documents.
 
-I attempted to fetch REAL documents for the 7 test functions according to the specification:
+| function    | file               | source                                                                                          | verify-snippet (present in file) |
+|-------------|--------------------|-------------------------------------------------------------------------------------------------|----------------------------------|
+| legal       | `legal.md`         | github/dmca — RIAA DMCA notice re youtube-dl (2020-10-23)                                      | "perjury, we submit that the RIAA is authorized to act" |
+| accounting  | `accounting.md`    | SEC EDGAR 8-K Ex-99.1 — Coinbase Q3 2025 shareholder letter                                    | "Total revenue in Q3 was $1.9 billion" |
+| sales       | `sales.md`         | YC launches — Risely AI (O4v)                                                                   | "1 in 3 students drop out because of poor student service" |
+| marketing   | `marketing.md`     | Fairphone Gen. 6 press release PDF (fairphone.com, 2025-07)                                    | "over 50% fair or recycled materials" (line-wrapped in PDF extraction) |
+| pm          | `pm.md`            | ethereum/EIPs — EIP-1559 fee-market proposal                                                   | "There is a base fee per gas in protocol" |
+| engineering | `engineering.md`   | GitLab blog — database outage postmortem 2017-01-31                                             | "around 300 GB of data had already been removed" |
+| contract    | `contract.md`      | github/site-policy — GitHub Marketplace Developer Agreement (effective 2025-05-27)              | "govern your participation in GitHub" |
 
-| Function                             | Source Attempted        | Result | Why Failed |
-|--------------------------------------|-------------------------|--------|-----------|
-| legal                                | OLC opinions (justice.gov)   | ✗ | PDFs require extraction; HTML pages 404 or JavaScript-heavy |
-| accounting                           | SEC EDGAR 10-K MD&A          | ✗ | Requires PDF parsing or complex HTML extraction |
-| sales                                | Pitch decks / press releases | ✗ | Image-heavy or behind JS rendering |
-| marketing                            | BusinessWire / newsroom press releases | ✗ | Require JS rendering or scraping |
-| pm                                   | PEP 585 / PEP 8 from peps.python.org or raw GitHub | ✗ | Fetch returns redirects or 302 responses |
-| engineering                          | Cloudflare blog postmortem   | ✗ | JavaScript-heavy extraction; yields noise not clean text |
-| contract                             | SEC EDGAR 8-K + Exhibit 10   | ✗ | PDFs and complex HTML structure |
+All files are in `fixtures/raw/` (gitignored — analysis use only, not redistribution).
+`TestFixtureIngestion` in `assay_test.go` runs each through `splitSummary`; missing files are
+`t.Skip`'d, never substituted.
 
-## Discipline Applied
+## Superseded stopgap files (deleted)
 
-Per CLAUDE.md "Hard rule: never fabricate inputs":
+The following genre-mismatched files from the 2026-06-01 Phase 1 session have been removed:
 
-> NEVER synthesize a fixture, test input, sample document, dataset, or "example" of a real artifact.
-> If a real one is required and cannot be fetched or obtained, STOP and report
-> "could not obtain real <X>" for that item. Do not substitute a fabricated stand-in.
+| deleted file        | was                                          |
+|---------------------|----------------------------------------------|
+| `legal.txt`         | Project Gutenberg — Franklin autobiography   |
+| `engineering.html`  | SQLite architecture page (HTML)              |
+| `pm.md`             | 18F Technology Budgeting Handbook            |
 
-**This is the correct choice.** A populated results table built on fabricated inputs would:
-1. Invert the tool's entire purpose (a claim validator running on fake claims)
-2. Make calibration signals invalid
-3. Hide real bugs that would surface against actual messy prose
+## History
 
-## What Was Completed
-
-**Phase 1 (COMPLETE):**
-- Added `-max-claims N` flag to bound evidence grounding
-- Seam tests verify the cap works and are mutation-tested
-- All tests pass; build succeeds
-
-**Phase 2 (INCOMPLETE):**
-- No real sources successfully fetched
-- No fixtures created
-- No assay runs possible
-
-## Next Steps
-
-To complete Phase 2, either:
-1. Manually provide real documents (copy/paste from sources)
-2. Use a different environment with better web access or tooling (lynx, wkhtmltohtml, etc.)
-3. Accept that the fixture test is not possible without real source material
-4. Use different test strategies (e.g., unit tests of individual parsing/grounding logic)
-
-## Recommendation
-
-Report Phase 1 as complete and ship the `-max-claims` feature. Phase 2's fixture collection is
-blocked by environment constraints, not code issues. The evidence-cap feature is valuable
-independently of the calibration exercise.
+- **2026-05-31** — original Phase 2 session halted with 0/7 fixtures (all curl attempts failed).
+  Failure record at git SHA `a1684e0`.
+- **2026-06-01** — Phase 1 stopgap: 3 genre-mismatched public-domain docs fetched into
+  `testdata/fixtures/` then moved to `fixtures/raw/`.
+- **2026-06-01** — Phase 2 complete: all 7 real-genre docs fetched, snippets verified, stopgaps
+  deleted. This report reflects final state.

@@ -44,18 +44,18 @@ filled later, when the outcome is observable, and assigns the ground-truth label
   output in a way that would not have happened otherwise.
 - **disadvantage** — applying rigour degraded the output, added noise, or consumed effort with no
   offsetting gain (the deal cooled, the idea was strangled, momentum was lost).
-- **irrelevant** — rigour ran but the output would have been the same without it; neither helped
-  nor hurt.
+- **irrelevant** — rigour ran but the output would have been the same without it; neither helped nor
+   hurt.
 
 Assign `label` from the **observed outcome**, not from how it felt at the time.
 
 ## Why `gut` is load-bearing
 
-The map has value only where it disagrees with instinct. Recording `gut` before acting is what
-makes the two goal metrics computable: the **disagreement win-rate** (where `gut` and `map_call`
-differ, how often is the map right against `label`) and the **false-negative gate** (`acted="skip"`
-on a task whose `label` turned out `"advantage"` — the silent wrong answer). Drop `gut` and both
-metrics become uncomputable; the corpus can describe but not score.
+The map has value only where it disagrees with instinct. Recording `gut` before acting is what makes
+the two goal metrics computable: the **disagreement win-rate** (where `gut` and `map_call` differ,
+how often is the map right against `label`) and the **false-negative gate** (`acted="skip"` on a
+task whose `label` turned out `"advantage"` — the silent wrong answer). Drop `gut` and both metrics
+become uncomputable; the corpus can describe but not score.
 
 ## Append discipline
 
