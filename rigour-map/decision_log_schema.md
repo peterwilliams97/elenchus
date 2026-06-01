@@ -12,25 +12,31 @@ filled later, when the outcome is observable, and assigns the ground-truth label
 
 ### Capture (before acting)
 
-| Field      | Type    | Description |
-|------------|---------|-------------|
-| `id`       | string  | Unique row id, e.g. `"d001"` |
-| `date`     | ISO date| `"2026-05-31"` |
-| `task`     | string  | The work task, one line, e.g. `"close-enterprise-deal"`, `"draft-adr"`, `"review-contract"` |
-| `phase`    | string  | `"generate"` / `"validate"` / `"decide"` / `"execute"` — the work phase, **not** an assay pipeline stage. This is the discriminating variable: rigour flips from asset to liability between `generate` and `validate`. |
-| `context`  | string  | Role/domain tag, e.g. `"papercut/ipp"`, `"solo/sales"`, `"monist/fundraise"` |
-| `mode`     | string  | If the rigour applied was `assay`: `"substance"` / `"faithfulness"` / `"evidence"` / `"audit"`. `"none"` if rigour was applied without the tool. |
-| `gut`      | string  | `"rigour"` / `"skip"` — your pre-committed instinct, recorded before you act |
-| `acted`    | string  | `"rigour"` / `"skip"` — what you actually did (may differ from `gut`) |
+| Field                    | Type     | Description |
+|--------------------------|----------|-------------|
+| `id`                     | string   | Unique row id, e.g. `"d001"` |
+| `started_at`             | ISO date | Date the attempt began, e.g. `"2026-06-01"`. Set at capture; never revised. |
+| `date`                   | ISO date | `"2026-05-31"` — alias for `started_at` in legacy rows; new rows use `started_at` |
+| `task`                   | string   | The work task, one line, e.g. `"close-enterprise-deal"`, `"draft-adr"`, `"review-contract"` |
+| `hypothesis`             | string   | One sentence: what outcome the attempt was expected to produce, recorded before acting |
+| `alternatives_considered`| string[] | Approaches considered but not taken, e.g. `["skip the pass", "use faithfulness only"]` |
+| `goal_link`              | string   | Rigour-map objective this serves (e.g. `"phase-0-corpus-collection"`), or `"maintenance"` / `"detour"` |
+| `phase`                  | string   | `"generate"` / `"validate"` / `"decide"` / `"execute"` — the work phase, **not** an assay pipeline stage. This is the discriminating variable: rigour flips from asset to liability between `generate` and `validate`. |
+| `context`                | string   | Role/domain tag, e.g. `"papercut/ipp"`, `"solo/sales"`, `"monist/fundraise"` |
+| `mode`                   | string   | If the rigour applied was `assay`: `"substance"` / `"faithfulness"` / `"evidence"` / `"audit"`. `"none"` if rigour was applied without the tool. |
+| `gut`                    | string   | `"rigour"` / `"skip"` — your pre-committed instinct, recorded before you act |
+| `acted`                  | string   | `"rigour"` / `"skip"` — what you actually did (may differ from `gut`) |
 
 ### Resolve (when the outcome is observable)
 
-| Field        | Type     | Description |
-|--------------|----------|-------------|
-| `reversible` | bool     | Was the decision cheap to reverse? (a feature, not part of the label) |
-| `label`      | string   | `"advantage"` / `"disadvantage"` / `"irrelevant"` — ground truth, assigned from outcome per the definitions below |
-| `rationale`  | string   | One or two sentences grounding the label: what happened, why rigour helped/hurt/was moot |
-| `notes`      | string?  | Optional caveats, edge cases, follow-ups |
+| Field          | Type     | Description |
+|----------------|----------|-------------|
+| `reversible`   | bool     | Was the decision cheap to reverse? (a feature, not part of the label) |
+| `outcome`      | string   | `"shipped"` / `"abandoned"` / `"reverted"` / `"superseded"` — what actually happened |
+| `superseded_by`| string?  | If `outcome="superseded"`, the `id` of the row that replaced this one |
+| `label`        | string   | `"advantage"` / `"disadvantage"` / `"irrelevant"` — ground truth, assigned from outcome per the definitions below |
+| `rationale`    | string   | One or two sentences grounding the label: what happened, why rigour helped/hurt/was moot |
+| `notes`        | string?  | Optional caveats, edge cases, follow-ups |
 
 ### Phase 1+ (added once the map exists)
 
@@ -62,4 +68,7 @@ become uncomputable; the corpus can describe but not score.
 - Rows are append-only. Never edit or delete a committed row.
 - One decision per row. Two separable observations from one session → two rows.
 - `gut` and `acted` are committed at capture and never revised once the outcome is known.
+- `started_at` and `hypothesis` are required at capture. `outcome` is required at resolve.
+- Log attempts when they START, not only when they ship. Abandoned and reverted rows are the
+  denominator the classifier depends on; survivorship in the corpus produces a biased map.
 - Delete the two example rows before using the corpus for training.

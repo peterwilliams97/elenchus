@@ -183,3 +183,14 @@ the thing the third column is for. See examples/url-length for a worked demonstr
   self-screened against the faithfulness critic's seven distortion modes before it's emitted — watch
   overstatement (hedges → certainties) and literalization (provocation → literal commitment)
   hardest. Summaries that carry decisions get the full `./assay -source notes.txt summary.txt` pass.
+- Pre-register the attempt, not the success: write the `decision_log` entry when a change STARTS
+  (hypothesis + alternatives not taken); fill in `outcome` later, including `abandoned`/`reverted`.
+  Never log only survivors — dead ends are the denominator the classifier needs most.
+- Goal-link or tag-as-detour: every change names the standing rigour-map objective (see Tracks
+  above) it serves, or is tagged `maintenance`/`detour`. Detours and maintenance never get promoted
+  to "the project focus."
+- Separate done from advanced: every session report states (i) what shipped, (ii) whether the
+  rigour-map goal moved and by how much, (iii) what toward the goal is still NOT done. "Green"
+  never stands alone.
+- Roads not taken: keep a parking lot (`SESSION.md`) of deferred and abandoned items so reversals
+  and dead ends survive the session boundary.
