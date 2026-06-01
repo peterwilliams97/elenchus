@@ -87,3 +87,34 @@ paste your output below. The example refuses to invent its own grounding column 
 whole point.
 
 <!-- VERDICT TABLES: paste real ./assay output here. Do not fabricate. -->
+
+### Substance (`./assay examples/url-length/claim.txt -md`)
+
+Run: 2026-06-01, model `claude-sonnet-4-6`, 7 claims, 15 calls, est $0.1334.
+
+| Verdict | Claim | Note |
+|---|---|---|
+| hollow | The maximum length of a URL is 2048 characters | Survives only by redefining 2048 as a "compatibility guideline for IE-era infrastructure" — conditions the speaker never stated. |
+| hollow | The 2048-character URL length limit is defined by the HTTP specification | Flatly false. No HTTP RFC defines a 2048-char limit. Steelman replaces "HTTP specification" with "broadly construed ecosystem including vendor documentation." Condition laundering. |
+| hollow | The HTTP specification defines a hard limit on URL length | RFC 7230 explicitly declines to set a numeric URI ceiling. Steelman redefines "hard limit" to mean "per-server discretionary threshold" — the opposite. |
+| hollow | Any URL longer than 2048 characters is invalid | Universal claim trivially falsified by modern browsers and RFC 7230. Survives only as "in IE-era stacks explicitly configured to that limit." |
+| hollow | Any URL longer than 2048 characters will be rejected | Same. Universal falsified by counterexample; rescued only with four conditions wholly absent from the original assertion. |
+| partial | The HTTP specification places no limit on URL length | **Survives as:** The IETF HTTP RFCs (RFC 7230 / RFC 9110–9112) specify no normative numeric maximum for URL length; any length ceiling is an implementation or deployment decision, not a protocol mandate. |
+| partial | A URL can be any length | **Survives as:** RFC 3986 and related URI specifications impose no explicit maximum length on a URI — no formal syntactic ceiling in the standard itself. |
+
+Summary: 5 hollow · 2 partial.
+
+---
+
+### Grounding (`./assay examples/url-length/claim.txt -evidence -md -max-claims 15`)
+
+Run: 2026-06-01, model `claude-sonnet-4-6`, 2 raw claims (no decomposition in evidence mode), 2 web searches, est $0.2052.
+
+| # | Claim | Verdict | Finding | Sources |
+|---|---|---|---|---|
+| 1 | The maximum length of a URL is 2048 characters, a hard limit defined by the HTTP specification; any URL longer than that is invalid and will be rejected. | **refuted** | The HTTP specification imposes no hard limit on URL length whatsoever; the 2,048-character figure originates from Internet Explorer's path-length limit and the XML Sitemap standard, not from HTTP — and modern browsers routinely handle URLs far longer than 2,048 characters. | RFC 2616 (IETF); SISTRIX "URL Length"; Microsoft Support "Maximum URL length is 2,083 characters in Internet Explorer"; codegenes.net; GitHub puma/puma #2134 |
+| 2 | The HTTP specification places no limit on URL length, so in practice a URL can be any length you want. | **mixed** | The first half is true — the HTTP specification imposes no hard limit — but the second half is false: browsers, web servers, CDNs, and proxies all enforce their own limits, making arbitrarily long URLs unreliable or outright rejected. | SISTRIX; urleditor.online; DevGex; urlencodedecode.com; GeeksforGeeks |
+
+Summary: 1 refuted · 1 mixed.
+
+**Reading the two tables together:** Substance catches the hidden premise (`implementation = specification`) and the universal overreach (`any URL … is invalid`). Grounding confirms: the spec claim is refuted by evidence, and the clever counter-claim (`any length you want`) comes back mixed — the spec part survives, the practice part doesn't. The armchair gets you to the right place on the spec; you still need the retrieval to find out what deployed systems actually enforce.
