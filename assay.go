@@ -437,7 +437,7 @@ func (c cfg) assayClaim(claim string) substance {
 		break
 	}
 	// Downgrade at loop exit if the final round survived only by laundered conditions. A claim that
-	// Sneeds invented qualifiers to survive is not partial.
+	// needs invented qualifiers to survive is not partial.
 	if last.SurvivesOnlyByConditions {
 		last.Verdict = "hollow"
 		last.Reason = last.Reason + " Survives only by conditions the speaker never stated."
@@ -486,10 +486,6 @@ func (c cfg) evidenceClaim(claim string) evidence {
 }
 
 // ── prompts (single source of truth — carry any prompt fixes here) ───────────
-// Calibration fixes applied here and pinned by tests: faithfulness "literalization"
-// mode + grounding the intended proposition (faithCriticSys, intendedProposition);
-// substance condition-laundering penalty + loop-stop/downgrade (substanceCriticSys,
-// assayClaim). The retired Python impl is archived at SHA 469ebe4.
 
 const decomposeSys = `You are a claims extractor trained in analytic philosophy. Break prose into
 its atomic, independently-evaluable assertions. Strip rhetoric, hedges, and connective filler. Each
