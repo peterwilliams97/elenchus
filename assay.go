@@ -19,6 +19,7 @@ import (
 	"io"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -57,8 +58,9 @@ type cfg struct {
 	usage        *usageCounters
 	tally        *runTally
 	// call is the API dispatch function. When nil, callClaude is used (production).
+	// Returns the response text, any retrieved sources (from web_search_tool_result blocks), and an error.
 	// Tests set this to a stub to avoid network calls.
-	call func(system, prompt string, withTools bool) (string, error)
+	call func(system, prompt string, withTools bool) (string, []retrievedSource, error)
 	// httpClient overrides the package-level httpClient. Tests inject a custom
 	// RoundTripper here to exercise the transport-retry path without network calls.
 	httpClient *http.Client
@@ -487,14 +489,70 @@ func (c cfg) faithClaim(claim, src string) faith {
 // column agrees with -evidence -source.
 func (c cfg) evidenceClaim(claim string) evidence {
 	var e evidenceJSON
-	if err := c.callJSON(evidenceSys, "CLAIM:\n"+claim, true, &e); err != nil {
+	rs, err := c.callJSONSourced(evidenceSys, "CLAIM:\n"+claim, true, &e)
+	if err != nil {
 		return evidence{Claim: claim, Verdict: "error", Finding: err.Error()}
 	}
-	out := evidence{Claim: claim, Verdict: e.Verdict, Finding: e.Finding}
+	out := evidence{
+		Claim: claim, Verdict: e.Verdict, Finding: e.Finding,
+		RetrievedSources: rs,
+	}
 	for _, s := range e.Sources {
 		out.Sources = append(out.Sources, source{s.Title, s.URL})
 	}
-	return out
+	return crossCheckEvidence(out)
+}
+
+// crossCheckEvidence downgrades a verdict to "unverifiable" when no model-claimed source URL
+// matches the set of URLs actually retrieved during the web_search_tool_result round trip.
+// This closes the grounding-integrity gap: the axis boundary requires a real truth-maker for
+// supported/mixed/refuted — positive grounding cannot be confirmed from parametric knowledge alone.
+// Only "unverifiable" and "error" are exempt (they make no external-evidence assertion).
+func crossCheckEvidence(e evidence) evidence {
+	if e.Verdict == "unverifiable" || e.Verdict == "error" || e.DowngradeReason != "" {
+		return e
+	}
+	if len(e.RetrievedSources) == 0 {
+		e.OriginalVerdict = e.Verdict
+		e.Verdict = "unverifiable"
+		e.DowngradeReason = "no sources retrieved; verdict is model self-report"
+		return e
+	}
+	if len(e.Sources) == 0 {
+		e.OriginalVerdict = e.Verdict
+		e.Verdict = "unverifiable"
+		e.DowngradeReason = "no URLs cited in response"
+		return e
+	}
+	retrieved := make(map[string]bool, len(e.RetrievedSources))
+	for _, r := range e.RetrievedSources {
+		retrieved[normalizeURL(r.URL)] = true
+	}
+	matched := 0
+	for _, s := range e.Sources {
+		if retrieved[normalizeURL(s.URL)] {
+			matched++
+		}
+	}
+	e.SourcesVerified = matched
+	if matched == 0 {
+		e.OriginalVerdict = e.Verdict
+		e.Verdict = "unverifiable"
+		e.DowngradeReason = "claimed sources not present in retrieval"
+	}
+	return e
+}
+
+// normalizeURL returns a canonical host+path string for URL comparison.
+// Strips scheme, query, and fragment; lowercases host; trims trailing slash from path.
+// Matching on host+path catches "cited a real article it actually read" without allowing
+// "cited some other page on the same domain" to pass.
+func normalizeURL(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return strings.ToLower(rawURL)
+	}
+	return strings.ToLower(u.Host) + strings.TrimRight(u.Path, "/")
 }
 
 // ── prompts (single source of truth — carry any prompt fixes here) ───────────
@@ -606,32 +664,39 @@ const defaultInput = `1. The future of work will happen inside Codex or Claude C
 // ── API ──────────────────────────────────────────────────────────────────────
 
 func (c cfg) callJSON(system, prompt string, withTools bool, v any) error {
+	_, err := c.callJSONSourced(system, prompt, withTools, v)
+	return err
+}
+
+// callJSONSourced is callJSON with retrieved sources threaded through. Used by evidenceClaim,
+// which is the only caller that needs to cross-check model-claimed URLs against actual retrieval.
+func (c cfg) callJSONSourced(system, prompt string, withTools bool, v any) ([]retrievedSource, error) {
 	dispatch := c.call
 	if dispatch == nil {
 		dispatch = c.callClaude
 	}
-	out, err := dispatch(system, prompt, withTools)
+	out, rs, err := dispatch(system, prompt, withTools)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if err := unmarshalLoose(out, v); err == nil {
-		return nil
+	if unmarshalLoose(out, v) == nil {
+		return rs, nil
 	}
 	strict := system +
 		"\n\nReturn ONLY raw JSON. No prose, no markdown, no backticks. " +
 		"First character must be { or [."
-	out2, err := dispatch(strict, prompt, withTools)
+	out2, rs2, err := dispatch(strict, prompt, withTools)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return unmarshalLoose(out2, v)
+	return rs2, unmarshalLoose(out2, v)
 }
 
 // callClaude makes a raw API call to Claude and returns the full text response.
 // `system` and `prompt` are passed directly to the API. The caller is responsible for any prompt
 // engineering,
 // `withTools`==true enables tool use (e.g. web search) when available for the model.
-func (c cfg) callClaude(system, prompt string, withTools bool) (string, error) {
+func (c cfg) callClaude(system, prompt string, withTools bool) (string, []retrievedSource, error) {
 	req := apiReq{Model: c.model, MaxTokens: maxTokens, System: system,
 		Messages: []apiMsg{{Role: "user", Content: prompt}}}
 	if withTools {
@@ -659,7 +724,7 @@ func (c cfg) callClaude(system, prompt string, withTools bool) (string, error) {
 
 		resp, err := client.Do(httpReq)
 		if err != nil {
-			return "", err
+			return "", nil, err
 		}
 		raw, _ = io.ReadAll(resp.Body)
 		resp.Body.Close() // explicit close before any retry; do not defer across iterations
@@ -672,10 +737,10 @@ func (c cfg) callClaude(system, prompt string, withTools bool) (string, error) {
 
 	var ar apiResp
 	if err := json.Unmarshal(raw, &ar); err != nil {
-		return "", fmt.Errorf("unreadable response: %.200s", string(raw))
+		return "", nil, fmt.Errorf("unreadable response: %.200s", string(raw))
 	}
 	if ar.Error != nil {
-		return "", fmt.Errorf("api error: %s", ar.Error.Message)
+		return "", nil, fmt.Errorf("api error: %s", ar.Error.Message)
 	}
 
 	// Accumulate usage before checking stop_reason — a truncated response was still billed.
@@ -702,10 +767,15 @@ func (c cfg) callClaude(system, prompt string, withTools bool) (string, error) {
 	}
 
 	if ar.StopReason == "max_tokens" {
-		return "", fmt.Errorf("response truncated: stop_reason=max_tokens (limit=%d tokens); raise maxTokens constant", maxTokens)
+		return "", nil, fmt.Errorf(
+			"response truncated: stop_reason=max_tokens (limit=%d tokens); raise maxTokens constant",
+			maxTokens)
 	}
 
-	var sb strings.Builder
+	var (
+		sb        strings.Builder
+		retrieved []retrievedSource
+	)
 	for _, b := range ar.Content {
 		switch b.Type {
 		case "text":
@@ -718,24 +788,42 @@ func (c cfg) callClaude(system, prompt string, withTools bool) (string, error) {
 				_ = json.Unmarshal(b.Input, &in)
 				fmt.Println(c.grey("│   searched: " + in.Query))
 			}
+		case "web_search_tool_result":
+			// b.Content is the raw JSON value of the "content" field: either a
+			// []web_search_result array or a web_search_tool_result_error object.
+			// Unmarshal directly into a slice; an error object (not an array) fails
+			// silently and lands in the "no sources retrieved" downgrade path.
+			var results []struct {
+				Type  string `json:"type"`
+				URL   string `json:"url"`
+				Title string `json:"title"`
+			}
+			if json.Unmarshal(b.Content, &results) == nil {
+				for _, r := range results {
+					if r.Type == "web_search_result" {
+						retrieved = append(retrieved, retrievedSource{Title: r.Title, URL: r.URL})
+					}
+				}
+			}
 		}
 	}
 	if c.verbose {
 		fmt.Println(c.cyan("├─ response:"))
 		fmt.Println(c.grey("│ " + strings.ReplaceAll(sb.String(), "\n", "\n│ ")))
+		if len(retrieved) > 0 {
+			fmt.Printf(c.grey("│ retrieved %d source(s)\n"), len(retrieved))
+		}
 		fmt.Println(c.cyan("└─"))
 	}
-	return sb.String(), nil
+	return sb.String(), retrieved, nil
 }
 
 // retryable reports whether an HTTP status code warrants a retry.
-func retryable(code int) bool {
-	return code == 429 || code == 503 || code == 529
-}
+func retryable(code int) bool { return code == 429 || code == 503 || code == 529 }
 
-// retryDelay returns how long to wait before the next attempt. It honours the
-// Retry-After header (integer seconds) when present; otherwise uses full-jitter
-// exponential backoff capped at 30 s. retryBase==0 (tests) always returns 0.
+// retryDelay returns how long to wait before the next attempt. It honours the Retry-After header
+// (integer seconds) when present; otherwise uses full-jitter exponential backoff capped at 30 s.
+// retryBase==0 (tests) always returns 0.
 func retryDelay(retryAfter string, attempt int) time.Duration {
 	if s, err := strconv.Atoi(strings.TrimSpace(retryAfter)); err == nil && s > 0 {
 		return time.Duration(s) * time.Second
@@ -782,10 +870,15 @@ type apiResp struct {
 	} `json:"error"`
 }
 type apiBlock struct {
-	Type  string          `json:"type"`
-	Text  string          `json:"text"`
-	Input json.RawMessage `json:"input"`
+	Type    string          `json:"type"`
+	Text    string          `json:"text"`
+	Input   json.RawMessage `json:"input"`
+	Content json.RawMessage `json:"content"` // populated for web_search_tool_result blocks
 }
+
+// retrievedSource is a URL actually fetched during a web_search_tool_result round trip —
+// distinct from source, which is what the model claims it used in its JSON response.
+type retrievedSource struct{ Title, URL string }
 
 // ── JSON extraction ──────────────────────────────────────────────────────────
 
@@ -902,6 +995,10 @@ type source struct{ Title, URL string }
 type evidence struct {
 	Claim, Verdict, Finding string
 	Sources                 []source
+	RetrievedSources        []retrievedSource
+	SourcesVerified         int
+	DowngradeReason         string
+	OriginalVerdict         string
 }
 
 // JSON shims (tagged) ----------------------------------------------------------
@@ -1024,8 +1121,12 @@ func mdEvidence(rs []evidence) string {
 		for _, s := range r.Sources {
 			srcs = append(srcs, fmt.Sprintf("[%s](%s)", mdCell(s.Title), s.URL))
 		}
+		finding := mdCell(r.Finding)
+		if r.DowngradeReason != "" {
+			finding += " *(was: " + r.OriginalVerdict + "; " + r.DowngradeReason + ")*"
+		}
 		b.WriteString(fmt.Sprintf("| %d | %s | %s | %s | %s |\n",
-			i+1, mdCell(r.Claim), mdV(r.Verdict), mdCell(r.Finding), strings.Join(srcs, "; ")))
+			i+1, mdCell(r.Claim), mdV(r.Verdict), finding, strings.Join(srcs, "; ")))
 		vs = append(vs, r.Verdict)
 	}
 	b.WriteString("\n**" + tally(vs) + "**\n")
@@ -1114,6 +1215,9 @@ func (c cfg) termEvidence(rs []evidence) {
 		c.termLine(r.Verdict, r.Claim, r.Finding)
 		for _, s := range r.Sources {
 			fmt.Println(c.grey("  · " + s.Title + " — " + s.URL))
+		}
+		if r.DowngradeReason != "" {
+			fmt.Println(c.yellow("  ↓ downgraded from " + r.OriginalVerdict + ": " + r.DowngradeReason))
 		}
 		vs = append(vs, r.Verdict)
 	}
@@ -1217,9 +1321,13 @@ type faithDetail struct {
 }
 
 type evidenceDetail struct {
-	Finding    string   `json:"finding,omitempty"`
-	Sources    []source `json:"sources,omitempty"`
-	ErrorCause string   `json:"error_cause,omitempty"`
+	Finding          string            `json:"finding,omitempty"`
+	Sources          []source          `json:"sources,omitempty"`
+	RetrievedSources []retrievedSource `json:"retrieved_sources,omitempty"`
+	SourcesVerified  int               `json:"sources_verified,omitempty"`
+	DowngradeReason  string            `json:"downgrade_reason,omitempty"`
+	OriginalVerdict  string            `json:"original_verdict,omitempty"`
+	ErrorCause       string            `json:"error_cause,omitempty"`
 }
 
 type auditDetail struct {
@@ -1265,9 +1373,13 @@ func evidenceChainRecord(i, total int, claim string, e evidence, start time.Time
 		errCause = e.Finding
 	}
 	det := evidenceDetail{
-		Finding:    e.Finding,
-		Sources:    e.Sources,
-		ErrorCause: errCause,
+		Finding:          e.Finding,
+		Sources:          e.Sources,
+		RetrievedSources: e.RetrievedSources,
+		SourcesVerified:  e.SourcesVerified,
+		DowngradeReason:  e.DowngradeReason,
+		OriginalVerdict:  e.OriginalVerdict,
+		ErrorCause:       errCause,
 	}
 	raw, _ := json.Marshal(det)
 	return chainRecord{
@@ -1292,8 +1404,12 @@ func auditChainRecord(i, n int, claim string, f faith, s substance, e evidence, 
 			Reason:         s.Reason,
 		},
 		Evidence: evidenceDetail{
-			Finding: e.Finding,
-			Sources: e.Sources,
+			Finding:          e.Finding,
+			Sources:          e.Sources,
+			RetrievedSources: e.RetrievedSources,
+			SourcesVerified:  e.SourcesVerified,
+			DowngradeReason:  e.DowngradeReason,
+			OriginalVerdict:  e.OriginalVerdict,
 		},
 	}
 	verdictSummary := fmt.Sprintf("faith=%s sub=%s ev=%s", f.Verdict, s.Verdict, e.Verdict)

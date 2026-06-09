@@ -112,26 +112,27 @@ func TestUnmarshalLooseConditionFields(t *testing.T) {
 //
 // The responses are controlled per test via the stubbedCritic field: callers can override what the
 // substance critic returns to exercise specific paths.
-func stubCall(criticJSON string) func(system, prompt string, withTools bool) (string, error) {
-	return func(system, prompt string, withTools bool) (string, error) {
+func stubCall(criticJSON string) func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
+	return func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
 		switch {
 		case strings.Contains(system, "You are the Producer"):
-			return `{"steelman":"strongest version","conditions":"some conditions"}`, nil
+			return `{"steelman":"strongest version","conditions":"some conditions"}`, nil, nil
 		case strings.Contains(system, "You are the Critic"):
-			return criticJSON, nil
+			return criticJSON, nil, nil
 		case strings.Contains(system, "You are the Defender"):
-			return `{"found":true,"quotes":["the speaker said it"],"best_case":"direct quote"}`, nil
+			return `{"found":true,"quotes":["the speaker said it"],"best_case":"direct quote"}`, nil, nil
 		case strings.Contains(system, "You are the Faithfulness Critic"):
 			// Default: overstated with what_source_actually_says populated.
 			if strings.Contains(prompt, "faithful-claim") {
-				return `{"findings":[],"verdict":"faithful","evidence":"direct match","what_source_actually_says":null}`, nil
+				return `{"findings":[],"verdict":"faithful","evidence":"direct match","what_source_actually_says":null}`, nil, nil
 			}
-			return `{"findings":[],"verdict":"overstated","evidence":"rhetorical","what_source_actually_says":"automation requires human oversight"}`, nil
+			return `{"findings":[],"verdict":"overstated","evidence":"rhetorical","what_source_actually_says":"automation requires human oversight"}`, nil, nil
 		case strings.Contains(system, "You are the Evidence Grounder"):
-			// Record which proposition was grounded via the prompt content.
-			return `{"verdict":"supported","finding":"evidence found","sources":[]}`, nil
+			// Return a matching retrieved source so the cross-check succeeds and verdict stands.
+			rs := []retrievedSource{{Title: "stub source", URL: "https://stub.example.com/evidence"}}
+			return `{"verdict":"supported","finding":"evidence found","sources":[{"title":"stub source","url":"https://stub.example.com/evidence"}]}`, rs, nil
 		default:
-			return `[]`, nil
+			return `[]`, nil, nil
 		}
 	}
 }
@@ -160,7 +161,7 @@ func TestConditionLaunderingLoopStop(t *testing.T) {
 	const launderedWantsMore = `{"critique":[],"verdict":"partial","surviving_claim":"narrowed","reason":"partial.",` +
 		`"needs_another_round":true,"added_conditions":5,"survives_only_by_conditioning":true}`
 	callCount := 0
-	stub := func(system, prompt string, withTools bool) (string, error) {
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
 		if strings.Contains(system, "You are the Critic") {
 			callCount++
 		}
@@ -181,18 +182,20 @@ func TestConditionLaunderingLoopStop(t *testing.T) {
 // Asserts that the evidence grounder receives the intended proposition, not the literal claim.
 func TestRunEvidencePropositionSubstitution(t *testing.T) {
 	var groundedProposition string
-	stub := func(system, prompt string, withTools bool) (string, error) {
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
 		switch {
 		case strings.Contains(system, "You are the Defender"):
-			return `{"found":true,"quotes":["automation is a lie"],"best_case":"direct"}`, nil
+			return `{"found":true,"quotes":["automation is a lie"],"best_case":"direct"}`, nil, nil
 		case strings.Contains(system, "You are the Faithfulness Critic"):
-			return `{"findings":[],"verdict":"overstated","evidence":"rhetorical","what_source_actually_says":"automation requires human oversight"}`, nil
+			return `{"findings":[],"verdict":"overstated","evidence":"rhetorical","what_source_actually_says":"automation requires human oversight"}`, nil, nil
 		case strings.Contains(system, "You are the Evidence Grounder"):
-			// Capture what proposition was sent for grounding.
+			// Capture what proposition was sent for grounding. Return a matching retrieved source
+			// so the cross-check succeeds and the test keeps asserting proposition routing.
 			groundedProposition = prompt
-			return `{"verdict":"mixed","finding":"humans still needed","sources":[]}`, nil
+			rs := []retrievedSource{{Title: "oversight study", URL: "https://example.com/oversight"}}
+			return `{"verdict":"mixed","finding":"humans still needed","sources":[{"title":"oversight study","url":"https://example.com/oversight"}]}`, rs, nil
 		default:
-			return `[]`, nil
+			return `[]`, nil, nil
 		}
 	}
 	c := cfg{call: stub}
@@ -238,30 +241,33 @@ func TestAuditGroundsIntendedProposition(t *testing.T) {
 	//   evidence grounding the INTENDED proposition → supported
 	// The test asserts the audit grounding is supported (intended), not refuted (literal).
 	var groundedProposition string
-	stub := func(system, prompt string, withTools bool) (string, error) {
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
 		switch {
 		case strings.Contains(system, "You are the Producer"):
-			return `{"steelman":"strongest version","conditions":"some conditions"}`, nil
+			return `{"steelman":"strongest version","conditions":"some conditions"}`, nil, nil
 		case strings.Contains(system, "You are the Critic"):
 			return `{"critique":[],"verdict":"partial","surviving_claim":null,"reason":"ok",` +
-				`"needs_another_round":false,"added_conditions":0,"survives_only_by_conditioning":false}`, nil
+				`"needs_another_round":false,"added_conditions":0,"survives_only_by_conditioning":false}`, nil, nil
 		case strings.Contains(system, "You are the Defender"):
-			return `{"found":true,"quotes":["automation is a lie"],"best_case":"direct"}`, nil
+			return `{"found":true,"quotes":["automation is a lie"],"best_case":"direct"}`, nil, nil
 		case strings.Contains(system, "You are the Faithfulness Critic"):
 			if strings.Contains(prompt, "faithful-claim") {
-				// Control: faithful claim with no source says → should ground literal.
-				return `{"findings":[],"verdict":"faithful","evidence":"direct","what_source_actually_says":null}`, nil
+				return `{"findings":[],"verdict":"faithful","evidence":"direct","what_source_actually_says":null}`, nil, nil
 			}
 			return `{"findings":[],"verdict":"overstated","evidence":"rhetorical",` +
-				`"what_source_actually_says":"automation always needs a human in the loop"}`, nil
+				`"what_source_actually_says":"automation always needs a human in the loop"}`, nil, nil
 		case strings.Contains(system, "You are the Evidence Grounder"):
 			groundedProposition = prompt
 			if strings.Contains(prompt, "Automation is a lie") {
-				return `{"verdict":"refuted","finding":"literal reading refuted","sources":[]}`, nil
+				// Literal claim path: return a retrieved source so refuted verdict stands.
+				rs := []retrievedSource{{Title: "refutation source", URL: "https://example.com/refuted"}}
+				return `{"verdict":"refuted","finding":"literal reading refuted","sources":[{"title":"refutation source","url":"https://example.com/refuted"}]}`, rs, nil
 			}
-			return `{"verdict":"supported","finding":"automation paradox documented","sources":[]}`, nil
+			// Intended proposition path: return a retrieved source so supported verdict stands.
+			rs := []retrievedSource{{Title: "paradox study", URL: "https://example.com/paradox"}}
+			return `{"verdict":"supported","finding":"automation paradox documented","sources":[{"title":"paradox study","url":"https://example.com/paradox"}]}`, rs, nil
 		default:
-			return `[]`, nil
+			return `[]`, nil, nil
 		}
 	}
 	c := cfg{maxRounds: 1, call: stub}
@@ -284,22 +290,23 @@ func TestAuditGroundsIntendedProposition(t *testing.T) {
 // (no SourceSays) must be grounded against the literal claim.
 func TestAuditFaithfulClaimGroundsLiteral(t *testing.T) {
 	var groundedProposition string
-	stub := func(system, prompt string, withTools bool) (string, error) {
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
 		switch {
 		case strings.Contains(system, "You are the Producer"):
-			return `{"steelman":"strongest version","conditions":"some conditions"}`, nil
+			return `{"steelman":"strongest version","conditions":"some conditions"}`, nil, nil
 		case strings.Contains(system, "You are the Critic"):
 			return `{"critique":[],"verdict":"partial","surviving_claim":null,"reason":"ok",` +
-				`"needs_another_round":false,"added_conditions":0,"survives_only_by_conditioning":false}`, nil
+				`"needs_another_round":false,"added_conditions":0,"survives_only_by_conditioning":false}`, nil, nil
 		case strings.Contains(system, "You are the Defender"):
-			return `{"found":true,"quotes":["SaaS is not dead"],"best_case":"direct"}`, nil
+			return `{"found":true,"quotes":["SaaS is not dead"],"best_case":"direct"}`, nil, nil
 		case strings.Contains(system, "You are the Faithfulness Critic"):
-			return `{"findings":[],"verdict":"faithful","evidence":"direct","what_source_actually_says":null}`, nil
+			return `{"findings":[],"verdict":"faithful","evidence":"direct","what_source_actually_says":null}`, nil, nil
 		case strings.Contains(system, "You are the Evidence Grounder"):
 			groundedProposition = prompt
-			return `{"verdict":"supported","finding":"SaaS growing","sources":[]}`, nil
+			rs := []retrievedSource{{Title: "SaaS market report", URL: "https://example.com/saas"}}
+			return `{"verdict":"supported","finding":"SaaS growing","sources":[{"title":"SaaS market report","url":"https://example.com/saas"}]}`, rs, nil
 		default:
-			return `[]`, nil
+			return `[]`, nil, nil
 		}
 	}
 	c := cfg{maxRounds: 1, call: stub}
@@ -407,19 +414,19 @@ func TestTally(t *testing.T) {
 // calls fire and the remaining 3 rows are marked "skipped (over cap)".
 func TestMaxClaimsCap(t *testing.T) {
 	evidenceCallCount := 0
-	stub := func(system, prompt string, withTools bool) (string, error) {
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
 		if strings.Contains(system, "You are the Evidence Grounder") {
 			evidenceCallCount++
 		}
 		switch {
 		case strings.Contains(system, "You are the Defender"):
-			return `{"found":true,"quotes":["claim text"],"best_case":"direct"}`, nil
+			return `{"found":true,"quotes":["claim text"],"best_case":"direct"}`, nil, nil
 		case strings.Contains(system, "You are the Faithfulness Critic"):
-			return `{"findings":[],"verdict":"faithful","evidence":"direct","what_source_actually_says":null}`, nil
+			return `{"findings":[],"verdict":"faithful","evidence":"direct","what_source_actually_says":null}`, nil, nil
 		case strings.Contains(system, "You are the Evidence Grounder"):
-			return `{"verdict":"supported","finding":"evidence found","sources":[]}`, nil
+			return `{"verdict":"supported","finding":"evidence found","sources":[]}`, nil, nil
 		default:
-			return `[]`, nil
+			return `[]`, nil, nil
 		}
 	}
 	c := cfg{maxClaims: 2, call: stub}
@@ -435,24 +442,25 @@ func TestMaxClaimsCap(t *testing.T) {
 // calls fire and the remaining rows are marked "skipped (over cap)".
 func TestMaxClaimsCapComputeAudit(t *testing.T) {
 	evidenceCallCount := 0
-	stub := func(system, prompt string, withTools bool) (string, error) {
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
 		if strings.Contains(system, "You are the Evidence Grounder") {
 			evidenceCallCount++
 		}
 		switch {
 		case strings.Contains(system, "You are the Producer"):
-			return `{"steelman":"strongest version","conditions":"some conditions"}`, nil
+			return `{"steelman":"strongest version","conditions":"some conditions"}`, nil, nil
 		case strings.Contains(system, "You are the Critic"):
 			return `{"critique":[],"verdict":"partial","surviving_claim":null,"reason":"ok",` +
-				`"needs_another_round":false,"added_conditions":0,"survives_only_by_conditioning":false}`, nil
+				`"needs_another_round":false,"added_conditions":0,"survives_only_by_conditioning":false}`, nil, nil
 		case strings.Contains(system, "You are the Defender"):
-			return `{"found":true,"quotes":["claim text"],"best_case":"direct"}`, nil
+			return `{"found":true,"quotes":["claim text"],"best_case":"direct"}`, nil, nil
 		case strings.Contains(system, "You are the Faithfulness Critic"):
-			return `{"findings":[],"verdict":"faithful","evidence":"direct","what_source_actually_says":null}`, nil
+			return `{"findings":[],"verdict":"faithful","evidence":"direct","what_source_actually_says":null}`, nil, nil
 		case strings.Contains(system, "You are the Evidence Grounder"):
-			return `{"verdict":"supported","finding":"evidence found","sources":[]}`, nil
+			rs := []retrievedSource{{Title: "evidence source", URL: "https://example.com/evidence"}}
+			return `{"verdict":"supported","finding":"evidence found","sources":[{"title":"evidence source","url":"https://example.com/evidence"}]}`, rs, nil
 		default:
-			return `[]`, nil
+			return `[]`, nil, nil
 		}
 	}
 	c := cfg{maxRounds: 1, maxClaims: 3, call: stub}
@@ -470,6 +478,122 @@ func TestMaxClaimsCapComputeAudit(t *testing.T) {
 	for i := 3; i < 6; i++ {
 		if es[i].Verdict != "skipped (over cap)" {
 			t.Errorf("claim %d: want 'skipped (over cap)', got %q", i, es[i].Verdict)
+		}
+	}
+}
+
+// ── crossCheckEvidence unit tests ────────────────────────────────────────────
+
+// TestCrossCheckEvidenceClaimedPresent: a model-claimed URL that appears in the retrieved
+// set should leave the verdict unchanged and record SourcesVerified=1.
+func TestCrossCheckEvidenceClaimedPresent(t *testing.T) {
+	e := evidence{
+		Claim: "test claim", Verdict: "supported", Finding: "found",
+		Sources:          []source{{Title: "Test Page", URL: "https://example.com/article"}},
+		RetrievedSources: []retrievedSource{{Title: "Test Page", URL: "https://example.com/article"}},
+	}
+	got := crossCheckEvidence(e)
+	if got.Verdict != "supported" {
+		t.Errorf("want supported (cross-check passed), got %q", got.Verdict)
+	}
+	if got.SourcesVerified != 1 {
+		t.Errorf("want SourcesVerified=1, got %d", got.SourcesVerified)
+	}
+	if got.DowngradeReason != "" {
+		t.Errorf("want no downgrade, got reason %q", got.DowngradeReason)
+	}
+}
+
+// TestCrossCheckEvidenceClaimedAbsent: a model-claimed URL absent from the retrieved set
+// should be downgraded to "unverifiable".
+func TestCrossCheckEvidenceClaimedAbsent(t *testing.T) {
+	e := evidence{
+		Claim: "test claim", Verdict: "supported", Finding: "found",
+		Sources:          []source{{Title: "Claimed Page", URL: "https://claimed.example.com/article"}},
+		RetrievedSources: []retrievedSource{{Title: "Other Page", URL: "https://other.example.com/stuff"}},
+	}
+	got := crossCheckEvidence(e)
+	if got.Verdict != "unverifiable" {
+		t.Errorf("want unverifiable (claimed URL absent from retrieval), got %q", got.Verdict)
+	}
+	if got.OriginalVerdict != "supported" {
+		t.Errorf("want OriginalVerdict=supported, got %q", got.OriginalVerdict)
+	}
+	if !strings.Contains(got.DowngradeReason, "claimed sources not present in retrieval") {
+		t.Errorf("want downgrade reason about claimed sources, got %q", got.DowngradeReason)
+	}
+}
+
+// TestCrossCheckEvidenceZeroRetrieved: no web search results at all should downgrade
+// any verdict that asserts external evidence.
+func TestCrossCheckEvidenceZeroRetrieved(t *testing.T) {
+	for _, verdict := range []string{"supported", "mixed", "refuted"} {
+		e := evidence{
+			Claim: "test claim", Verdict: verdict, Finding: "finding",
+			Sources:          []source{{Title: "Some Page", URL: "https://example.com"}},
+			RetrievedSources: nil,
+		}
+		got := crossCheckEvidence(e)
+		if got.Verdict != "unverifiable" {
+			t.Errorf("verdict=%s: want unverifiable (zero retrieved), got %q", verdict, got.Verdict)
+		}
+		if !strings.Contains(got.DowngradeReason, "no sources retrieved") {
+			t.Errorf("verdict=%s: want 'no sources retrieved' in reason, got %q", verdict, got.DowngradeReason)
+		}
+		if got.OriginalVerdict != verdict {
+			t.Errorf("verdict=%s: want OriginalVerdict=%s, got %q", verdict, verdict, got.OriginalVerdict)
+		}
+	}
+}
+
+// TestCrossCheckEvidenceZeroSources: retrieval succeeded but model cited no URLs — the
+// truth-maker is missing even though a search happened.
+func TestCrossCheckEvidenceZeroSources(t *testing.T) {
+	e := evidence{
+		Claim: "test claim", Verdict: "mixed", Finding: "cuts both ways",
+		Sources:          nil,
+		RetrievedSources: []retrievedSource{{Title: "Retrieved Page", URL: "https://example.com/data"}},
+	}
+	got := crossCheckEvidence(e)
+	if got.Verdict != "unverifiable" {
+		t.Errorf("want unverifiable (no URLs cited), got %q", got.Verdict)
+	}
+	if !strings.Contains(got.DowngradeReason, "no URLs cited in response") {
+		t.Errorf("want 'no URLs cited in response' in reason, got %q", got.DowngradeReason)
+	}
+}
+
+// TestCrossCheckEvidenceExemptions: "unverifiable" and "error" verdicts must pass
+// through unchanged — they make no external-evidence assertion.
+func TestCrossCheckEvidenceExemptions(t *testing.T) {
+	for _, verdict := range []string{"unverifiable", "error"} {
+		e := evidence{Claim: "c", Verdict: verdict, Finding: "f"}
+		got := crossCheckEvidence(e)
+		if got.Verdict != verdict {
+			t.Errorf("%s should be exempt from cross-check, got %q", verdict, got.Verdict)
+		}
+		if got.DowngradeReason != "" {
+			t.Errorf("%s: unexpected downgrade reason %q", verdict, got.DowngradeReason)
+		}
+	}
+}
+
+// ── normalizeURL unit tests ───────────────────────────────────────────────────
+
+func TestNormalizeURL(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"https://example.com/article", "example.com/article"},
+		{"http://example.com/article", "example.com/article"},
+		{"https://example.com/article/", "example.com/article"},
+		{"HTTPS://Example.COM/Article", "example.com/Article"},
+		{"https://example.com/page?utm_source=x&ref=y", "example.com/page"},
+		{"https://example.com/page#section", "example.com/page"},
+		{"https://example.com", "example.com"},
+		{"https://example.com/", "example.com"},
+	}
+	for _, tc := range cases {
+		if got := normalizeURL(tc.in); got != tc.want {
+			t.Errorf("normalizeURL(%q) = %q, want %q", tc.in, got, tc.want)
 		}
 	}
 }
@@ -629,16 +753,16 @@ func TestStdoutPurity(t *testing.T) {
 	}
 	os.Stdout = w
 
-	stub := func(system, prompt string, withTools bool) (string, error) {
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
 		switch {
 		case strings.Contains(system, "You are the Defender"):
-			return `{"found":true,"quotes":["q"],"best_case":"direct"}`, nil
+			return `{"found":true,"quotes":["q"],"best_case":"direct"}`, nil, nil
 		case strings.Contains(system, "You are the Faithfulness Critic"):
-			return `{"findings":[],"verdict":"faithful","evidence":"e","what_source_actually_says":null}`, nil
+			return `{"findings":[],"verdict":"faithful","evidence":"e","what_source_actually_says":null}`, nil, nil
 		case strings.Contains(system, "You are the Evidence Grounder"):
-			return `{"verdict":"supported","finding":"found","sources":[]}`, nil
+			return `{"verdict":"supported","finding":"found","sources":[]}`, nil, nil
 		default:
-			return `[]`, nil
+			return `[]`, nil, nil
 		}
 	}
 	c := cfg{
@@ -747,7 +871,7 @@ func TestCallClaude429ThenSuccess(t *testing.T) {
 			return fakeResp(200, okBody, nil), nil
 		})},
 	}
-	got, err := c.callClaude("sys", "prompt", false)
+	got, _, err := c.callClaude("sys", "prompt", false)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -774,7 +898,7 @@ func TestCallClaude529PersistentFails(t *testing.T) {
 			return fakeResp(529, `{"error":{"type":"overloaded_error","message":"overloaded"}}`, nil), nil
 		})},
 	}
-	_, err := c.callClaude("sys", "prompt", false)
+	_, _, err := c.callClaude("sys", "prompt", false)
 	if err == nil {
 		t.Fatal("expected error on persistent 529, got nil")
 	}
@@ -795,7 +919,7 @@ func TestCallClaudeMaxTokensTruncation(t *testing.T) {
 			return fakeResp(200, maxTokensBody, nil), nil
 		})},
 	}
-	_, err := c.callClaude("sys", "prompt", false)
+	_, _, err := c.callClaude("sys", "prompt", false)
 	if err == nil {
 		t.Fatal("expected truncation error, got nil")
 	}
@@ -813,8 +937,8 @@ func TestCallClaudeMaxTokensTruncation(t *testing.T) {
 // decompose as a non-nil error rather than a silent nil slice.
 func TestDecomposeReturnsError(t *testing.T) {
 	c := cfg{
-		call: func(system, prompt string, withTools bool) (string, error) {
-			return "", fmt.Errorf("API down")
+		call: func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
+			return "", nil, fmt.Errorf("API down")
 		},
 	}
 	_, err := c.decompose("some text")
@@ -902,12 +1026,13 @@ func TestProgressOneLine(t *testing.T) {
 	}
 	os.Stderr = w
 
-	stub := func(system, prompt string, withTools bool) (string, error) {
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
 		switch {
 		case strings.Contains(system, "You are the Evidence Grounder"):
-			return `{"verdict":"supported","finding":"found","sources":[]}`, nil
+			rs := []retrievedSource{{Title: "progress source", URL: "https://example.com/progress"}}
+			return `{"verdict":"supported","finding":"found","sources":[{"title":"progress source","url":"https://example.com/progress"}]}`, rs, nil
 		default:
-			return `[]`, nil
+			return `[]`, nil, nil
 		}
 	}
 	c := cfg{
@@ -977,6 +1102,58 @@ func TestRunTallyCorrect(t *testing.T) {
 
 // TestChainJSONLWritten verifies that appendChain writes a valid JSONL record for a grounding case,
 // including error_cause on an errored case.
+// ── web_search_tool_result parse-path tests ──────────────────────────────────
+// These tests exercise the real callClaude transport path (via httpClient RoundTripper),
+// not cfg.call. They are the only tests that exercise the web_search_tool_result branch.
+
+// TestWebSearchToolResultParsesRetrievedSources loads the live-capture fixture and
+// asserts that callClaude extracts at least one retrievedSource from the
+// web_search_tool_result block. This test is designed to FAIL on the pre-fix code
+// (array unmarshal into struct) and pass after the fix.
+func TestWebSearchToolResultParsesRetrievedSources(t *testing.T) {
+	body, err := os.ReadFile("testdata/web_search_live.json")
+	if err != nil {
+		t.Skipf("live fixture not available: %v", err)
+	}
+	c := cfg{
+		model:  "claude-sonnet-4-6",
+		apiKey: "test-key",
+		httpClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			return fakeResp(200, string(body), nil), nil
+		})},
+	}
+	_, rs, err := c.callClaude("sys", "prompt", true)
+	if err != nil {
+		t.Fatalf("callClaude error: %v", err)
+	}
+	if len(rs) == 0 {
+		t.Errorf("want at least 1 retrievedSource from web_search_tool_result block, got 0")
+	}
+}
+
+// TestWebSearchToolResultErrorSkipped loads the error fixture (content is an object, not
+// an array) and asserts that callClaude returns 0 retrievedSources without panicking.
+func TestWebSearchToolResultErrorSkipped(t *testing.T) {
+	body, err := os.ReadFile("testdata/web_search_error.json")
+	if err != nil {
+		t.Fatalf("error fixture missing: %v", err)
+	}
+	c := cfg{
+		model:  "claude-sonnet-4-6",
+		apiKey: "test-key",
+		httpClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			return fakeResp(200, string(body), nil), nil
+		})},
+	}
+	_, rs, err := c.callClaude("sys", "prompt", true)
+	if err != nil {
+		t.Fatalf("callClaude error: %v", err)
+	}
+	if len(rs) != 0 {
+		t.Errorf("want 0 retrievedSources for error block, got %d", len(rs))
+	}
+}
+
 func TestChainJSONLWritten(t *testing.T) {
 	dir := t.TempDir()
 	chainPath := filepath.Join(dir, "test.grounding.jsonl")
