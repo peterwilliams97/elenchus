@@ -107,16 +107,15 @@ and trailing commas. Web search uses `withTools=true`, which adds `web_search_20
 request; tool-use blocks are consumed silently (or logged in `-v`).
 
 **Verdicts:**
-- Dialectic: `"substantive"` | `"partial"` | `"hollow"` | `"error"`. Only `substantive` and
-  `partial` appear in the final residue. `partial` claims carry `SurvivingClaim`.
+- Dialectic: `"substantive"` | `"partial"` | `"hollow"`     | `"error"`. Only `substantive` and `partial` appear in the final residue. `partial` claims carry `SurvivingClaim`.
 - Faithfulness: `"faithful"` | `"partial"` | `"overstated"` | `"absent"` | `"contradicted"`
-- Evidence: `"supported"` | `"mixed"` | `"refuted"` | `"unverifiable"`
+- Evidence: `"supported"`    | `"mixed"`   | `"refuted"`    | `"unverifiable"`
 
 **`maxTokens = 1500`** caps every Claude response. Raise this constant if critiques truncate.
 
 ## Hard rule: never fabricate inputs, and propagate provenance to conclusions
 This is a claim-validation tool. Its credibility is its substrate. Fabricated inputs don't just
-weaken a result — they invert the tool's entire purpose.
+weaken a result; they invert the tool's entire purpose.
 
 - NEVER synthesize a fixture, test input, sample document, dataset, or "example" of a real artifact.
    If a real one is required and cannot be fetched or obtained, STOP and report
@@ -162,9 +161,9 @@ speed, then re-run on the default model for the verdict to trust.
 The three columns are not equally reachable from any one competence:
 - Close reading reaches FAITHFULNESS.
 - Dialectic reaches SUBSTANCE.
-- Reasoning can REFUTE a grounding claim (an internal contradiction kills it with no lookup) but
-  can NEVER CONFIRM one. Positive grounding always needs the truth-maker — a retrieval, not a
-  deduction, however rigorous.
+- Reasoning can REFUTE a grounding claim (an internal contradiction kills it with no lookup) but can
+  NEVER CONFIRM one. Positive grounding always needs the truth-maker — a retrieval, not a deduction,
+  however rigorous.
 
 The characteristic failure is laundering confidence: scoring real wins on faithfulness and
 substance, then pronouncing on grounding with borrowed authority the first two columns never

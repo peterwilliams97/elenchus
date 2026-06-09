@@ -486,9 +486,10 @@ func (c cfg) evidenceClaim(claim string) evidence {
 }
 
 // ── prompts (single source of truth — carry any prompt fixes here) ───────────
-// NOTE: the two calibration fixes in flight on the Python side (faithfulness "literalization"
-// mode + grounding the intended proposition; substance condition-laundering penalty + loop-stop)
-// land in faithCriticSys / substanceCriticSys / assayClaim. They are NOT yet applied here.
+// Calibration fixes applied here and pinned by tests: faithfulness "literalization"
+// mode + grounding the intended proposition (faithCriticSys, intendedProposition);
+// substance condition-laundering penalty + loop-stop/downgrade (substanceCriticSys,
+// assayClaim). The retired Python impl is archived at SHA 469ebe4.
 
 const decomposeSys = `You are a claims extractor trained in analytic philosophy. Break prose into
 its atomic, independently-evaluable assertions. Strip rhetoric, hedges, and connective filler. Each
@@ -608,7 +609,9 @@ func (c cfg) callJSON(system, prompt string, withTools bool, v any) error {
 	if err := unmarshalLoose(out, v); err == nil {
 		return nil
 	}
-	strict := system + "\n\nReturn ONLY raw JSON. No prose, no markdown, no backticks. First character must be { or [."
+	strict := system +
+		"\n\nReturn ONLY raw JSON. No prose, no markdown, no backticks. " +
+		"First character must be { or [."
 	out2, err := dispatch(strict, prompt, withTools)
 	if err != nil {
 		return err

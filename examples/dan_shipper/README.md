@@ -40,30 +40,30 @@ The audit grounding column uses the **intended proposition** — what the speake
 not the literal summary wording. A `refuted` in the grounding column therefore means the
 *intended* claim is refuted — a real anti-signal — not a straw man.
 
-| # | Claim | Faithful? | Substantive? | Grounded? |
-|---|---|---|---|---|
-| 1 | The future of work will happen inside Codex or Claude Code. | partial | partial | mixed |
-| 2 | Every company will have one "super-agent" inside their Slack that every employee talks to regularly. | overstated | partial | mixed |
-| 3 | SaaS is not dead—in fact, Dan is bullish on SaaS stocks. His contrarian take: "I would buy SaaS stocks right now." | faithful | **hollow** | supported |
-| 4 | SaaS economics will shift: users will bring their own AI tokens into apps, which actually improves SaaS margins. | partial | partial | mixed |
-| 5 | PMs will thrive in the AI era. | faithful | **hollow** | mixed |
-| 6 | Full-stack designers will become superheroes. | **absent** | **hollow** | unverifiable |
-| 7 | The AI job apocalypse is not happening. | faithful | partial | mixed |
-| 8 | Forward deployed engineer is the new most essential role. | **absent** | partial | mixed |
-| 9 | CLIs are over. | overstated | **hollow** | **refuted** |
+| #  | Claim                                                                                                              | Faithful? | Substantive? | Grounded? |
+|----|--------------------------------------------------------------------------------------------------------------------|-----------:|-------------:|------:|
+|  1 | The future of work will happen inside Codex or Claude Code.                                                        | partial    | partial    | mixed |
+|  2 | Every company will have one "super-agent" inside their Slack that every employee talks to regularly.               | overstated | partial    | mixed |
+|  3 | SaaS is not dead—in fact, Dan is bullish on SaaS stocks. His contrarian take: "I would buy SaaS stocks right now." | faithful   | **hollow** | supported |
+|  4 | SaaS economics will shift: users will bring their own AI tokens into apps, which actually improves SaaS margins.   | partial    | partial    | mixed |
+|  5 | PMs will thrive in the AI era.                                                                                     | faithful   | **hollow** | mixed |
+|  6 | Full-stack designers will become superheroes.                                                                      | **absent** | **hollow** | unverifiable |
+|  7 | The AI job apocalypse is not happening.                                                                            | faithful   | partial    | mixed |
+|  8 | Forward deployed engineer is the new most essential role. | **absent** | partial | mixed |
+|  9 | CLIs are over. | overstated | **hollow** | **refuted** |
 | 10 | Automation is a lie. | partial | substantive | supported |
 | 11 | We will read way more AI-generated writing and we will like it. | faithful | partial | mixed |
 | 12 | We'll be building software for humans and agents to use together. | faithful | **hollow** | supported |
 
 ## Reading the results
 
-| Pattern | Reading |
-|---------|---------|
-| faithful + partial/substantive + supported | **Signal** — a real, checkable claim that holds. |
+| Pattern                                                | Reading |
+|--------------------------------------------------------|---------|
+| faithful + partial/substantive + supported             | **Signal** — a real, checkable claim that holds. |
 | faithful + partial/substantive + mixed or unverifiable | **Genuine bet** — well-formed and honestly attributed, not yet settled. |
-| faithful + partial/substantive + **refuted** | **Anti-signal** — checkable and wrong. Investigate before acting on it. |
-| **overstated** or **absent** + any | **Summarizer's noise** — the distortion is in the summary. Go back to the source; the faithfulness column tells you where. |
-| faithful + **hollow** | **Speaker's noise** — vacuous, but accurately reported. |
+| faithful + partial/substantive + **refuted**           | **Anti-signal** — checkable and wrong. Investigate before acting on it. |
+| **overstated** or **absent** + any                     | **Summarizer's noise** — the distortion is in the summary. Go back to the source; the faithfulness column tells you where. |
+| faithful + **hollow**                                  | **Speaker's noise** — vacuous, but accurately reported. |
 
 Note: because the audit grounds the *intended* proposition rather than the literal words, an
 `overstated` or `absent` grounding verdict is rare — the substitution handles the register before
@@ -91,6 +91,5 @@ refuted. Even the intended narrowed claim ("CLIs are no longer the primary work 
 refuted by evidence (CLIs are in a renaissance). Three-way bad: the summarizer inflated it, the
 claim dissolved on scrutiny, and the evidence cuts against it.
 
-**Speaker's noise — #3, #5, #12.** Faithfully reported but substance returned hollow — the
-original claims are unfalsifiable or equivocate. Dan said them; they just don't hold up under
-dialectic.
+**Speaker's noise — #3, #5, #12.** Faithfully reported but substance returned hollow — the original
+claims are unfalsifiable or equivocate. Dan said them; they just don't hold up under dialectic.

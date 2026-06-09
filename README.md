@@ -7,7 +7,8 @@ think; it makes the structure of a claim visible so you can decide.
 The tool answers three **different** questions, one per mode, and it lets the answers disagree:
 
 - **Faithfulness** — did the source actually say this? *(sense / attribution)*
-- **Substance** — is the claim well-formed and falsifiable, the kind of thing that *could* be true? *(structure)*
+- **Substance** — is the claim well-formed and falsifiable, the kind of thing that *could* be true?
+*(structure)*
 - **Grounding** — is it actually true, against external evidence? *(reference / truth-makers)*
 
 A claim can be faithfully reported, internally well-reasoned, and still false. Keeping those three
@@ -16,12 +17,12 @@ purpose rather than collapsing them into a single "is this good?"
 
 ## What assay is for
 
-assay is a mirror, not a crutch. It is built for people trained in classical rigour — the
-trivium, the scientific method, an arts or science degree — who have landed in technical
-workplaces and cannot see where that training applies. The training is invisible to the person
-who holds it. assay instantiates the rigour they already have as three concrete columns —
-faithfulness, substance, grounding — on a real work artifact, so the transferable skill becomes
-visible to its owner. The recognition is the product; the verdict on any one claim is secondary.
+assay is a mirror, not a crutch. It is built for people trained in classical rigour — the trivium,
+the scientific method, an arts or science degree — who have landed in technical workplaces and
+cannot see where that training applies. The training is invisible to the person who holds it. assay
+instantiates the rigour they already have as three concrete columns — *faithfulness*, *substance*,
+*grounding* — on a real work artifact, so the transferable skill becomes visible to its owner. The
+recognition is the product; the verdict on any one claim is secondary.
 
 The tool's own headline is a claim it cannot settle from the armchair: that making already-held
 rigour visible this way causes a trained user to recognise the skill as transferable. That is a
