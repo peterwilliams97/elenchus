@@ -17,22 +17,28 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math/rand"
 	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
 )
 
 const (
-	defaultModel = "claude-sonnet-4-6"
-	apiURL       = "https://api.anthropic.com/v1/messages"
-	maxTokens    = 1500
+	defaultModel     = "claude-sonnet-4-6"
+	apiURL           = "https://api.anthropic.com/v1/messages"
+	maxTokens        = 1500
+	retryMaxAttempts = 4 // 1 initial + 3 retries on 429/503/529
 )
 
-var httpClient = &http.Client{Timeout: 150 * time.Second}
+var (
+	httpClient = &http.Client{Timeout: 150 * time.Second}
+	retryBase  = time.Second // overridden to 0 in tests for instant retry
+)
 
 // ── config ────────────────────────────────────────────────────────────────────
 
@@ -53,6 +59,9 @@ type cfg struct {
 	// call is the API dispatch function. When nil, callClaude is used (production).
 	// Tests set this to a stub to avoid network calls.
 	call func(system, prompt string, withTools bool) (string, error)
+	// httpClient overrides the package-level httpClient. Tests inject a custom
+	// RoundTripper here to exercise the transport-retry path without network calls.
+	httpClient *http.Client
 }
 
 // runTally tracks verified/errored counts across a single assay run for the SUMMARY block.
@@ -258,7 +267,10 @@ func printSummary(fixture, mode, model string, rt *runTally, u *usageCounters, c
 // ── runners ──────────────────────────────────────────────────────────────────
 
 func (c *cfg) runSubstance(input string) {
-	claims := c.decompose(input)
+	claims, err := c.decompose(input)
+	if err != nil {
+		fatal("decompose failed: " + err.Error())
+	}
 	c.tally = newRunTally(len(claims))
 	results := make([]substance, len(claims))
 	for i, cl := range claims {
@@ -400,12 +412,12 @@ func (c *cfg) runAudit(input, src string) {
 
 // decompose is the first stage: break an input blob into independently checkable claims. The rest
 // of the stages operate on these individual claims.
-func (c cfg) decompose(text string) []string {
+func (c cfg) decompose(text string) ([]string, error) {
 	var arr []string
 	if err := c.callJSON(decomposeSys, "TEXT:\n"+text, false, &arr); err != nil {
-		return nil
+		return nil, err
 	}
-	return arr
+	return arr, nil
 }
 
 // assayClaim is the substance pass: given a claim, run it through producer-critic rounds to see if
@@ -633,17 +645,30 @@ func (c cfg) callClaude(system, prompt string, withTools bool) (string, error) {
 		fmt.Println(c.grey("│ user:\n│   " + strings.ReplaceAll(prompt, "\n", "\n│   ")))
 	}
 
-	httpReq, _ := http.NewRequest("POST", apiURL, bytes.NewReader(body))
-	httpReq.Header.Set("content-type", "application/json")
-	httpReq.Header.Set("x-api-key", c.apiKey)
-	httpReq.Header.Set("anthropic-version", "2023-06-01")
-
-	resp, err := httpClient.Do(httpReq)
-	if err != nil {
-		return "", err
+	client := httpClient
+	if c.httpClient != nil {
+		client = c.httpClient
 	}
-	defer resp.Body.Close()
-	raw, _ := io.ReadAll(resp.Body)
+
+	var raw []byte
+	for attempt := 0; ; attempt++ {
+		httpReq, _ := http.NewRequest("POST", apiURL, bytes.NewReader(body))
+		httpReq.Header.Set("content-type", "application/json")
+		httpReq.Header.Set("x-api-key", c.apiKey)
+		httpReq.Header.Set("anthropic-version", "2023-06-01")
+
+		resp, err := client.Do(httpReq)
+		if err != nil {
+			return "", err
+		}
+		raw, _ = io.ReadAll(resp.Body)
+		resp.Body.Close() // explicit close before any retry; do not defer across iterations
+
+		if !retryable(resp.StatusCode) || attempt >= retryMaxAttempts-1 {
+			break
+		}
+		time.Sleep(retryDelay(resp.Header.Get("Retry-After"), attempt))
+	}
 
 	var ar apiResp
 	if err := json.Unmarshal(raw, &ar); err != nil {
@@ -653,7 +678,7 @@ func (c cfg) callClaude(system, prompt string, withTools bool) (string, error) {
 		return "", fmt.Errorf("api error: %s", ar.Error.Message)
 	}
 
-	// Accumulate usage from this call.
+	// Accumulate usage before checking stop_reason — a truncated response was still billed.
 	if c.usage != nil && ar.Usage != nil {
 		webSearches := 0
 		if ar.Usage.ServerToolUse != nil {
@@ -674,6 +699,10 @@ func (c cfg) callClaude(system, prompt string, withTools bool) (string, error) {
 		}
 		c.usage.add(ar.Usage.InputTokens, ar.Usage.OutputTokens,
 			ar.Usage.CacheReadInputTokens, ar.Usage.CacheCreationInputTokens, webSearches)
+	}
+
+	if ar.StopReason == "max_tokens" {
+		return "", fmt.Errorf("response truncated: stop_reason=max_tokens (limit=%d tokens); raise maxTokens constant", maxTokens)
 	}
 
 	var sb strings.Builder
@@ -697,6 +726,26 @@ func (c cfg) callClaude(system, prompt string, withTools bool) (string, error) {
 		fmt.Println(c.cyan("└─"))
 	}
 	return sb.String(), nil
+}
+
+// retryable reports whether an HTTP status code warrants a retry.
+func retryable(code int) bool {
+	return code == 429 || code == 503 || code == 529
+}
+
+// retryDelay returns how long to wait before the next attempt. It honours the
+// Retry-After header (integer seconds) when present; otherwise uses full-jitter
+// exponential backoff capped at 30 s. retryBase==0 (tests) always returns 0.
+func retryDelay(retryAfter string, attempt int) time.Duration {
+	if s, err := strconv.Atoi(strings.TrimSpace(retryAfter)); err == nil && s > 0 {
+		return time.Duration(s) * time.Second
+	}
+	d := retryBase << uint(attempt) // 1 s, 2 s, 4 s, …
+	if d > 30*time.Second {
+		d = 30 * time.Second
+	}
+	// rand.Int63n(n+1) with n==0 returns 0, so retryBase==0 sleeps for 0.
+	return time.Duration(rand.Int63n(int64(d) + 1)) // full jitter: [0, d]
 }
 
 type apiReq struct {
@@ -725,9 +774,10 @@ type apiUsage struct {
 	} `json:"server_tool_use"`
 }
 type apiResp struct {
-	Content []apiBlock `json:"content"`
-	Usage   *apiUsage  `json:"usage"`
-	Error   *struct {
+	Content    []apiBlock `json:"content"`
+	StopReason string     `json:"stop_reason"`
+	Usage      *apiUsage  `json:"usage"`
+	Error      *struct {
 		Message string `json:"message"`
 	} `json:"error"`
 }

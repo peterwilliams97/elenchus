@@ -2,7 +2,9 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -691,6 +693,136 @@ func TestPriceLookupUnknownModel(t *testing.T) {
 	// Measured token counts must appear in the string so the caller can still see them.
 	if !strings.Contains(est, "in=500") {
 		t.Errorf("want input token count in estimate, got %q", est)
+	}
+}
+
+// ── transport-retry tests ─────────────────────────────────────────────────────
+//
+// These drive callClaude via a stubbed http.RoundTripper (cfg.httpClient), not
+// the cfg.call seam, so the retry loop and status-code handling are exercised
+// directly. retryBase is set to 0 so retries are instant.
+
+// roundTripFunc adapts a function to the http.RoundTripper interface.
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+
+// fakeResp builds a minimal *http.Response with the given status, body, and headers.
+func fakeResp(status int, body string, headers map[string]string) *http.Response {
+	h := http.Header{}
+	for k, v := range headers {
+		h.Set(k, v)
+	}
+	return &http.Response{StatusCode: status, Header: h, Body: io.NopCloser(strings.NewReader(body))}
+}
+
+// okBody is a representative Anthropic API success response (real field layout).
+const okBody = `{"id":"msg_01","type":"message","role":"assistant",` +
+	`"content":[{"type":"text","text":"hello"}],` +
+	`"model":"claude-sonnet-4-6","stop_reason":"end_turn","stop_sequence":null,` +
+	`"usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}`
+
+// maxTokensBody is a response that was cut off mid-output.
+const maxTokensBody = `{"id":"msg_02","type":"message","role":"assistant",` +
+	`"content":[{"type":"text","text":"partial {"}],` +
+	`"model":"claude-sonnet-4-6","stop_reason":"max_tokens","stop_sequence":null,` +
+	`"usage":{"input_tokens":10,"output_tokens":1500,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}`
+
+// TestCallClaude429ThenSuccess confirms that a 429 followed by a 200 succeeds
+// after one retry and returns the expected content.
+func TestCallClaude429ThenSuccess(t *testing.T) {
+	retryBase = 0
+	t.Cleanup(func() { retryBase = time.Second })
+
+	attempts := 0
+	c := cfg{
+		model:  "claude-sonnet-4-6",
+		apiKey: "test-key",
+		httpClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			attempts++
+			if attempts == 1 {
+				return fakeResp(429, `{"error":{"type":"rate_limit_error","message":"rate limited"}}`,
+					map[string]string{"Retry-After": "0"}), nil
+			}
+			return fakeResp(200, okBody, nil), nil
+		})},
+	}
+	got, err := c.callClaude("sys", "prompt", false)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if got != "hello" {
+		t.Errorf("want %q, got %q", "hello", got)
+	}
+	if attempts != 2 {
+		t.Errorf("want 2 attempts, got %d", attempts)
+	}
+}
+
+// TestCallClaude529PersistentFails confirms that persistent 529s exhaust retries
+// and return a clean error. retryBase=0 keeps the test instant.
+func TestCallClaude529PersistentFails(t *testing.T) {
+	retryBase = 0
+	t.Cleanup(func() { retryBase = time.Second })
+
+	attempts := 0
+	c := cfg{
+		model:  "claude-sonnet-4-6",
+		apiKey: "test-key",
+		httpClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			attempts++
+			return fakeResp(529, `{"error":{"type":"overloaded_error","message":"overloaded"}}`, nil), nil
+		})},
+	}
+	_, err := c.callClaude("sys", "prompt", false)
+	if err == nil {
+		t.Fatal("expected error on persistent 529, got nil")
+	}
+	if attempts != retryMaxAttempts {
+		t.Errorf("want %d attempts, got %d", retryMaxAttempts, attempts)
+	}
+}
+
+// TestCallClaudeMaxTokensTruncation confirms that a max_tokens stop_reason is
+// returned as a named error and that usage is recorded before the error is returned.
+func TestCallClaudeMaxTokensTruncation(t *testing.T) {
+	u := newUsageCounters()
+	c := cfg{
+		model:  "claude-sonnet-4-6",
+		apiKey: "test-key",
+		usage:  u,
+		httpClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			return fakeResp(200, maxTokensBody, nil), nil
+		})},
+	}
+	_, err := c.callClaude("sys", "prompt", false)
+	if err == nil {
+		t.Fatal("expected truncation error, got nil")
+	}
+	if !strings.Contains(err.Error(), "max_tokens") {
+		t.Errorf("error should mention max_tokens, got: %v", err)
+	}
+	// Usage must have been accumulated before the error was returned.
+	calls, in, out, _, _, _, _, _ := u.snapshot()
+	if calls != 1 || in != 10 || out != 1500 {
+		t.Errorf("usage not recorded before truncation error: calls=%d in=%d out=%d", calls, in, out)
+	}
+}
+
+// TestDecomposeReturnsError confirms that a callJSON failure propagates out of
+// decompose as a non-nil error rather than a silent nil slice.
+func TestDecomposeReturnsError(t *testing.T) {
+	c := cfg{
+		call: func(system, prompt string, withTools bool) (string, error) {
+			return "", fmt.Errorf("API down")
+		},
+	}
+	_, err := c.decompose("some text")
+	if err == nil {
+		t.Fatal("expected decompose to return error, got nil")
+	}
+	if !strings.Contains(err.Error(), "API down") {
+		t.Errorf("expected wrapped error to contain 'API down', got: %v", err)
 	}
 }
 
