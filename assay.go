@@ -465,6 +465,10 @@ func (c cfg) assayClaim(claim string) substance {
 	return out
 }
 
+// faithClaim is the faithfulness pass: given a claim and a source transcript, check whether the
+// claim faithfully represents what the speaker said in the source. This is a two-step process:
+// first the defender identifies supporting evidence in the source, then the critic evaluates the
+// faithfulness of the claim based on this evidence.
 func (c cfg) faithClaim(claim, src string) faith {
 	var d defenderJSON
 	if err := c.callJSON(faithDefenderSys, "SUMMARY CLAIM:\n"+claim+"\n\nSOURCE:\n"+src, false, &d); err != nil {
