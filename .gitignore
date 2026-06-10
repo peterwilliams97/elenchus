@@ -6,3 +6,7 @@ __pycache__/
 log*.txt
 /fixtures/
 /eval/
+# Real fetched source documents for the laundering probe (copyright: analysis, not
+# redistribution). The committed PROVENANCE.md records URL + retrieval date + verbatim
+# snippet so the source can be recreated; see examples/destructive/laundering/.
+examples/destructive/laundering/sources/

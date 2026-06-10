@@ -52,3 +52,10 @@ with grounded reasoning, explicitly flagging any confidence/accuracy mismatch.
 **Open.**
 - Mode design: does this reuse the grounding pass against the artifact, or is it a new track?
 - How is "the artifact" supplied — code? a transcript? a claim set?
+
+
+---
+
+## 3. Standard code testing.
+
+1. Fuzz

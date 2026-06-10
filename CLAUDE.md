@@ -23,8 +23,9 @@ Three operating modes, plus Go-only extras:
 
 **Docs roster:** `README.md` is the user-facing abstract; `BACKGROUND.md` is the design-rationale +
 failure-envelope / destructive-self-criticism doc (where verdicts can't be trusted, plus the
-destructive-test specs); `SESSION.md` is the parking lot of deferred work; `rigour-map/decision_log.jsonl`
-is the decision/change log.
+destructive-test specs); `TESTING.md` is the testing program — the four-layer test taxonomy, what
+each layer's results are allowed to mean, and the live destructive-test status board; `SESSION.md` is
+the parking lot of deferred work; `rigour-map/decision_log.jsonl` is the decision/change log.
 
 ### Tracks
 
@@ -47,9 +48,18 @@ export ANTHROPIC_API_KEY=sk-ant-...
 ./assay -audit -source transcript.txt -md summary.txt  # all three, markdown cross-tab
 ./assay -v memo.txt                                    # verbose: show every API call
 ./assay -model claude-opus-4-8 -max-rounds 3 memo.txt
+./assay -quiet -usage-out usage.jsonl memo.txt         # suppress per-case lines; append a usage record
+./assay -max-claims 5 -evidence claims.txt             # bound an expensive grounding run
+./assay -chain-dir eval/run1 memo.txt                  # write the Tier-2 JSONL chain here
 ```
 
 `ANTHROPIC_MODEL` env var overrides the default model (`claude-sonnet-4-6`).
+
+**Flags beyond the modes:** `-max-rounds N` (producer–critic rounds, substance only, default 2);
+`-max-claims N` (cap claims graded, 0 = unlimited); `-progress` (per-case stderr lines + 60s
+heartbeat, default on); `-quiet` (suppress per-case lines and heartbeat but keep the SUMMARY block
+and Tier-2 chain); `-usage-out FILE` (append one JSON usage record per run); `-chain-dir DIR` (Tier-2
+JSONL verification chain destination, default `eval/<stamp>/`); `-v`/`-verbose`; `-no-color`.
 
 ## Architecture
 
@@ -130,6 +140,21 @@ actually fetched); `callJSONSourced` threads these back so `crossCheckEvidence` 
 `max_tokens` cutoff (or stubborn malformed JSON past the single reparse) collapses a case to
 `"error"`, which the tally counts as unverified rather than surfacing why (BACKGROUND.md W11).
 
+**Reporting (three tiers).** Every run emits, to stderr:
+- *Tier 1* — one `progressDone` completion line per case (verdict + truncated claim + elapsed),
+  plus a 60s `startHeartbeat` liveness line (`heartbeatLine`) so long grounding runs don't look
+  hung. Both are gated by `cfg.progressEnabled()` (off under `-quiet`).
+- *SUMMARY block* — `printSummary` prints a final rollup (fixture, mode, model, verified/total,
+  per-verdict counts from `runTally`, and the `usageCounters` snapshot). Always emitted, even under
+  `-quiet`.
+- *Tier 2* — a JSONL verification chain (one record per case) written to `cfg.chainFile`, derived
+  from `-chain-dir` (default `eval/<stamp>/`), for offline audit of the full run.
+
+`runTally` (`newRunTally`/`record`/`snapshot`) counts verdicts across a run; an `"error"` case
+counts as unverified, not a win. `usageCounters` (`newUsageCounters`/`add`/`snapshot`) accumulates
+input/output/cache tokens and web-search request counts from each `callClaude` (parsed from
+`apiUsage`); `-usage-out` appends the snapshot as one JSON record per run.
+
 ## Hard rule: never fabricate inputs, and propagate provenance to conclusions
 This is a claim-validation tool. Its credibility is its substrate. Fabricated inputs don't just
 weaken a result; they invert the tool's entire purpose.
@@ -173,12 +198,21 @@ Test coverage in `assay_test.go`:
 For end-to-end validation use `examples/dan_shipper/` with `-model claude-haiku-4-5-20251001` for
 speed, then re-run on the default model for the verdict to trust.
 
-These tests are **confirmatory** (nominal input → intended behaviour fires). The complementary
-**destructive-testing program** — adversarial inputs that push each mode past its limit to map the
-failure envelope — is specified in BACKGROUND.md §2.2 and tracked as the next step in `SESSION.md`;
-it is not yet implemented. Atomization asymmetry to keep in mind when testing: substance uses the LLM
-`decompose`, while faithfulness/evidence/audit use the regex `splitSummary` — different failure
-surfaces (BACKGROUND.md W4), so test the one your change actually touches.
+These `go test` tests are **confirmatory** (nominal input → intended behaviour fires) and cover
+Layers 1–2 (plumbing + orchestration) of the four-layer program in `TESTING.md`. The complementary
+**destructive-testing program** (Layer 3 — adversarial inputs that push each mode past its limit to
+map the failure envelope) is specified in BACKGROUND.md §2.2 and tracked layer-by-layer in
+`TESTING.md`. It is now **partly built**: the §3b adversarial axis probes ship as seven public worked
+examples under `examples/destructive/` (motte-and-bailey, reference-class, hidden-premise,
+unfalsifiable-dress, causal-narrative, axis-gaps, laundering, each with `claim.txt` / `DEFECT.md` /
+`EXPECTED.md` / `results/` + a top-level `run.sh` and reader README), first-calibrated 2026-06-10 on
+`claude-haiku-4-5-20251001` at N=10 (logged to `testing/calibration_log.jsonl`). Layer 3 is
+*calibration, never a CI gate* — its results are read by a human and mean "the envelope held on this
+set, this time," never "the critic is correct." The constructive gold sets (§3a), cross-model probes
+(§3c), and several Layer 1–2 lockdowns remain unbuilt — see `SESSION.md` for the prioritized queue.
+Atomization asymmetry to keep in mind when testing: substance uses the LLM `decompose`, while
+faithfulness/evidence/audit use the regex `splitSummary` — different failure surfaces (BACKGROUND.md
+W4), so test the one your change actually touches.
 
 ## The axis boundary (durable design note)
 

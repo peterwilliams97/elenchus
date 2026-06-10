@@ -1,0 +1,1 @@
+Teams that adopted the tool shipped 38% faster the next quarter. The mechanism is clear: by removing the friction of context-switching, it keeps engineers in flow, and flow is where throughput comes from.

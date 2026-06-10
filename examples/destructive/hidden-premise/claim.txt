@@ -1,0 +1,1 @@
+We should retire the on-prem edition. Ninety-one percent of this quarter's new signups chose the cloud offering, so customers have told us clearly where to put our engineering effort.
