@@ -23,10 +23,10 @@ Three operating modes, plus Go-only extras:
 
 ### Tracks
 
-**Rigour-application map** — a parallel track (no Go code yet) that classifies `(task, phase)` →
-`{advantage, disadvantage, irrelevant}` from a labeled decision log. Phase 0 is data collection;
-`rigour-map/decision_log.jsonl` is the corpus. Open decision: seed the classifier now vs. log
-unaided first to protect the disagreement baseline — not yet resolved.
+**Rigour-application map**: A parallel track (no Go code yet) that classifies
+`(task, phase)` → `{advantage, disadvantage, irrelevant}` from a labeled decision log. Phase 0 is
+data collection; `rigour-map/decision_log.jsonl` is the corpus. Open decision: seed the classifier
+now vs. log unaided first to protect the disagreement baseline — not yet resolved.
 
 ## Running it
 

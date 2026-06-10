@@ -1,9 +1,9 @@
 # Worked example — "the maximum URL length is 2048"
 
-This is the example the rest of the repo was missing. The others exercise the machinery; this
-one shows the intended user — someone trained in close reading and dialectic — watching that
-training help decisively on two of assay's three columns and turn into a trap on the third. The
-point is not the verdict on the claim. The point is seeing where your own rigour stops.
+This is the example the rest of the repo was missing. The others exercise the machinery; this one
+shows the intended user — someone trained in close reading and dialectic — watching that training
+help decisively on two of assay's three columns and turn into a trap on the third. The point is not
+the verdict on the claim. The point is seeing where your own rigour stops.
 
 ## The claim
 
@@ -92,15 +92,15 @@ whole point.
 
 Run: 2026-06-01, model `claude-sonnet-4-6`, 7 claims, 15 calls, est $0.1334.
 
-| Verdict | Claim | Note |
-|---|---|---|
-| hollow | The maximum length of a URL is 2048 characters | Survives only by redefining 2048 as a "compatibility guideline for IE-era infrastructure" — conditions the speaker never stated. |
-| hollow | The 2048-character URL length limit is defined by the HTTP specification | Flatly false. No HTTP RFC defines a 2048-char limit. Steelman replaces "HTTP specification" with "broadly construed ecosystem including vendor documentation." Condition laundering. |
-| hollow | The HTTP specification defines a hard limit on URL length | RFC 7230 explicitly declines to set a numeric URI ceiling. Steelman redefines "hard limit" to mean "per-server discretionary threshold" — the opposite. |
-| hollow | Any URL longer than 2048 characters is invalid | Universal claim trivially falsified by modern browsers and RFC 7230. Survives only as "in IE-era stacks explicitly configured to that limit." |
-| hollow | Any URL longer than 2048 characters will be rejected | Same. Universal falsified by counterexample; rescued only with four conditions wholly absent from the original assertion. |
-| partial | The HTTP specification places no limit on URL length | **Survives as:** The IETF HTTP RFCs (RFC 7230 / RFC 9110–9112) specify no normative numeric maximum for URL length; any length ceiling is an implementation or deployment decision, not a protocol mandate. |
-| partial | A URL can be any length | **Survives as:** RFC 3986 and related URI specifications impose no explicit maximum length on a URI — no formal syntactic ceiling in the standard itself. |
+| Verdict | Claim                                                     | Note |
+|---------|-----------------------------------------------------------|------|
+| hollow  | The maximum length of a URL is 2048 characters            | Survives only by redefining 2048 as a "compatibility guideline for IE-era infrastructure" — conditions the speaker never stated. |
+| hollow  | The 2048-character URL length limit is defined by the HTTP specification | Flatly false. No HTTP RFC defines a 2048-char limit. Steelman replaces "HTTP specification" with "broadly construed ecosystem including vendor documentation." Condition laundering. |
+| hollow  | The HTTP specification defines a hard limit on URL length | RFC 7230 explicitly declines to set a numeric URI ceiling. Steelman redefines "hard limit" to mean "per-server discretionary threshold" — the opposite. |
+| hollow  | Any URL longer than 2048 characters is invalid            | Universal claim trivially falsified by modern browsers and RFC 7230. Survives only as "in IE-era stacks explicitly configured to that limit." |
+| hollow  | Any URL longer than 2048 characters will be rejected      | Same. Universal falsified by counterexample; rescued only with four conditions wholly absent from the original assertion. |
+| partial | The HTTP specification places no limit on URL length      | **Survives as:** The IETF HTTP RFCs (RFC 7230 / RFC 9110–9112) specify no normative numeric maximum for URL length; any length ceiling is an implementation or deployment decision, not a protocol mandate. |
+| partial | A URL can be any length                                   | **Survives as:** RFC 3986 and related URI specifications impose no explicit maximum length on a URI — no formal syntactic ceiling in the standard itself. |
 
 Summary: 5 hollow · 2 partial.
 
@@ -117,4 +117,9 @@ Run: 2026-06-01, model `claude-sonnet-4-6`, 2 raw claims (no decomposition in ev
 
 Summary: 1 refuted · 1 mixed.
 
-**Reading the two tables together:** Substance catches the hidden premise (`implementation = specification`) and the universal overreach (`any URL … is invalid`). Grounding confirms: the spec claim is refuted by evidence, and the clever counter-claim (`any length you want`) comes back mixed — the spec part survives, the practice part doesn't. The armchair gets you to the right place on the spec; you still need the retrieval to find out what deployed systems actually enforce.
+**Reading the two tables together:** Substance catches the hidden premise
+(`implementation = specification`) and the universal overreach (`any URL … is invalid`). Grounding
+confirms: the spec claim is refuted by evidence, and the clever counter-claim
+(`any length you want`) comes back mixed — the spec part survives, the practice part doesn't. The
+armchair gets you to the right place on the spec; you still need the retrieval to find out what
+deployed systems actually enforce.

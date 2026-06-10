@@ -1,7 +1,7 @@
 # Decision Log Schema
 
-Each row in `decision_log.jsonl` is one labeled decision about whether applying intellectual
-rigour helped, hurt, or was moot in a specific **(task, phase)** context. The corpus trains the
+Each row in `decision_log.jsonl` is one labeled decision about whether applying intellectual rigour
+helped, hurt, or was moot in a specific **(task, phase)** context. The corpus trains the
 rigour-application map: a classifier `(task, phase) → {advantage, disadvantage, irrelevant}`.
 
 Two-stage by design. **Capture** is filled in ~20 seconds *before you act* — a gut call recorded

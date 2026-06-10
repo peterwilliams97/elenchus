@@ -1,2 +1,3 @@
-The maximum length of a URL is 2048 characters, a hard limit defined by the HTTP specification; any URL longer than that is invalid and will be rejected.
+The maximum length of a URL is 2048 characters, a hard limit defined by the HTTP specification; any
+URL longer than that is invalid and will be rejected.
 The HTTP specification places no limit on URL length, so in practice a URL can be any length you want.

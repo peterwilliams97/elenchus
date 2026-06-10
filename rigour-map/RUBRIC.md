@@ -1,9 +1,9 @@
 # Rigour-Application Rubric
 
-Classifies the dialectical-rigour methodology per **(business_area × mode)** →
-`{advantage | disadvantage | irrelevant}`. The methodology is three filters with different
-domain-fit, so the unit of classification is the (area, mode) cell, and the per-area result is the
-3-vector. A flat per-area label averages away the real signal — don't use one.
+Classifies the dialectical-rigour methodology per
+**(business_area × mode)** → `{advantage | disadvantage | irrelevant}`. The methodology is three
+filters with different domain-fit, so the unit of classification is the (area, mode) cell, and the
+per-area result is the 3-vector. A flat per-area label averages away the real signal — don't use one.
 
 The label is *earned from an assay run*, never asserted. Inputs are the seven verified fixtures in
 `fixtures/raw/` (provenance in their headers). A populated label table is not a result until every

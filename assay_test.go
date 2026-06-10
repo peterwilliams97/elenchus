@@ -852,8 +852,8 @@ const maxTokensBody = `{"id":"msg_02","type":"message","role":"assistant",` +
 	`"model":"claude-sonnet-4-6","stop_reason":"max_tokens","stop_sequence":null,` +
 	`"usage":{"input_tokens":10,"output_tokens":1500,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}`
 
-// TestCallClaude429ThenSuccess confirms that a 429 followed by a 200 succeeds
-// after one retry and returns the expected content.
+// TestCallClaude429ThenSuccess confirms that a 429 followed by a 200 succeeds after one retry and
+// returns the expected content.
 func TestCallClaude429ThenSuccess(t *testing.T) {
 	retryBase = 0
 	t.Cleanup(func() { retryBase = time.Second })
@@ -883,8 +883,8 @@ func TestCallClaude429ThenSuccess(t *testing.T) {
 	}
 }
 
-// TestCallClaude529PersistentFails confirms that persistent 529s exhaust retries
-// and return a clean error. retryBase=0 keeps the test instant.
+// TestCallClaude529PersistentFails confirms that persistent 529s exhaust retries and return a clean
+// error. retryBase=0 keeps the test instant.
 func TestCallClaude529PersistentFails(t *testing.T) {
 	retryBase = 0
 	t.Cleanup(func() { retryBase = time.Second })
@@ -898,8 +898,7 @@ func TestCallClaude529PersistentFails(t *testing.T) {
 			return fakeResp(529, `{"error":{"type":"overloaded_error","message":"overloaded"}}`, nil), nil
 		})},
 	}
-	_, _, err := c.callClaude("sys", "prompt", false)
-	if err == nil {
+	if _, _, err := c.callClaude("sys", "prompt", false); err == nil {
 		t.Fatal("expected error on persistent 529, got nil")
 	}
 	if attempts != retryMaxAttempts {
@@ -907,8 +906,8 @@ func TestCallClaude529PersistentFails(t *testing.T) {
 	}
 }
 
-// TestCallClaudeMaxTokensTruncation confirms that a max_tokens stop_reason is
-// returned as a named error and that usage is recorded before the error is returned.
+// TestCallClaudeMaxTokensTruncation confirms that a max_tokens stop_reason is returned as a named
+// error and that usage is recorded before the error is returned.
 func TestCallClaudeMaxTokensTruncation(t *testing.T) {
 	u := newUsageCounters()
 	c := cfg{

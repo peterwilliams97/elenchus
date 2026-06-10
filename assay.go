@@ -58,11 +58,12 @@ type cfg struct {
 	usage        *usageCounters
 	tally        *runTally
 	// call is the API dispatch function. When nil, callClaude is used (production).
-	// Returns the response text, any retrieved sources (from web_search_tool_result blocks), and an error.
+	// Returns the response text, any retrieved sources (from web_search_tool_result blocks), and an
+	// error.
 	// Tests set this to a stub to avoid network calls.
 	call func(system, prompt string, withTools bool) (string, []retrievedSource, error)
-	// httpClient overrides the package-level httpClient. Tests inject a custom
-	// RoundTripper here to exercise the transport-retry path without network calls.
+	// httpClient overrides the package-level httpClient. Tests inject a custom RoundTripper here to
+	// exercise the transport-retry path without network calls.
 	httpClient *http.Client
 }
 
@@ -789,10 +790,10 @@ func (c cfg) callClaude(system, prompt string, withTools bool) (string, []retrie
 				fmt.Println(c.grey("│   searched: " + in.Query))
 			}
 		case "web_search_tool_result":
-			// b.Content is the raw JSON value of the "content" field: either a
-			// []web_search_result array or a web_search_tool_result_error object.
-			// Unmarshal directly into a slice; an error object (not an array) fails
-			// silently and lands in the "no sources retrieved" downgrade path.
+			// b.Content is the raw JSON value of the "content" field: either a []web_search_result
+			// array or a web_search_tool_result_error object.
+			// Unmarshal directly into a slice; an error object (not an array) fails silently and
+			// lands in the "no sources retrieved" downgrade path.
 			var results []struct {
 				Type  string `json:"type"`
 				URL   string `json:"url"`
@@ -876,8 +877,8 @@ type apiBlock struct {
 	Content json.RawMessage `json:"content"` // populated for web_search_tool_result blocks
 }
 
-// retrievedSource is a URL actually fetched during a web_search_tool_result round trip —
-// distinct from source, which is what the model claims it used in its JSON response.
+// retrievedSource is a URL actually fetched during a web_search_tool_result round trip — distinct
+// from source, which is what the model claims it used in its JSON response.
 type retrievedSource struct{ Title, URL string }
 
 // ── JSON extraction ──────────────────────────────────────────────────────────
@@ -1091,7 +1092,8 @@ func mdSubstance(rs []substance) string {
 		if why == "" && r.SurvivingClaim != "" {
 			why = "survives as: " + r.SurvivingClaim
 		}
-		b.WriteString(fmt.Sprintf("| %d | %s | %s | %s |\n", i+1, mdCell(r.Claim), mdV(r.Verdict), mdCell(why)))
+		b.WriteString(fmt.Sprintf("| %d | %s | %s | %s |\n",
+			i+1, mdCell(r.Claim), mdV(r.Verdict), mdCell(why)))
 		vs = append(vs, r.Verdict)
 	}
 	b.WriteString("\n**" + tally(vs) + "**\n")
@@ -1104,7 +1106,8 @@ func mdFaith(rs []faith) string {
 	b.WriteString("| # | Claim | Verdict | Source actually says |\n|---|---|---|---|\n")
 	vs := []string{}
 	for i, r := range rs {
-		b.WriteString(fmt.Sprintf("| %d | %s | %s | %s |\n", i+1, mdCell(r.Claim), mdV(r.Verdict), mdCell(r.SourceSays)))
+		b.WriteString(fmt.Sprintf("| %d | %s | %s | %s |\n",
+			i+1, mdCell(r.Claim), mdV(r.Verdict), mdCell(r.SourceSays)))
 		vs = append(vs, r.Verdict)
 	}
 	b.WriteString("\n**" + tally(vs) + "**\n")
@@ -1494,7 +1497,11 @@ func (u *usageCounters) setLabel(label string) {
 }
 
 // snapshot returns a consistent read without holding the lock across formatting.
-func (u *usageCounters) snapshot() (calls, in, out, cacheRead, cacheCreate, webSearches int, label string, elapsed time.Duration) {
+func (u *usageCounters) snapshot() (
+	calls, in, out, cacheRead, cacheCreate, webSearches int,
+	label string,
+	elapsed time.Duration,
+) {
 	u.mu.Lock()
 	calls = u.calls
 	in = u.inputTokens
@@ -1528,7 +1535,7 @@ func estimateCost(model string, in, out, cacheRead, cacheCreate, webSearches int
 }
 
 // heartbeatLine produces a one-line cumulative status for the 60s ticker.
-// rt may be nil (e.g. when called before the runner initialises its tally).
+// `rt` may be nil (e.g. when called before the runner initialises its tally).
 func heartbeatLine(model string, u *usageCounters, rt *runTally) string {
 	calls, in, out, cacheRead, cacheCreate, webSearches, label, elapsed := u.snapshot()
 	cost, _ := estimateCost(model, in, out, cacheRead, cacheCreate, webSearches)
@@ -1558,8 +1565,8 @@ func heartbeatLine(model string, u *usageCounters, rt *runTally) string {
 		elapsed.Round(time.Second), calls, in, out, webSearches, cost, tallyPart, label)
 }
 
-// startHeartbeat starts a background goroutine that prints a one-line status
-// to stderr every 60 seconds. Cancel it via the returned cancel func.
+// startHeartbeat starts a background goroutine that prints a one-line status to stderr every 60
+// seconds. Cancel it via the returned cancel func.
 // rt is a pointer to the cfg's tally field — it may be nil at heartbeat start and populated later.
 func startHeartbeat(model string, u *usageCounters, getTally func() *runTally) func() {
 	done := make(chan struct{})
