@@ -132,44 +132,93 @@ logged** on a stated model/date with the envelope characterized — never "the c
 the central constraint). First calibration: 2026-06-10, `claude-haiku-4-5-20251001`, N=10 each
 (`testing/calibration_log.jsonl`).
 
+**Unit-of-analysis correction (2026-06-11).** The 2026-06-10 tallies are **per-atomic-claim**, but
+each probe carries **one** engineered defect and `decompose` splits it into several fragments — most
+of them **clean scaffolding** (the honest motte, a real figure). A `substantive` verdict on a clean
+fragment is the critic being **right**, not a leak. The false-pass metric is therefore defined
+**per defect-carrying fragment**: a false pass is a defect fragment rated `substantive` with **no
+target-axis (or legitimate-adjacent) finding** — in practice, an *empty* critique. The four probes
+with nonzero `substantive` (motte, hidden-premise, causal, axis-gaps) were re-run 2026-06-11 with
+per-fragment chains persisted and the `substantive` verdicts attributed; reference-class (0/30) and
+unfalsifiable-dress (0/39) had nothing to attribute. **`N_valid` excludes `error` verdicts**
+(instrument failures), reported in their own column. The 2026-06-11 lines carry the false-pass
+counts below; the 2026-06-10 lines are retained as the first distribution snapshot and annotated
+`fragment_attribution: unrecoverable` (their chains were destroyed by an instrument error — see
+[`testing/SCHEMA.md`](testing/SCHEMA.md) and the §3d note). Fragment-attributed false-pass rate
+across the four probes: **3 / 212 valid fragment-verdicts (~1.4%)**, versus the naive 22-`substantive`
+(~10%) reading — ~77% of `substantive` verdicts are the critic correctly affirming clean scaffolding.
+
 - [x] **Motte-and-bailey fixture** — equivocation axis.
-      [`examples/destructive/motte-and-bailey/`](examples/destructive/motte-and-bailey/). Haiku N=10:
-      40 hollow · 19 partial · 7 substantive · 2 error; equivocation fires. Finding: `decompose`
-      *splits* the motte from the bailey (W4), so the isolated motte rates `substantive` — the
-      move's structure is partly dissolved before grading. No clean false pass.
+      [`examples/destructive/motte-and-bailey/`](examples/destructive/motte-and-bailey/). 2026-06-10
+      snapshot: 40 hollow · 19 partial · 7 substantive · 2 error; equivocation fires. **2026-06-11
+      fragment-attributed (N_valid=63):** of 9 `substantive`, **8 land on the defensible motte in
+      isolation** (correct — W4 splits motte from bailey before grading) and **1 is a clean false
+      pass** (run 10 kept the equivocation conditional whole and passed it with an *empty* critique).
+      **False-pass: 1/63.**
 - [x] **Reference-class gaming** — base-rate/magnitude axis dressed in a flattering class.
       [`examples/destructive/reference-class/`](examples/destructive/reference-class/). Haiku N=10:
-      14 hollow · 16 partial · **0 substantive** — the gamed class never passed clean (better than
-      the borderline prediction).
+      14 hollow · 16 partial · **0 substantive** — the gamed class never passed clean. **The DEFECT.md
+      design note's falsifiable self-prediction — "expect more `substantive`/`partial` leakage here
+      than on the other probes" — was FALSIFIED by the observed 0/30** `substantive`. No re-run needed
+      (nothing to attribute).
 - [x] **Hidden-premise chain** — conclusion valid only under an unstated load-bearing premise.
-      [`examples/destructive/hidden-premise/`](examples/destructive/hidden-premise/). Haiku N=10:
-      17 hollow · 15 partial · 3 substantive · 1 error; small `substantive` leak noted.
+      [`examples/destructive/hidden-premise/`](examples/destructive/hidden-premise/). 2026-06-10
+      snapshot: 17 hollow · 15 partial · 3 substantive · 1 error. **2026-06-11 fragment-attributed
+      (N_valid=36):** of 8 `substantive`/`substantial`, **6 land on the clean honest figure** ("91% of
+      new signups chose cloud") and 1 defect fragment ("retire on-prem") passed but with the
+      hidden-premise axis *firing* (named, not a leak); **1 clean false pass** (run 8, empty critique).
+      **False-pass: 1/36, not 3.** (W10: one verdict came back `"substantial"`, a non-enum near-miss.)
 - [x] **Unfalsifiable-by-design claim in empirical dress** — falsifiability axis.
       [`examples/destructive/unfalsifiable-dress/`](examples/destructive/unfalsifiable-dress/).
-      Haiku N=10: 30 hollow · 9 partial · **0 substantive** — strongest catch, as predicted.
+      Haiku N=10: 30 hollow · 9 partial · **0 substantive** — strongest catch, as predicted. No re-run
+      needed (nothing to attribute).
 - [x] **Causality-from-correlation narrative** — plausible mechanism story over correlational
       evidence only.
-      [`examples/destructive/causal-narrative/`](examples/destructive/causal-narrative/).
-      Haiku N=10: 23 hollow · 19 partial · 3 substantive; small `substantive` leak noted.
+      [`examples/destructive/causal-narrative/`](examples/destructive/causal-narrative/). 2026-06-10
+      snapshot: 23 hollow · 19 partial · 3 substantive. **2026-06-11 fragment-attributed
+      (N_valid=43):** of 4 `substantive`, **every one had the adjacent Hidden-premise axis fire** (the
+      same defect from another angle = the probe working) and 3 are decomposed sub-mechanism fragments.
+      **False-pass: 0/43** — the "3 leaked" reading was the unit-of-analysis artifact.
 - [~] **Axis-incompleteness probes** — defects the seven axes do NOT name (category error,
       composition/division, survivorship framing). Outcome unknown by design; the result maps the
       envelope either way. [`examples/destructive/axis-gaps/`](examples/destructive/axis-gaps/).
-      Haiku N=10: 55 hollow · 10 partial · 4 substantive.
-      Finding: composition is caught via
-      **Counterexample** (10/10) and survivorship via **Base rate** (8/10) — adjacent reach is wider
-      than the gap taxonomy assumed; **category error remains the genuine un-named gap** (likely
-      source of the 4 `substantive` leaks). Stays `[~]`: envelope-mapping is logged and re-checked,
-      never "passed".
+      2026-06-10 snapshot: 55 hollow · 10 partial · 4 substantive; composition caught via
+      **Counterexample** (10/10), survivorship via **Base rate** (8/10) — adjacent reach is wider than
+      the gap taxonomy assumed; **category error remains the genuine un-named gap**. **2026-06-11
+      fragment-attributed (N_valid=70):** **1 `substantive`**, on the survivorship fragment with the
+      survivorship-specific axes silent (Hidden-premise fired weakly); category-error fragments stayed
+      quiet this run. **Mapped-limit leak: 1/70.** Stays `[~]`: envelope-mapping is logged and
+      re-checked, never "passed".
 - [~] **The laundering fixture (priority)** — a claim that is *faithful, substantive, and false*
       simultaneously, run through `-audit`. Correct result: faithful + substantive + `refuted`; all
       three columns green = the laundering-confidence failure caught in the act.
       [`examples/destructive/laundering/`](examples/destructive/laundering/) — real source (Ballmer,
       USA TODAY 2007; provenance recorded). Haiku N=10: **faithful 10 + hollow 10 + refuted 10**.
-      The laundering *false pass never occurred* (grounding refuted every run — the boundary held),
-      **but** substance rated the bare prediction `hollow` rather than `substantive`, so the
-      textbook `substantive + refuted` cell did not appear. Stays `[~]`: the priority
-      *demonstration* is pending  a sonnet/opus re-run (a forecast may need a stronger model to be
-      credited `substantive`).
+      Two findings, pulling opposite ways:
+      - **Affirmative non-occurrence — the laundering false pass did NOT occur.** Grounding returned
+        `refuted` 10/10: the resolved-prediction blindness the probe hunts (grounding confirming a
+        famous-but-false forecast from the armchair) **never happened — the boundary held.** Retained
+        as a **live hypothesis for the sonnet/opus runs** (a stronger model that "knows" the iPhone
+        succeeded could still refute cheaply; the haiku result does not retire the risk).
+      - **Measured false-attack (first datum for the metric).** Substance rated the bare, falsifiable
+        prediction `hollow` **10/10**, diverging from the README spec for `substantive` ("well-formed
+        and falsifiable — the kind of thing that *could* be true"). This is the **first logged datum
+        for the false-attack rate**. Hypothesis: the **Evidence axis penalises bare, decontextualised
+        claims** — and since every assayed claim arrives decontextualised by construction, that would
+        be a **systematic** bias. Tested directly by the bare-vs-contextualized probe below.
+      Stays `[~]`: the textbook `substantive + refuted` cell still wants a sonnet/opus re-run (a forecast
+      may need a stronger model to be credited `substantive`); pending in `SESSION.md`.
+- [x] **Bare vs contextualized** — a *critic-calibration* probe (no engineered claim defect), testing
+      the false-attack hypothesis above.
+      [`examples/destructive/bare-vs-contextualized/`](examples/destructive/bare-vs-contextualized/).
+      Same Ballmer claim, with vs without its real in-text argument (provenance from the laundering
+      source). **2026-06-11, haiku, N=10 each: hypothesis NOT confirmed.** `bare.txt` `hollow` 10/10;
+      `contextual.txt` 28 hollow · 21 partial · 11 substantive — but the **central prediction rates
+      `hollow` 10/10 in *both*** (the aggregate shift is the *added* sub-claims, a decomposition
+      artifact the A1 discipline catches). The fatal axis is **Counterexample**, not Evidence (Evidence
+      only weakens). The false-attack is real but its cause is Counterexample-against-a-sweeping-
+      prediction, not an Evidence/decontextualisation penalty — so the proposed prompt fix is
+      **withdrawn** (SESSION.md). Measurement before intervention, vindicated.
 
 ### 3c. Correlated blind spots (cannot be self-tested)
 
@@ -193,11 +242,16 @@ Documented limits live here as tests or standing entries — honest failures, no
       from API citation blocks. The test asserting citation-block provenance FAILS today by
       design; the failing test IS the documented limit. (Excluded from the CI gate; tracked
       here until the implementation reads citation blocks.)
-- [ ] **Reflexive canary** — run assay on its own README/CLAUDE.md claims. The headline claim
+- [x] **Reflexive canary** — run assay on its own README/CLAUDE.md claims. The headline claim
       (visible rigour → user recognition) is a grounding claim about effects on people and MUST
       return `unverifiable`. If grounding ever rates the tool's own value proposition `supported`,
       that is a self-sealing failure inside the instrument — the earliest warning that grounding has
-      started confirming from the armchair. Cheap; run with every calibration pass.
+      started confirming from the armchair. Now **wired into `run.sh` as the always-on final step of a
+      full pass** (`run.sh canary`, or automatic after `run.sh all`), and demonstrated in
+      [`examples/reflexive/`](examples/reflexive/). **Run and logged 2026-06-11,
+      `claude-haiku-4-5-20251001`, N=5: `unverifiable` 5/5 — canary held, no self-sealing failure.**
+      `[x]` = run and logged on this model/date, **never "passed"**: a held canary says only that the
+      boundary held on this run, not that grounding is sound.
 - **Permanent limit (no test possible):** the headline claim itself is settled only by
       watching trained users use the tool — never from the armchair, and never by assay.
       Carried as a hypothesis awaiting field evidence. Recorded here so it is never quietly
@@ -218,16 +272,20 @@ than treated as failure:
 
 ## Operating envelope (maintained summary)
 
-Updated as Layer 3/4 results accumulate. Current state — from design analysis, not yet measured:
+Updated as Layer 3/4 results accumulate. No longer "from design analysis, not yet measured": the
+haiku 3b/3d calibration (2026-06-10/11) measures several rows. Rows tagged *measured* cite a
+calibration run; the remainder are still design expectations.
 
 | Region                                        | Expected reliability               | Basis |
 |-----------------------------------------------|------------------------------------|-------|
 | Faithfulness with source present              | Highest                            | Reference in hand (STV asymmetry) |
 | Refutation of internally contradictory claims | High                               | Reachable by reasoning alone |
-| `unverifiable` on predictions/intentions      | High (by design)                   | Axis boundary |
+| `unverifiable` on predictions/intentions      | High (by design)                   | *Measured:* by design; resolved-prediction case held 10/10, haiku, 2026-06-10 (laundering) |
+| Relational defects (equivocation, motte-and-bailey) | Partly dissolved by decomposition before grading | *Measured:* motte calibration — `decompose` splits motte from bailey, so the move is graded fragment-by-fragment (W4) |
+| Substance on sweeping forward predictions     | Skews `hollow` (false-attack direction) | *Measured:* laundering + bare-vs-contextualized (2026-06-11) — bare forecast `hollow` 10/10, unmoved by context; killed by **Counterexample**, not an Evidence/decontextualisation penalty |
 | Substance verdicts, novel/specialist domains  | Lowest — treat with most suspicion | No reference; correlated blind spots |
 | Positive grounding confirmation               | Bounded by search quality; never armchair | Needs the truth-maker |
-| Tool's own headline claim                     | Untestable by the tool              | Permanent limit |
+| Tool's own headline claim                     | Untestable by the tool              | Permanent limit; reflexive canary `unverifiable` 5/5 (haiku, 2026-06-11) shows the boundary holding |
 
 ## Disciplines for this file
 

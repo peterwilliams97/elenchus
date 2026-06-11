@@ -39,9 +39,27 @@ Full data in `results/2026-06-10-claude-haiku-4-5-20251001.md`.
   claim, but the move's structure is partly dissolved by atomization before the critic sees it. This
   is a property of the decompose-then-grade pipeline, recorded as an envelope note — not a fixture bug.
 
+## Observed — 2026-06-11, `claude-haiku-4-5-20251001`, N=10 (fragment-attributed)
+
+Fresh calibration with per-fragment chains persisted (the 2026-06-10 chains were discarded by an
+instrument error — see `../../../testing/SCHEMA.md` and `decision_log` d016 — so this is a *new
+sample*, not a rescore of 2026-06-10). Distribution (64 fragment-verdicts, `claims_per_run` 5–7):
+**41 hollow · 13 partial · 9 substantive · 1 error.** `N_valid` = 63 (the error is excluded from
+envelope rates).
+
+**Fragment attribution of the 9 `substantive` verdicts** — the breakdown the 2026-06-10 aggregate
+could not give: **8 land on the defensible MOTTE in isolation** ("the engine adapts / learns from
+interactions"), which is the critic being *correct*, exactly as the 2026-06-10 W4 note anticipated (a
+surviving motte is a success, not a leak). **1 clean false pass:** in run 10 `decompose` did *not*
+split the move — it kept the equivocation conditional ("if one accepts a system learns and adapts,
+one has granted it is intelligent") as one fragment, and the critic rated it `substantive` with an
+**empty critique** (no Equivocation / Counterexample / Hidden-premise finding). That empty critique
+is the false-pass signature: not a wrong axis, but *no* axis. **False-pass rate: 1/63**, versus the
+naive reading of all 9 `substantive` as 9 leaks — the unit-of-analysis correction in action.
+
 ## Calibration results
 
 Populated by `../run.sh motte-and-bailey`. Latest summary lives in `results/`; ledger in
-`../../../testing/calibration_log.jsonl`. Status: **`[x]`** — calibrated 2026-06-10/haiku, envelope
-characterized (equivocation fires; atomization-split finding recorded). "`[x]`" here means *measured
-and logged*, never "the critic is correct."
+`../../../testing/calibration_log.jsonl`. Status: **`[x]`** — calibrated 2026-06-10/haiku, then
+fragment-attributed 2026-06-11/haiku (1 clean false pass / 63; 8/9 `substantive` correct-on-motte).
+"`[x]`" here means *measured and logged*, never "the critic is correct."

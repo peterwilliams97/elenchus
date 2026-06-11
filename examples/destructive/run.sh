@@ -34,6 +34,12 @@ DESTDIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DESTDIR/../.." && pwd)"
 ASSAY="$ROOT/assay"
 LOG="$ROOT/testing/calibration_log.jsonl"
+# Persisted Tier-2 chains. The false-pass metric is defined per-DEFECT-fragment, so the
+# per-fragment verdicts MUST survive the run — earlier versions wrote -chain-dir to $TMP and
+# deleted it on EXIT, discarding exactly the data the headline metric needs (instrument error,
+# decision_log d016). Chains now persist here, one dir per run, gitignored (raw assay output;
+# the committed artifact is the attribution summary in each probe's results/).
+CHAINROOT="$ROOT/testing/chains"
 
 PROBE="${1:-all}"
 N="${2:-10}"
@@ -79,7 +85,8 @@ run_substance() {
   local r out tally low key
   r=1
   while [ "$r" -le "$N" ]; do
-    out="$("$ASSAY" -md -model "$MODEL" -chain-dir "$TMP/chain" "$dir/claim.txt" 2>"$TMP/err" || true)"
+    local cdir="$CHAINROOT/$DATE-$MODEL/$probe/run-$r"; mkdir -p "$cdir"
+    out="$("$ASSAY" -md -model "$MODEL" -chain-dir "$cdir" "$dir/claim.txt" 2>"$TMP/err" || true)"
     # Verdict distribution: parse the bold tally line, e.g. **2 hollow · 1 partial**
     tally="$(printf '%s\n' "$out" | grep -E '^\*\*[0-9]' | head -1 | sed 's/\*\*//g' || true)"
     if [ -n "$tally" ]; then
@@ -121,7 +128,8 @@ run_audit() {
   local r out
   r=1
   while [ "$r" -le "$N" ]; do
-    out="$("$ASSAY" -md -audit -model "$MODEL" -chain-dir "$TMP/chain" -source "$src" "$dir/summary.txt" 2>"$TMP/err" || true)"
+    local cdir="$CHAINROOT/$DATE-$MODEL/laundering/run-$r"; mkdir -p "$cdir"
+    out="$("$ASSAY" -md -audit -model "$MODEL" -chain-dir "$cdir" -source "$src" "$dir/summary.txt" 2>"$TMP/err" || true)"
     # Cross-tab data rows: | N | claim | faithful | substantive | grounded |
     # Keep only rows whose first cell is an integer (excludes the pattern-reading table).
     printf '%s\n' "$out" | while IFS='|' read -r _ num _claim faith subst ground _rest; do
@@ -221,6 +229,38 @@ emit_audit_report() {
   echo "grounded:";    [ -n "$gtbl" ] && echo "$gtbl" | sed 's/^/  /'
 }
 
+# ── reflexive grounding canary (TESTING.md 3d) ────────────────────────────────
+# Always-on final step of a full calibration pass. Runs ./assay -evidence on the repo's own
+# headline; REQUIRED result is `unverifiable` every run. Any `supported` is a self-sealing failure
+# inside the instrument (grounding confirming the tool's own value proposition from the armchair) —
+# the earliest warning that grounding has started pronouncing from the armchair. Cheap, never a gate.
+run_canary() {
+  local headline="$ROOT/examples/reflexive/headline.txt"
+  [ -f "$headline" ] || { echo "skip canary: $headline missing" >&2; return; }
+  local cn="${CANARY_N:-3}" r=1 vfile="$TMP/canary.verdicts"; : > "$vfile"
+  echo "--- reflexive grounding canary (TESTING.md 3d), N=$cn ---" >&2
+  while [ "$r" -le "$cn" ]; do
+    local cdir="$CHAINROOT/$DATE-$MODEL/reflexive-canary/run-$r"; mkdir -p "$cdir"
+    "$ASSAY" -md -quiet -evidence -model "$MODEL" -chain-dir "$cdir" "$headline" >/dev/null 2>"$TMP/err" || true
+    local v
+    v="$(grep -hoE '"verdict":"[a-z]+"' "$cdir"/*.grounding.jsonl 2>/dev/null | head -1 | sed 's/.*:"//;s/"//')"
+    [ -n "$v" ] && echo "$v" >> "$vfile"
+    echo "  canary run $r/$cn: ${v:-parse-miss}" >&2
+    r=$((r+1))
+  done
+  local held=true
+  if grep -q '^supported$' "$vfile"; then
+    held=false
+    echo "*** CANARY BREACH: grounding returned 'supported' on the tool's own headline — self-sealing" >&2
+    echo "*** failure (TESTING.md 3d). Investigate before trusting any grounding verdict. ***" >&2
+  else
+    echo "canary held (required: unverifiable every run; not a gate): $(sort "$vfile" | uniq -c | sed 's/^ *//' | tr '\n' ' ')" >&2
+  fi
+  split_summary "$(summarize "$vfile")"; local cjson="$SUM_JSON"
+  printf '{"date":"%s","model":"%s","fixture":"reflexive-canary","mode":"grounding","runs":%d,"verdict_counts":{%s},"canary":"headline","required":"unverifiable every run","held":%s}\n' \
+    "$DATE" "$MODEL" "$cn" "$cjson" "$held" >> "$LOG"
+}
+
 # ── dispatch ──────────────────────────────────────────────────────────────────
 echo "calibration: probe=$PROBE N=$N model=$MODEL" >&2
 echo "log: $LOG" >&2
@@ -229,6 +269,10 @@ case "$PROBE" in
   all)
     for p in $SUBSTANCE_PROBES; do run_substance "$p"; done
     run_audit
+    run_canary   # always-on final step of a full pass (TESTING.md 3d)
+    ;;
+  canary)
+    run_canary
     ;;
   laundering)
     run_audit
@@ -236,7 +280,7 @@ case "$PROBE" in
   *)
     found=0
     for p in $SUBSTANCE_PROBES; do [ "$p" = "$PROBE" ] && found=1; done
-    [ "$found" -eq 1 ] || { echo "error: unknown probe '$PROBE' (use one of: $SUBSTANCE_PROBES laundering all)" >&2; exit 1; }
+    [ "$found" -eq 1 ] || { echo "error: unknown probe '$PROBE' (use one of: $SUBSTANCE_PROBES laundering canary all)" >&2; exit 1; }
     run_substance "$PROBE"
     ;;
 esac

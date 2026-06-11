@@ -10,3 +10,6 @@ log*.txt
 # redistribution). The committed PROVENANCE.md records URL + retrieval date + verbatim
 # snippet so the source can be recreated; see examples/destructive/laundering/.
 examples/destructive/laundering/sources/
+
+# Persisted Tier-2 calibration chains (raw assay output; attribution summaries are committed)
+/testing/chains/

@@ -70,6 +70,21 @@ claim whose substance-core is a present-tense factual assertion rather than a fo
 sonnet/opus re-run** (tracked in `../../../SESSION.md`). What this run establishes is the boundary
 holding, not the laundering risk fully exercised — an honest partial result, not a clean win.
 
+**The two findings, named for the metrics they feed (2026-06-11 framing):**
+
+- **Affirmative non-occurrence — resolved-prediction blindness did NOT occur.** The named failure mode
+  (grounding confirming a famous-but-false forecast from the armchair because the model "knows" the
+  outcome) did not happen: grounding `refuted` 10/10. **Retained as a live hypothesis for the
+  sonnet/opus runs** — a stronger model is *more* likely to recognise rather than reason, so the haiku
+  pass does not retire the risk.
+- **Measured false-attack — first datum for the false-attack rate metric.** Substance rated this
+  paradigmatically falsifiable claim `hollow` 10/10, diverging from the README spec ("well-formed and
+  falsifiable, the kind of thing that could be true"). Logged as the **first false-attack datum**.
+  Hypothesis: the **Evidence axis penalises bare, decontextualised claims** — a *systematic* bias,
+  since every assayed claim arrives as a decontextualised line by construction. Tested directly in
+  [`../bare-vs-contextualized/`](../bare-vs-contextualized/) (measurement only; the prompt fix is a
+  separate red-then-green follow-up parked in `../../../SESSION.md`).
+
 ## Calibration results
 
 Populated by `../run.sh laundering`. Summary in `results/`; ledger in
