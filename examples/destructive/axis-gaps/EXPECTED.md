@@ -55,10 +55,28 @@ survivorship better than the gap taxonomy assumed; **category error remains the 
 gap.** This is a finding, not a pass or a fail. The 4 `substantive` verdicts are *mapped limits*
 (BACKGROUND.md W6), recorded, not patched.
 
+## Observed — 2026-06-11, `claude-haiku-4-5-20251001`, N=10 (fragment-attributed)
+
+Fresh calibration with per-fragment chains persisted (2026-06-10 chains discarded by an instrument
+error — `../../../testing/SCHEMA.md`, `decision_log` d016 — a *new sample*, not a rescore).
+Distribution (70 fragment-verdicts, `claims_per_run` 7): **55 hollow · 14 partial · 1 substantive ·
+0 error.** `N_valid` = 70.
+
+**Fragment attribution of the lone `substantive` verdict:** it is on the **survivorship** fragment
+(run 5, "the founders who changed the world all ignored the skeptics"). The survivorship-specific
+catches (**Base rate / Counterexample**) were **silent** on it; only Hidden-premise fired weakly. In
+the *same run*, a sibling fragment ("…bet everything on one idea") was caught `hollow` with an
+explicit **"Survivorship bias / Base rate"** axis — so the defect was reachable, just not on this
+fragment. Recorded as **1 mapped-limit leak** (the un-named-gap behaviour this probe exists to map),
+not a clean target catch. **Category-error fragments did not surface `substantive` this run** — the
+standing gap was quiet rather than leaking here. **False-pass-class rate: 1/70** (down from the
+per-claim aggregate of 4, which spanned both un-named gaps).
+
 ## Calibration results
 
 Populated by `../run.sh axis-gaps`. Summary in `results/`; ledger in
-`../../../testing/calibration_log.jsonl`. Status: **`[~]`** — calibrated 2026-06-10/haiku and the
-envelope characterized, but this probe stays `[~]` by design: "done" for envelope-mapping means *the
-limit is logged and re-checked across models*, never *the critic passed*. Category-error leakage is
-the standing mapped limit.
+`../../../testing/calibration_log.jsonl`. Status: **`[~]`** — calibrated 2026-06-10/haiku, then
+fragment-attributed 2026-06-11/haiku (1 mapped-limit leak / 70, on survivorship; category-error quiet
+this run). Stays `[~]` by design: "done" for envelope-mapping means *the limit is logged and
+re-checked across models*, never *the critic passed*. Category-error leakage is the standing mapped
+limit.

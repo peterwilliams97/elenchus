@@ -4,6 +4,48 @@ Deferred and abandoned items, so reversals and dead ends survive the session bou
 backlog (`TODO.md`) and not a change log (`rigour-map/decision_log.jsonl`) — this is the holding pen
 for "decided to defer," with enough context to resume cold.
 
+## 2026-06-11 — packages A + B (d015 / d016 / d017)
+
+Fragment-attributed re-calibration, false-attack probe, and reflexive pass. What shipped and what it
+turned up:
+
+- **Instrument error found + fixed (d016).** `run.sh` wrote per-run Tier-2 chains to a `$TMP` dir it
+  deleted on EXIT — discarding exactly the per-fragment data the false-pass metric is *defined* over.
+  The 2026-06-10 fragment data is **unrecoverable**; chains now persist under `testing/chains/`
+  (gitignored). Logged as a finding, not just a circumstance (`testing/calibration_log.jsonl`
+  annotations; `testing/SCHEMA.md`).
+- **A1 unit-of-analysis correction.** Fresh 2026-06-11 fragment-attributed run of the four
+  nonzero-`substantive` probes. The "leaks" were largely the critic correctly affirming **clean
+  scaffolding**: false-pass rate **3 / 212 valid fragment-verdicts (~1.4%)**, vs the naive
+  22-`substantive` (~10%) reading. The genuine false-pass signature is an **empty critique** (no axis
+  fired), seen twice (motte run10 equivocation conditional; hidden-premise run8).
+- **A4 — the Evidence-axis-penalty hypothesis is WITHDRAWN (not confirmed).** bare-vs-contextualized
+  shows the **central prediction rates `hollow` 10/10 with *and* without context**; the aggregate
+  shift is the added sub-claims (decomposition artifact). The fatal axis is **Counterexample**, not
+  Evidence. **Therefore the previously-planned `substanceCriticSys` prompt fix ("evaluate form, not
+  in-text support") is dropped** — it would not move the verdict, because the contextual claim *has*
+  in-text support and still dies on Counterexample.
+  - **Reframed open question (the real one):** how *should* substance treat a falsifiable **forward
+    prediction** that a counterexample can always be constructed against? "iPhone won't get
+    significant share" is well-formed and falsifiable, yet Counterexample kills it as if a single
+    conceivable counterexample refutes a probabilistic forecast. Candidate: distinguish a
+    *counterexample that defeats a universal* from one that merely *contests a prediction*. This is a
+    substance-critic design question, not a quick prompt tweak — spec before touching `substanceCriticSys`.
+- **B2 reflexive substance — referent collision under decontextualisation.** Running substance on the
+  repo's own claims, stripped to atomic lines, made the critic read "**assay**" as a *chemical* assay
+  (4 fragments) and rate tool-specific claims ("two of assay's three columns…") `hollow` for opaque
+  referents. The headline rated `partial` as expected (we agree — it's a hypothesis). **No README
+  claim was edited** (measurement before intervention); none was genuinely hollow on its merits.
+  - **Candidate new 3b fixture:** a **referent-ambiguity probe** — a domain-polysemous term ("assay",
+    "column") graded with vs without a one-line domain anchor; measures how decontextualisation
+    collides referents. Same family as bare-vs-contextualized.
+- **B1 reflexive canary — wired + green.** `./assay -evidence` on the headline → `unverifiable` 5/5;
+  now the always-on final step of `run.sh` (and `run.sh canary`). No self-sealing failure.
+
+Still NOT done (carried): the laundering `substantive`-cell sonnet/opus re-run (below); cross-model 3b
+re-run (below); the reframed forward-prediction / Counterexample question above; the referent-ambiguity
+probe; the substanceCriticSys design work (now *without* the withdrawn Evidence-axis premise).
+
 ## 3b adversarial axis probes — BUILT (d013), calibration ongoing
 
 The §2.2 / 3b axis probes are now public worked examples under `examples/destructive/` (seven probes

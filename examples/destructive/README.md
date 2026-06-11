@@ -30,10 +30,11 @@ asking for exactly the unexamined trust it claims to cure.
 
 ## The probes
 
-Each probe is an **openly-constructed adversarial input** — fluent, hedged, plausible prose engineered
-to carry **one** specific defect while staying clean on every other axis, so a flag on the target axis
-is unambiguous signal. Six target one of assay's seven substance axes each; one targets the gaps
-*between* the axes; and one — the priority — is real, not constructed.
+Most probes are an **openly-constructed adversarial input** — fluent, hedged, plausible prose
+engineered to carry **one** specific defect while staying clean on every other axis, so a flag on the
+target axis is unambiguous signal. Six target one of assay's seven substance axes each; one targets the
+gaps *between* the axes; one — the priority — is real, not constructed; and one targets the **critic's
+own calibration** (a suspected false-attack bias) rather than any claim defect.
 
 | Probe | Targets | Defect |
 |---|---|---|
@@ -44,10 +45,12 @@ is unambiguous signal. Six target one of assay's seven substance axes each; one 
 | [`causal-narrative/`](causal-narrative/) | Causality vs correlation | a mechanism story laid over a single correlation |
 | [`axis-gaps/`](axis-gaps/) | *(none — by design)* | category error, composition, survivorship — defects the seven axes don't name |
 | [`laundering/`](laundering/) | **all three modes** | a **real** claim that is faithful + substantive + **false** at once |
+| [`bare-vs-contextualized/`](bare-vs-contextualized/) | **the critic's calibration** (no claim defect) | the *same* claim with vs without its real in-text argument — tests a suspected false-attack penalty on bare lines |
 
 Each probe directory contains:
 
-- `claim.txt` — the input (for `laundering/`, also `summary.txt` + `PROVENANCE.md`)
+- `claim.txt` — the input (for `laundering/`, also `summary.txt` + `PROVENANCE.md`; for
+  `bare-vs-contextualized/`, the two inputs `bare.txt` + `contextual.txt` instead)
 - `DEFECT.md` — the engineered flaw, stated precisely; which axis should fire; which axes it is clean
   on; how it was built
 - `EXPECTED.md` — the expected result as a **distribution**, not a golden verdict
@@ -86,10 +89,18 @@ Calibrated N-run distribution (the way these are meant to be read):
 
 ```sh
 cd examples/destructive
-./run.sh                       # all probes, 10 runs each, on haiku
+./run.sh                       # all probes, 10 runs each, on haiku (+ reflexive canary at the end)
 ./run.sh motte-and-bailey 10   # one probe, 10 runs
 ./run.sh laundering 10 claude-sonnet-4-6
+./run.sh canary                # just the reflexive grounding canary (TESTING.md 3d)
 ```
+
+A full `./run.sh` pass ends with the **reflexive grounding canary**: `./assay -evidence` on assay's
+own headline, which must come back `unverifiable` every run. A `supported` there is a self-sealing
+failure inside the instrument — grounding confirming the tool's own value proposition from the
+armchair — and is printed as a `CANARY BREACH`. Per-fragment chains from every run now persist under
+`../../testing/chains/` (the false-pass metric is defined per fragment; see
+[`../../testing/SCHEMA.md`](../../testing/SCHEMA.md)).
 
 `run.sh` tallies the verdict distribution per probe, writes a dated summary into each `results/`, and
 appends one line per probe to [`../../testing/calibration_log.jsonl`](../../testing/calibration_log.jsonl).
