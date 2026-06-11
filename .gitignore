@@ -1,0 +1,12 @@
+/assay
+/setup.sh
+__pycache__/
+*.pyc
+.DS_Store
+log*.txt
+/fixtures/
+/eval/
+# Real fetched source documents for the laundering probe (copyright: analysis, not
+# redistribution). The committed PROVENANCE.md records URL + retrieval date + verbatim
+# snippet so the source can be recreated; see examples/destructive/laundering/.
+examples/destructive/laundering/sources/

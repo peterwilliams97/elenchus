@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+go test ./...
+staticcheck ./...
+go vet ./...
+go mod tidy
+go build -o assay .
+echo "built: $(pwd)/assay"

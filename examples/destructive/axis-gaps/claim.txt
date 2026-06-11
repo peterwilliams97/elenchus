@@ -1,0 +1,3 @@
+A monolith is a more honest architecture than microservices.
+Every engineer on this team is individually excellent, so this is an excellent team.
+The founders who changed the world all ignored the skeptics and bet everything on one idea, so the lesson is to ignore the skeptics and bet everything.

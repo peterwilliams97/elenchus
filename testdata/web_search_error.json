@@ -1,0 +1,15 @@
+{
+  "_provenance": "docs.claude.com web-search-tool page; response envelope assembled for transport test; NOT a live capture",
+  "id": "msg_x",
+  "type": "message",
+  "role": "assistant",
+  "model": "claude-sonnet-4-6",
+  "content": [
+    {"type": "text", "text": "Searching."},
+    {"type": "server_tool_use", "id": "srvtoolu_01WYG", "name": "web_search", "input": {"query": "Claude Shannon"}},
+    {"type": "web_search_tool_result", "tool_use_id": "srvtoolu_01WYG", "content": {"type": "web_search_tool_result_error", "error_code": "max_uses_exceeded"}},
+    {"type": "text", "text": "I could not complete the search."}
+  ],
+  "stop_reason": "end_turn",
+  "usage": {"input_tokens": 6039, "output_tokens": 931, "cache_read_input_tokens": 0, "cache_creation_input_tokens": 0}
+}
