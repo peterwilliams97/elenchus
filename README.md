@@ -1,4 +1,4 @@
-# crossexam
+# elenchus
 
 Three questions, kept separate.
 
