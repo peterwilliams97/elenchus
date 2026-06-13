@@ -1,5 +1,27 @@
 # SESSION.md
 
+## 2026-06-13 — change binary name in frozen spec; drop reader-facing lineage (d022)
+
+Two follow-ups to the d021 rename, both at the user's explicit direction.
+
+**Dropped reader-facing v1/v2 rebuild lineage.** README (`## Status`, Examples) and FAQ (the whole
+"## History / why a v2 rebuild" Q&A, the intro's acceptance-test aside, the LLM answer's "v1's
+post-mortem") no longer narrate the repo's own history — readers don't care. Kept the honest
+"binary not built yet" status. Also removed the self-referential rename notes added earlier in d021
+(CRITIQUE.md, reflexive README, `doc.go`). Internal docs that legitimately reference v1 (CLAUDE.md
+frozen-spec rule, PLAN.md acceptance test, LIMITS.md `Evidence:` provenance citations) were left.
+
+**Authorized one edit to the frozen spec (d022).** The d021 rename deliberately left `spec/` frozen,
+producing a spec/code divergence (spec invoked `./assay`, the build ships `crossexam`). The user
+chose to resolve it at the source (AskUserQuestion: "Edit spec + amend rule"). Changed **only the 3
+binary-name surfaces** in `spec/FIXTURES.md`: the two `./assay` run commands (L86-87) and the
+`/assay` built-binary tree line (L308) → `crossexam`. **Unchanged:** v1 source identifiers
+(`assay.go`, `assayClaim`, `assay_test.go` — Go symbols, not the binary) and the chemical-assay
+narrative. The `## spec/ is frozen input` rule in CLAUDE.md was amended to record this as the single
+authorized deviation, so future sessions don't STOP on finding `spec/` modified; any *other* spec
+change still triggers STOP-and-report. `spec/` is no longer byte-for-byte v1 in those 3 lines; the
+acceptance test is unaffected (binary name is not a behavioural element). Logged as **d022**.
+
 ## 2026-06-13 — rename tool `assay` → `crossexam` + writing-discipline notes (d021)
 
 Renamed the tool/binary from **`assay`** to **`crossexam`** at the user's direction (`assay`

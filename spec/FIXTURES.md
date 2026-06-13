@@ -83,8 +83,8 @@ results.
 
 **Run protocol** (from `run.sh`):
 - `./run.sh [PROBE|all] [N] [MODEL]` — default: all, N=10, `claude-haiku-4-5-20251001`
-- Substance probes run `./assay -md` on `claim.txt` (or `bare.txt` / `contextual.txt` for bare-vs-contextualized)
-- Laundering runs `./assay -md -audit -source sources/ballmer_usatoday_2007.txt summary.txt`
+- Substance probes run `./crossexam -md` on `claim.txt` (or `bare.txt` / `contextual.txt` for bare-vs-contextualized)
+- Laundering runs `./crossexam -md -audit -source sources/ballmer_usatoday_2007.txt summary.txt`
 - Each run writes per-run chains to `../../testing/chains/<date>-<model>/<probe>/run-N/` (gitignored)
 - Writes a dated markdown summary to each `results/` directory
 - Appends one JSON line per probe to `../../testing/calibration_log.jsonl`
@@ -305,7 +305,7 @@ examples/destructive/README.md  — how to read distributions; training-data cav
 examples/destructive/laundering/sources/   — real third-party text; recreate from PROVENANCE.md
 /testing/chains/                           — raw per-run Tier-2 chains; large, not committed
 /eval/                                     — per-run eval output from main binary runs
-/assay                                     — built binary
+/crossexam                                 — built binary
 ```
 
 ---

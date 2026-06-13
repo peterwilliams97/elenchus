@@ -8,6 +8,12 @@ It is never edited, extended, or deleted.
 Any session that finds `spec/` missing or modified **STOPS and reports** — it never
 substitutes the v1 repo or memory as a source.
 
+**One authorized deviation (d022, 2026-06-13):** the binary name was changed `assay`
+→ `crossexam` in `spec/FIXTURES.md` (the two `./assay` run commands and the `/assay`
+built-binary line only). v1 source identifiers (`assay.go`, `assayClaim`,
+`assay_test.go`) and the chemical-assay narrative are unchanged. This is the **only**
+permitted edit to `spec/`; finding any other modification still means STOP and report.
+
 ## Structural rules
 
 - No new fields on shared structs. New state is passed as parameters. Any struct wanting
