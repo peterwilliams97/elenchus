@@ -28,13 +28,13 @@ well-formedness already carry synthetic background commitments. The line
 is exactly the line Quine says isn't there. Davidson sharpens it: the producer's "strongest defensible version" is charitable
 interpretation — reading the claim to make it as defensible as possible. But that move is
 built into interpretation itself: you cannot fix what was said (faithfulness) without already
-taking a stand on what is true (grounding). So the steelman bleeds
+taking a stand on what is true (grounding). So that strongest-defensible-version bleeds
 grounding into substance, violating the repo's own column-separation rule. The
 one Quinean move the tool does make (distributional verdicts) is in tension with
 the atomism and the analytic/synthetic split it also needs.
 
 ## The rule-following gap
-The seven axes are rules, and Wittgenstein (PI §201; Kripke's reading) shows no
+The seven axes are rules, and Wittgenstein (*Philosophical Investigations* §201; Kripke's reading) shows no
 rule contains the rules for its own application. §3a is this paradox in the wild:
 the Counterexample axis fires fatally on probabilistic forecasts because "a
 conceivable counterexample is always constructible" — the rule underdetermines
