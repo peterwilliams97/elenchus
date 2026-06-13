@@ -21,14 +21,14 @@ himself retracted it.
 
 ## The analytic/substance vs. synthetic/grounding gap
 The substance/grounding split — well-formed-and-falsifiable on one side, true on the other —
-is the analytic/synthetic distinction cast as a binary verdict. Quine's "Two
-Dogmas" denies the distinction can be drawn in principle: falsifiability and
+is the analytic/synthetic distinction cast as a binary verdict.
+Quine's "Two Dogmas" denies the distinction can be drawn in principle: falsifiability and
 well-formedness already carry synthetic background commitments. The line
-"survives the challenges → well-formed and falsifiable; not thereby true" is
-exactly the line Quine says isn't there. Davidson sharpens it: the producer's
-"strongest defensible version" IS the principle of charity, and charity is
-constitutive of interpretation — you cannot fix what was said (faithfulness)
-without already taking a stand on what is true (grounding). So the steelman bleeds
+"survives the challenges → well-formed and falsifiable; not thereby true"
+is exactly the line Quine says isn't there. Davidson sharpens it: the producer's "strongest defensible version" is charitable
+interpretation — reading the claim to make it as defensible as possible. But that move is
+built into interpretation itself: you cannot fix what was said (faithfulness) without already
+taking a stand on what is true (grounding). So the steelman bleeds
 grounding into substance, violating the repo's own column-separation rule. The
 one Quinean move the tool does make (distributional verdicts) is in tension with
 the atomism and the analytic/synthetic split it also needs.
