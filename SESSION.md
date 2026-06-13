@@ -1,5 +1,92 @@
 # SESSION.md
 
+## 2026-06-13 — FAQ formatted into FAQ.md (consolidation, docs only, step 4 of 4)
+
+This session formatted the reviewed `FAQ.answers.md` draft into the reader-facing **FAQ.md** (repo
+root), the final step of the FAQ workflow. The approach was **verify-then-format, not
+trust-and-polish**: review had found a fabricated citation in the draft, so every surviving provenance
+tag was re-checked against its actual source file as the answer was lifted, then the internal
+`[GROUNDED]/[CONTRACT]/[OPEN]/[LIMIT]` tags were stripped from the reader-facing text while the honesty
+they encoded was preserved in prose. The decision was pre-registered as **d020** (same meta handling as
+d018/d019: doc/meta, review-of-docs-not-a-diff, `label=irrelevant`, outcome abstained). A link-checker
+verified all 23 in-repo anchor links in FAQ.md resolve to real headings.
+
+**Git/provenance state at session start (reported, not fixed).** The d018 doc work *is* committed
+(`a6e25b2` pre-register, `e81c767` critique+cross-links, `939a5ac` reflow). Uncommitted at start were
+the d019 deliverables (`FAQ.answers.md` untracked, the `SESSION.md` edit, the d019 log line) plus two
+unrelated pre-existing changes not authored by these sessions — the `CRITIQUE.md` "PLAN.md §3"
+back-link and the `build.sh` staticcheck step.
+
+**Reviewer corrections applied.** (a) The LLM-agnostic answer's claim crediting `CLAUDE.md` with "one
+wrapper per external dependency" was **dropped as unverifiable** — that phrase is in neither the repo
+`CLAUDE.md` nor `spec/LESSONS.md` (it lives only in the global `~/CLAUDE.md`, not a repo file). The
+feasibility point was re-grounded to `spec/LESSONS.md §2` (the `api/` package boundary) plus the modes
+already consuming typed JSON shims (`substanceJSON`/`faithJSON`/`evidenceJSON`, in `spec/PROMPTS.md` &
+`spec/BEHAVIOR.md`); the valid `spec/CLI.md` + `spec/PROMPTS.md §6` grounding was kept. (b) The
+fact-checker/judge/RAG answer's "explicitly disclaims that the distribution is a property of the claim"
+was **softened** to THEORY.md's narrower statement — the false-pass *rate* is a property of the
+distribution, not the claim, while repeated runs still read as "what the claim tends to do" — and the
+[psychologism-gap](CRITIQUE.md#the-psychologism-gap) link (that very equivocation) was kept. (c)
+Confirmed `LIMITS.md` carries a `## Operating envelope` section, so those citations stand and did not
+need repointing to `spec/FINDINGS.md`.
+
+**Tag report (changed / dropped / unverifiable).** One tag was unverifiable and dropped: the
+`CLAUDE.md §API discipline` citation (correction a), with the claim re-grounded as above. One claim was
+softened (correction b). All remaining internal tags were stripped by design, each underlying claim
+re-verified against its source this session; no unverifiable claim was carried into the published FAQ.
+
+**Reader-facing form.** Section order unchanged (Goals / What it is / Problem statements / Method
+choice / Trust & cost / Limits & scope / History / LLMs / Uses). The eight design-analysis answers
+(dialectic-alternatives, producer-critic-alternatives, the fact-checker/judge/RAG comparison,
+why-ship-grounding, and all four LLM answers) are framed as reasoned design analysis, not settled fact
+— seven with an explicit "_Design analysis, not a settled repo decision:_" lead, and measure-performance
+with an inline qualifier because its core instrument (the calibration protocol) is grounded in PLAN.md
+§2 and only the cross-model extension is analysis. The binary-not-built / "cannot run today" /
+"trust this least" honesty is retained, the reader-facing `([critique](CRITIQUE.md#…))` and
+THEORY/PLAN/LIMITS links are kept, and Uses carries one contract disclaimer at the top plus each
+example's "limit that bites." No answer was re-answered or expanded; no new questions were added.
+
+**Constraints / carry-forward.** Docs only — no code/test/prompt/spec edits; `spec/` confirmed clean
+(6 files). `FAQ.answers.md` (the draft) was left in place untouched. The unrelated `CRITIQUE.md`
+back-link and `build.sh` staticcheck change were **left unbundled and unreverted** by design — their
+disposition (commit or revert, each on its own) is the user's call, not this session's.
+
+## 2026-06-13 — FAQ answer pass drafted (consolidation, docs only)
+
+This session drafted **FAQ.answers.md** (new, repo root): grounded, provenance-tagged answers to
+every first-time-viewer FAQ question, in order, under the supplied section headings (Goals / What it
+is / Problem statements / Method choice / Trust & cost / Limits & scope / History / LLMs / Uses).
+This is the **answer pass** (step 2 of the 4-step FAQ workflow) — a reviewable draft, not the final
+FAQ. Each answer carries at least one provenance tag: `[GROUNDED]` (supported by the repo),
+`[CONTRACT: binary not built]` (promised behaviour, not observed — the binary is not built, README
+§Status, and internal/*/doc.go are scaffolds), `[LIMIT]` (a CRITIQUE.md / LIMITS.md / README limit),
+or `[OPEN: design analysis]` (my reasoning, separated from what the repo does). No invented numbers:
+the only quantitative results cited are the repo's own (Ballmer N=10 row; PLAN.md §2 distributions).
+The decision was pre-registered before drafting as **d019** in `rigour-map/decision_log.jsonl` (same
+handling as d018: doc/meta work, review of docs not a diff, `label=irrelevant`, outcome abstained,
+kept out of the rigour gut-vs-acted signal). All 8 cited CRITIQUE.md anchors were verified to resolve
+to real headings.
+
+**GROUNDED vs OPEN split.** Grounded (anchored to repo text): the goals, the three-mode definitions
+and when to pick each, the "is it a fact-checker" answer, what-you-see (CONTRACT), the
+problem-statement subtlety (substance is the mode whose referents must be supplied — THEORY.md +
+PLAN.md §3c + CRITIQUE.md#the-atomism-gap), the trust/reliability ranking (LIMITS.md operating
+envelope), the N=10-is-calibration-not-mandatory answer, the limits/scope answers, the
+v1→v2 history, and "not finished." OPEN design analysis (reasoned, marked, kept separate from "what
+the repo does"): the dialectic-vs-alternatives comparison, Producer-Critic alternatives, the
+fact-checker/LLM-judge/RAG comparison, all four LLM questions (agnostic refactor, performance
+measurement, removing LLMs, local model), and the "why ship grounding" rationale. The six Uses
+examples are CONTRACT-tagged worked micro-examples (decompose → three-questions flow + the documented
+limit that bites each); the science/spectra one is explicit that assay validates **prose claims, not
+spectra**, with the Given and externalism gaps biting hardest. Two questions were softened to honest
+non-answers rather than guessed: usefulness to untrained users (no field data) and the deeper "why
+rebuild v2" motivation (not argued in the v2 docs) — both flagged `[OPEN]`, none required a STOP.
+
+**Step 4 (format into FAQ.md) is pending review.** FAQ.md was NOT touched. spec/ confirmed clean; no
+code/test/prompt diffs. Carry-forward: two pre-existing, unrelated working-tree changes I did NOT
+author and left unbundled — `build.sh` (a `staticcheck ./...` step, already flagged below) and
+`CRITIQUE.md` (a one-spot inline link added to "PLAN.md §3"); commit or revert each on its own.
+
 ## 2026-06-13 — doc-level philosophy critique recorded (consolidation, docs only)
 
 This session installed a critic against the repo's own documentation and recorded its findings
