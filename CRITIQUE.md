@@ -34,7 +34,7 @@ one Quinean move the tool does make (distributional verdicts) is in tension with
 the atomism and the analytic/synthetic split it also needs.
 
 ## The rule-following gap
-The seven axes are rules, and Wittgenstein (*Philosophical Investigations* §201; Kripke's reading) shows no
+The seven axes are rules, and Wittgenstein's rule-following paradox (in Kripke's reading) shows no
 rule contains the rules for its own application. §3a is this paradox in the wild:
 the Counterexample axis fires fatally on probabilistic forecasts because "a
 conceivable counterexample is always constructible" — the rule underdetermines
