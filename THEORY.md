@@ -6,16 +6,19 @@ Three questions can be asked of any claim in a text:
 did the source actually say it (**faithfulness**),
 is it well-formed and falsifiable (**substance**), and
 is it actually true (**grounding**)?
-The tool answers each in a separate mode and keeps the answers separate ([critique](CRITIQUE.md#the-analyticsubstance-vs-syntheticgrounding-gap)), because the modes reach
+The tool answers each in a separate mode and keeps the answers separate
+([critique](CRITIQUE.md#the-analyticsubstance-vs-syntheticgrounding-gap)), because the modes reach
 different things.
 
 Close reading reaches faithfulness.
-The faithfulness critic's task is sense-preservation, not truth ([critique](CRITIQUE.md#the-force--speech-act-gap)):
+The faithfulness critic's task is sense-preservation, not truth
+([critique](CRITIQUE.md#the-force--speech-act-gap)):
 whether the summary reports the speaker accurately, never whether the speaker was right.
 A faithfully reported claim can still be wrong; that question belongs to a different column.
 
 Dialectic reaches substance.
-The producer-critic loop tests whether a claim survives seven named challenges ([critique](CRITIQUE.md#the-rule-following-gap)) —
+The producer-critic loop tests whether a claim survives seven named challenges
+([critique](CRITIQUE.md#the-rule-following-gap)) —
 evidence,
 hidden premise,
 falsifiability,
@@ -29,9 +32,11 @@ It is not thereby true. ([critique](CRITIQUE.md#the-analyticsubstance-vs-synthet
 
 Reasoning can refute a grounding claim without a lookup: an internal contradiction
 kills a claim by deduction alone. But reasoning cannot confirm one. Positive grounding
-is a retrieval — the actual truth-maker, a page that backs the sentence ([critique](CRITIQUE.md#the-given-gap)) — not a
+is a retrieval — the actual truth-maker, a page that backs the sentence
+([critique](CRITIQUE.md#the-given-gap)) — not a
 deduction, however rigorous. That boundary is not a contingent limitation of the
-design; it is the limit of what close reading and dialectic can do. ([critique](CRITIQUE.md#the-reflexive-thesis-is-itself-ungrounded))
+design; it is the limit of what close reading and dialectic can do.
+([critique](CRITIQUE.md#the-reflexive-thesis-is-itself-ungrounded))
 
 The failure this guards against is laundering: confidence earned on the reachable
 columns — faithfulness and substance — spent on the unreachable one. A system that
@@ -43,7 +48,7 @@ move, including about itself.
 
 ## The producer and the limit of separation
 
-In substance mode, two calls run in sequence.
+In **substance** mode, two calls run in sequence.
 The producer is given a claim and asked for its strongest defensible version and the conditions
 required for it to hold.
 The critic then attacks that version across seven named axes.
@@ -51,8 +56,8 @@ The producer's prompt withholds the axes entirely: it asks only for the best hon
 naming what the critic will test. A critic the generator can anticipate is worthless — it shapes
 the output to survive rather than to survive scrutiny.
 
-The calls also run with independent context. The critic receives the producer's
-steelman as its input — it sees the framing — but it runs in a fresh context and did
+The calls also run with independent context. The critic receives the producer's steelman as its
+input — it sees the framing — but it runs in a fresh context and did
 not author what it grades. This removes self-defense bias: the critic is not evaluating
 a position it has already committed to.
 

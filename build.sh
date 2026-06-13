@@ -22,6 +22,10 @@ echo ">> golangci-lint run"
 command -v golangci-lint >/dev/null 2>&1 || fail "golangci-lint not installed"
 golangci-lint run || fail "golangci-lint run"
 
+echo ">> staticcheck ./..."
+command -v staticcheck >/dev/null 2>&1 || fail "staticcheck not installed"
+staticcheck ./... || fail "staticcheck ./..."
+
 echo ">> go test ./..."
 go test ./... || fail "go test ./..."
 
