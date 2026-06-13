@@ -81,7 +81,7 @@ holding, not the laundering risk fully exercised — an honest partial result, n
   paradigmatically falsifiable claim `hollow` 10/10, diverging from the README spec ("well-formed and
   falsifiable, the kind of thing that could be true"). Logged as the **first false-attack datum**.
   Hypothesis: the **Evidence axis penalises bare, decontextualised claims** — a *systematic* bias,
-  since every assayed claim arrives as a decontextualised line by construction. Tested directly in
+  since every examined claim arrives as a decontextualised line by construction. Tested directly in
   [`../bare-vs-contextualized/`](../bare-vs-contextualized/) (measurement only; the prompt fix is a
   separate red-then-green follow-up parked in `../../../SESSION.md`).
 

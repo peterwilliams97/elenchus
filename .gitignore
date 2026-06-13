@@ -10,8 +10,8 @@ examples/destructive/laundering/sources/
 # Test binaries and compiled output
 *.test
 *.out
-/assay
-/cmd/assay/assay
+/crossexam
+/cmd/crossexam/crossexam
 
 # Coverage / profiling
 *.prof

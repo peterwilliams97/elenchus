@@ -1,6 +1,6 @@
 # EXPECTED — motte-and-bailey
 
-Expected results are a **distribution over runs**, never a single golden verdict. assay's judgment
+Expected results are a **distribution over runs**, never a single golden verdict. crossexam's judgment
 layer is non-deterministic (see `../../../TESTING.md`, "The central constraint"). Read the modal
 verdict and the spread, not one run.
 

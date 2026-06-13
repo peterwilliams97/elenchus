@@ -20,7 +20,7 @@ session, not a side-fix (LESSONS.md §4 is what mixing produced; no W-entry-styl
    (co-located with the code that parses their output). Tests: stub-driven loop termination,
    max-rounds, proposition substitution, audit alignment — plus a **mutation check**: invert each
    guard and confirm a test fails (a test that survives its own logic inverted is testing nothing).
-4. **internal/render + cmd/assay** — terminal + markdown output, flag parsing, wiring. Tests:
+4. **internal/render + cmd/crossexam** — terminal + markdown output, flag parsing, wiring. Tests:
    golden-output render tests; `Config` (immutable) separated from run-state per LESSONS.md §1.
 5. **run.sh adaptation + smoke run** — port examples/destructive/run.sh to the v2 binary
    (chains persisted, never $TMP — instrument error d016), then one smoke probe end-to-end.

@@ -20,6 +20,20 @@ substitutes the v1 repo or memory as a source.
 - Prompts in `internal/modes` are verbatim from `spec/PROMPTS.md`; any deliberate change
   to a prompt is a design-queue item (PLAN.md §3), never a port-time edit.
 
+## Writing
+
+- **Plain English.** We are not writing for an audience of pompous academics hiding
+  behind obscure language. If a phrase needs a glossary, rewrite it. Prefer the short
+  word and the concrete one. "The first step everything depends on" beats "the
+  load-bearing first step." The docs name hard ideas (Frege, holism, the Given) — name
+  them plainly; the difficulty is in the idea, never in the wording.
+- **Name things for what they do; never name a component in a way that confuses the
+  reader.** A name must not collide with a more common meaning of the word. When it
+  does, two readers get burned: the human, and the tool itself when it decomposes its
+  own prose into fragments — in the repo's own dogfooding the critic read "assay" as a
+  chemical assay (CRITIQUE.md, the atomism gap). If the best descriptive name is
+  ambiguous out of context, gloss it on first use.
+
 ## Carried disciplines
 
 - **fetch-or-STOP** — required external inputs are fetched; if unobtainable, STOP and mark blocked, never substitute.

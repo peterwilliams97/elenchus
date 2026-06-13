@@ -2,7 +2,7 @@
 #
 # run.sh — Layer 3 calibration runner for the destructive axis probes.
 #
-# This is NOT a test and NOT a CI gate. assay's judgment layer is non-deterministic
+# This is NOT a test and NOT a CI gate. crossexam's judgment layer is non-deterministic
 # (see ../../TESTING.md, "The central constraint"); a flaky pass/fail check on a verdict
 # trains us to ignore failures. So this runs each probe N times, tallies the verdict
 # DISTRIBUTION, and logs it for a human to read — never green/red. Do not wire it into
@@ -26,18 +26,18 @@
 # Portable to macOS's stock bash 3.2 (no associative arrays, no namerefs): counts are
 # accumulated in temp files and summarized with `sort | uniq -c`.
 #
-# Requires: the assay binary at the repo root (run ./build.sh first) and ANTHROPIC_API_KEY.
+# Requires: the crossexam binary at the repo root (run ./build.sh first) and ANTHROPIC_API_KEY.
 
 set -euo pipefail
 
 DESTDIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$DESTDIR/../.." && pwd)"
-ASSAY="$ROOT/assay"
+BIN="$ROOT/crossexam"
 LOG="$ROOT/testing/calibration_log.jsonl"
 # Persisted Tier-2 chains. The false-pass metric is defined per-DEFECT-fragment, so the
 # per-fragment verdicts MUST survive the run — earlier versions wrote -chain-dir to $TMP and
 # deleted it on EXIT, discarding exactly the data the headline metric needs (instrument error,
-# decision_log d016). Chains now persist here, one dir per run, gitignored (raw assay output;
+# decision_log d016). Chains now persist here, one dir per run, gitignored (raw crossexam output;
 # the committed artifact is the attribution summary in each probe's results/).
 CHAINROOT="$ROOT/testing/chains"
 
@@ -51,12 +51,12 @@ SUBSTANCE_PROBES="motte-and-bailey reference-class hidden-premise unfalsifiable-
 # Axis keywords we scan the critic's "Why" column for (approximate — substring match, lower-cased).
 AXIS_KEYS="equivocat|hidden premise|falsifiab|base rate|magnitude|counterexample|causal|correlation|evidence"
 
-[ -x "$ASSAY" ] || { echo "error: assay binary not found at $ASSAY — run ./build.sh first" >&2; exit 1; }
+[ -x "$BIN" ] || { echo "error: crossexam binary not found at $BIN — run ./build.sh first" >&2; exit 1; }
 [ -n "${ANTHROPIC_API_KEY:-}" ] || { echo "error: set ANTHROPIC_API_KEY first" >&2; exit 1; }
 mkdir -p "$ROOT/testing"
 
 DATE="$(date +%Y-%m-%d)"
-TMP="$(mktemp -d "${TMPDIR:-/tmp}/assay-calib.XXXXXX")"
+TMP="$(mktemp -d "${TMPDIR:-/tmp}/crossexam-calib.XXXXXX")"
 trap 'rm -rf "$TMP"' EXIT
 
 # summarize FILE  -> prints to stdout: first a markdown table body, then a "===" line, then a
@@ -86,7 +86,7 @@ run_substance() {
   r=1
   while [ "$r" -le "$N" ]; do
     local cdir="$CHAINROOT/$DATE-$MODEL/$probe/run-$r"; mkdir -p "$cdir"
-    out="$("$ASSAY" -md -model "$MODEL" -chain-dir "$cdir" "$dir/claim.txt" 2>"$TMP/err" || true)"
+    out="$("$BIN" -md -model "$MODEL" -chain-dir "$cdir" "$dir/claim.txt" 2>"$TMP/err" || true)"
     # Verdict distribution: parse the bold tally line, e.g. **2 hollow · 1 partial**
     tally="$(printf '%s\n' "$out" | grep -E '^\*\*[0-9]' | head -1 | sed 's/\*\*//g' || true)"
     if [ -n "$tally" ]; then
@@ -129,7 +129,7 @@ run_audit() {
   r=1
   while [ "$r" -le "$N" ]; do
     local cdir="$CHAINROOT/$DATE-$MODEL/laundering/run-$r"; mkdir -p "$cdir"
-    out="$("$ASSAY" -md -audit -model "$MODEL" -chain-dir "$cdir" -source "$src" "$dir/summary.txt" 2>"$TMP/err" || true)"
+    out="$("$BIN" -md -audit -model "$MODEL" -chain-dir "$cdir" -source "$src" "$dir/summary.txt" 2>"$TMP/err" || true)"
     # Cross-tab data rows: | N | claim | faithful | substantive | grounded |
     # Keep only rows whose first cell is an integer (excludes the pattern-reading table).
     printf '%s\n' "$out" | while IFS='|' read -r _ num _claim faith subst ground _rest; do
@@ -230,7 +230,7 @@ emit_audit_report() {
 }
 
 # ── reflexive grounding canary (TESTING.md 3d) ────────────────────────────────
-# Always-on final step of a full calibration pass. Runs ./assay -evidence on the repo's own
+# Always-on final step of a full calibration pass. Runs ./crossexam -evidence on the repo's own
 # headline; REQUIRED result is `unverifiable` every run. Any `supported` is a self-sealing failure
 # inside the instrument (grounding confirming the tool's own value proposition from the armchair) —
 # the earliest warning that grounding has started pronouncing from the armchair. Cheap, never a gate.
@@ -241,7 +241,7 @@ run_canary() {
   echo "--- reflexive grounding canary (TESTING.md 3d), N=$cn ---" >&2
   while [ "$r" -le "$cn" ]; do
     local cdir="$CHAINROOT/$DATE-$MODEL/reflexive-canary/run-$r"; mkdir -p "$cdir"
-    "$ASSAY" -md -quiet -evidence -model "$MODEL" -chain-dir "$cdir" "$headline" >/dev/null 2>"$TMP/err" || true
+    "$BIN" -md -quiet -evidence -model "$MODEL" -chain-dir "$cdir" "$headline" >/dev/null 2>"$TMP/err" || true
     local v
     v="$(grep -hoE '"verdict":"[a-z]+"' "$cdir"/*.grounding.jsonl 2>/dev/null | head -1 | sed 's/.*:"//;s/"//')"
     [ -n "$v" ] && echo "$v" >> "$vfile"

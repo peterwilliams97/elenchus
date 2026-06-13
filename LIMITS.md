@@ -51,8 +51,8 @@ run 8.
 **Model-retyped URLs not matched to citation spans (W3).** `crossCheckEvidence` matches model-cited
 URLs against retrieved URLs by host+path. This proves a URL was fetched; it does not prove the
 specific sentence is backed by a specific span on that page. The API's citation block content is
-never read. v1's README overstated this check; v2 documentation must describe it as URL-presence
-matching only, until citation spans are read. Evidence: v1 assay.go:792–808 (via spec/FINDINGS.md).
+never read, so this is URL-presence matching only, not span-level backing. Evidence:
+assay.go:792–808 (via spec/FINDINGS.md).
 
 **Non-enum verdict passes through unchecked (W10).** `unmarshalLoose` accepts any string into the
 `Verdict` field; no caller validates enum membership. In hidden-premise run 3 (2026-06-11), the
@@ -65,6 +65,6 @@ Evidence: v1 testing/calibration_log.jsonl (via spec/FINDINGS.md), line 14.
 
 The tool's headline claim — that seeing the three columns disagree causes a trained user to
 recognise their skill as transferable — is a claim about effects on people. It cannot be settled by
-reasoning, by web search, or by running assay on itself. The reflexive canary
+reasoning, by web search, or by running crossexam on itself. The reflexive canary
 (`unverifiable` 5/5, haiku, 2026-06-11) confirms only that grounding is not currently self-sealing.
 The claim is a hypothesis awaiting field evidence.

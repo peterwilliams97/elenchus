@@ -17,7 +17,7 @@ claim killed), not a true negative.
 The **hypothesis**: the substance critic penalises a **bare, decontextualised** claim — one presented
 as a single line with no supporting argument — on the **Evidence** axis ("no source / no support
 given"), and that penalty pushes it to `hollow`. If so, this is a **systematic** bias, because *every*
-claim assayed in substance mode arrives as a decontextualised line by construction (the input is
+claim examined in substance mode arrives as a decontextualised line by construction (the input is
 prose, broken into atomic claims, each graded alone). The tool would then be structurally harsh on
 exactly the inputs it is built to take.
 

@@ -3,7 +3,7 @@
 Dan Shipper (CEO of Every) made 12 predictions about the future of work on Lenny's Podcast.
 `dan_summary.txt` contains those 12 claims; `dan_shipper.txt` is the full transcript.
 
-This example runs all three assay filters in one command and cross-tabulates the results.
+This example runs all three crossexam filters in one command and cross-tabulates the results.
 
 ## How to run
 
@@ -16,12 +16,12 @@ From the repo root:
 S=examples/dan_shipper
 
 # All three filters in one cross-tab (fast pass on haiku)
-./assay -audit -source $S/dan_shipper.txt -md -model claude-haiku-4-5-20251001 $S/dan_summary.txt
+./crossexam -audit -source $S/dan_shipper.txt -md -model claude-haiku-4-5-20251001 $S/dan_summary.txt
 
 # Or run modes individually
-./assay -source $S/dan_shipper.txt $S/dan_summary.txt            # faithfulness only
-./assay $S/dan_summary.txt                                       # substance only
-./assay -source $S/dan_shipper.txt -evidence $S/dan_summary.txt  # grounding on intended propositions
+./crossexam -source $S/dan_shipper.txt $S/dan_summary.txt            # faithfulness only
+./crossexam $S/dan_summary.txt                                       # substance only
+./crossexam -source $S/dan_shipper.txt -evidence $S/dan_summary.txt  # grounding on intended propositions
 ```
 
 Re-run on `claude-sonnet-4-6` (the default) for the verdict you'll trust; calibration is
@@ -32,7 +32,7 @@ model-sensitive.
 Cross-tabulation produced by:
 
 ```
-./assay -audit -source dan_shipper.txt -md -model claude-haiku-4-5-20251001 dan_summary.txt
+./crossexam -audit -source dan_shipper.txt -md -model claude-haiku-4-5-20251001 dan_summary.txt
 ```
 
 The audit grounding column uses the **intended proposition** — what the speaker actually asserted

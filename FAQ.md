@@ -1,6 +1,6 @@
 # FAQ
 
-First-time questions about **assay**, answered. Where an answer reasons about a design choice the
+First-time questions about **crossexam**, answered. Where an answer reasons about a design choice the
 repo has not settled, it is flagged in italics as design analysis rather than stated as fact. Several
 answers link to the deeper documents — [THEORY.md](THEORY.md), [PLAN.md](PLAN.md),
 [LIMITS.md](LIMITS.md), and the running [critique](CRITIQUE.md) of the repo's own claims.
@@ -15,13 +15,15 @@ answers link to the deeper documents — [THEORY.md](THEORY.md), [PLAN.md](PLAN.
 
 ### What are the goals of this repo?
 
-The repo builds `assay`, a tool that splits prose into atomic claims and asks three deliberately
-separate questions of each — faithfulness (did the source say it), substance (is it well-formed and
-falsifiable), grounding (is it true) — and refuses to merge the verdicts. The target failure it
-guards against is *confidence laundering*: real wins on the questions reasoning can reach
-(attribution, structure) spent as authority on the one it cannot (truth). v2's concrete near-term
-goal is the acceptance test — rebuild v1 in Go and reproduce v1's calibration distributions within
-sampling noise ([PLAN.md §2](PLAN.md)).
+The repo builds `crossexam`, a tool that splits prose into atomic claims and asks three deliberately
+separate questions of each —
+faithfulness (did the source say it),
+substance (is it well-formed and falsifiable),
+grounding (is it true)
+ — and refuses to merge the verdicts.
+The target failure it guards against is *confidence laundering*: real wins on the questions
+reasoning can reach
+(attribution, structure) spent as authority on the one it cannot (truth).
 
 ### Who is this for? Is it useless to me if I'm not already "trained to separate attribution from structure from truth"?
 
@@ -48,9 +50,9 @@ critique additionally flags this load-bearing thesis as
 
 ## What it is
 
-### In one sentence, what is assay and what do I get from it?
+### In one sentence, what is crossexam and what do I get from it?
 
-assay is a CLI that decomposes prose into atomic claims and returns, per claim, up to three
+crossexam is a CLI that decomposes prose into atomic claims and returns, per claim, up to three
 independent verdicts — faithfulness, substance, grounding — kept in separate columns so a win on one
 is never spent as authority on another; what you get is a per-claim table of verdicts plus a JSONL
 verification chain, not a single "good/bad" score.
@@ -145,17 +147,17 @@ producer-blind-to-the-axes plus an independent-context critic, chosen so the gen
 output to survive a critic it can anticipate
 ([THEORY.md](THEORY.md#the-producer-and-the-limit-of-separation)).
 
-### How is assay different from a fact-checker, an LLM-as-judge eval harness, or a RAG hallucination detector?
+### How is crossexam different from a fact-checker, an LLM-as-judge eval harness, or a RAG hallucination detector?
 
 *Design analysis, not a settled repo decision:* a fact-checker collapses everything into true/false;
-assay refuses to, treating truth as one of three columns and the least reachable. An LLM-as-judge eval
-harness grades an output against a task/rubric to emit a score; assay's substance mode is adversarial
+crossexam refuses to, treating truth as one of three columns and the least reachable. An LLM-as-judge eval
+harness grades an output against a task/rubric to emit a score; crossexam's substance mode is adversarial
 (producer vs critic) and reports a verdict *distribution* rather than a scalar. It treats the
 false-pass *rate* as a property of that distribution, not of the claim — while still reading repeated
 runs as "what the claim tends to do under examination," and the critique flags exactly that slide from
 distribution to claim-property as the [psychologism gap](CRITIQUE.md#the-psychologism-gap). A RAG
 hallucination detector checks whether generated text is supported by retrieved context; that maps
-closest to assay's *faithfulness* mode (sense-preservation against a source) — but assay separates
+closest to crossexam's *faithfulness* mode (sense-preservation against a source) — but crossexam separates
 that from truth entirely, whereas a hallucination detector typically conflates "grounded in the docs"
 with "correct."
 
@@ -181,7 +183,7 @@ The N=10 (canary N=5) protocol is the *calibration / acceptance* procedure — h
 tool's own bias envelope — not a mandate for every production use. The README's Ballmer row and PLAN.md
 §2 distributions are N=10 calibration results. For a one-off read you can run once and read the verdict
 as one draw; you repeat only when you need the distribution (a high-stakes verdict, or to detect skew).
-There are no time or dollar figures to quote: the binary is not built and no benchmark exists. assay
+There are no time or dollar figures to quote: the binary is not built and no benchmark exists. crossexam
 does emit a per-run `est_usd` and a `USAGE` line, but those are contract outputs, not measured numbers
 — and `est_usd` is null when the model is not in the price table.
 
@@ -200,7 +202,7 @@ share a model, so a blind spot survives both; [critique](CRITIQUE.md#the-externa
 
 ## Limits & scope
 
-### What is assay bad at? When should I not use it?
+### What is crossexam bad at? When should I not use it?
 
 Bad at: positive truth confirmation (grounding-as-retrieval cannot deliver a truth-maker, possibly
 even in principle; [critique](CRITIQUE.md#the-given-gap)); relational defects like motte-and-bailey
@@ -235,18 +237,7 @@ but specialist claims are its worst-grounded case.
 
 ---
 
-## History
-
-### Where did this come from? What's the relationship to v1 (elenchus), and why a v2 rebuild?
-
-assay is the v2 rebuild of v1 (elenchus). `spec/` was copied byte-for-byte from v1 on 2026-06-13 and
-is frozen — it is the input contract, never edited. v1 was a single Go file (`assay.go`, cited
-throughout the spec by line number); v2 re-implements it as a multi-package Go project
-(internal/client, claims, modes, render; cmd/assay). v2's acceptance test is to reproduce v1's
-calibration distributions within sampling noise — so the rebuild is validated against v1's *measured*
-behaviour, not against fresh goals ([PLAN.md §1–2](PLAN.md)). The documented motivation is
-re-architecture into stateless packages; a deeper "why rebuild at all" is not separately argued in the
-v2 docs.
+## Status
 
 ### Is it finished — can I use it today?
 
@@ -264,7 +255,7 @@ binary must satisfy, not a description of working software." You cannot run it t
 (default `claude-sonnet-4-6`, override via `-model` / `ANTHROPIC_MODEL`), and grounding uses
 Anthropic-specific web-search tooling ([spec/CLI.md](spec/CLI.md),
 [spec/PROMPTS.md §6](spec/PROMPTS.md)). Making it agnostic would mean abstracting the client behind an
-interface (provider → text + tools + usage). That is feasible: v1's post-mortem already calls for a
+interface (provider → text + tools + usage). That is feasible: the spec already calls for a
 separate `api/` package boundary holding the HTTP client and retry logic
 ([spec/LESSONS.md §2](spec/LESSONS.md)), and the modes already consume typed JSON shims
 (`substanceJSON` / `faithJSON` / `evidenceJSON`) rather than raw API types
@@ -359,8 +350,8 @@ Input: a coding assistant's claim, "I've added input validation and the function
 cases." Decompose → `["input validation was added", "the function handles all edge cases"]`.
 *Faithfulness* (with the actual diff as source): did it add validation, or only claim to? *Substance:*
 "all edge cases" trips Counterexample/Falsifiability (one unhandled case refutes it; "all" is the
-classic hollow-skewing universal). *Grounding:* only checkable by running tests, which assay does not
-do — it reads the prose claim, not the behaviour. **Limit that bites:** assay assays the *claim about*
+classic hollow-skewing universal). *Grounding:* only checkable by running tests, which crossexam does not
+do — it reads the prose claim, not the behaviour. **Limit that bites:** crossexam examines the *claim about*
 the code, never the code — a confident-but-false "handles all edge cases" with a plausible rationale
 can pass while the code is broken — and universal claims skew toward `hollow`
 ([LIMITS.md](LIMITS.md), [critique](CRITIQUE.md#the-externalism-gap)).
@@ -382,7 +373,7 @@ sincere constative.
 
 Input: a prose conclusion, "The 580 cm⁻¹ band confirms octahedral Fe–O coordination in the sample."
 Decompose → `["a band appears at 580 cm⁻¹", "that band indicates octahedral Fe–O coordination", "the
-sample contains octahedral Fe–O"]`. Be honest about what is happening: **assay validates the prose
+sample contains octahedral Fe–O"]`. Be honest about what is happening: **crossexam validates the prose
 claims, not the spectra.** It cannot read a spectrum or a spectral library; it can only assess the
 sentences a chemist writes about them. *Faithfulness* would check the prose against a cited source
 text; *substance* would test the inference (Hidden premise: the assignment assumes a reference
@@ -392,5 +383,5 @@ claim, not the truth-maker (the [Given gap](CRITIQUE.md#the-given-gap)) — whil
 suspicion is maximal: band assignment is expert content fixed by a division of linguistic labor that
 the shared producer/critic model cannot reliably defer to (the
 [externalism gap](CRITIQUE.md#the-externalism-gap); the README warns that "specialist domains deserve
-the most suspicion"). Do not use assay to *derive* chemistry insight; at most use it to flag
+the most suspicion"). Do not use crossexam to *derive* chemistry insight; at most use it to flag
 overclaiming in chemistry prose, and trust even that least.

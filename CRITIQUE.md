@@ -3,14 +3,16 @@
 A doc-level critique of this repo's claims, read through analytic philosophy from Frege forward.
 This is a review of documentation, not of code. It is not a bug list: several items here are
 in-principle limits, not defects awaiting a patch.
-The tell throughout is that PLAN.md §3's own open problems are these critiques resurfacing as
-engineering work —
+The tell throughout is that
+[PLAN.md §3](PLAN.md#3-design-queue-priority-order-from-specfindingsmd-open-questions)'s
+own open problems are these critiques resurfacing as engineering work —
 §3a is the rule-following paradox,
 §3c is the context principle,
 §3d and the W2/W3 limits are the Myth of the Given.
 
 ## The atomism gap
-The load-bearing first step is `decompose` into atomic claims, then grading fragments.
+Everything downstream rests on the first step: `decompose` splits the prose into atomic
+claims, which are then graded one fragment at a time.
 Frege's context principle — never ask for the meaning of a word in isolation, only in the context of
 a proposition — says atomic content is context-relative. Quine's confirmation holism says claims
 meet evidence only as a corporate body, never individually, so "is THIS atomic claim grounded?" is

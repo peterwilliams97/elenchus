@@ -1,4 +1,4 @@
-# Reflexive pass — assay run on its own claims
+# Reflexive pass — crossexam run on its own claims
 
 The tool's own thesis, turned on the tool. assay exists to keep three questions apart — *faithful?
 well-formed? true?* — and to refuse to claim more than each mode can settle. If that discipline is

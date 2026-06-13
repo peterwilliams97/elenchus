@@ -1,9 +1,9 @@
-# Destructive testing — assay's published failure probes
+# Destructive testing — crossexam's published failure probes
 
-This directory is where assay tries to break itself in public.
+This directory is where crossexam tries to break itself in public.
 
 If you just cloned this repo and want to know whether to trust the tool, this is the most honest
-thing to read. The other examples (`../dan_shipper`, `../url-length`) show assay *working*. These show
+thing to read. The other examples (`../dan_shipper`, `../url-length`) show crossexam *working*. These show
 where it is *designed to fail*, what it actually does when pushed there, and how to tell a real catch
 from a lucky one.
 
@@ -14,14 +14,14 @@ you load it until it bends and *record the load at which it bends*. The number y
 failure envelope, not a pass. A beam with no published failure load is a beam nobody has actually
 tested.
 
-assay outputs **judgments**, and a judgment has no deterministic ground truth (see
+crossexam outputs **judgments**, and a judgment has no deterministic ground truth (see
 [`../../TESTING.md`](../../TESTING.md)). So you cannot unit-test the verdicts the way you unit-test a
 parser. What you *can* do is engineer inputs that target one weakness at a time, run each many times,
 and publish the distribution of what comes back. That is what lives here.
 
 ## Why a claim-validation tool publishes its own failure probes
 
-assay's entire value is that it externalises judgment you'd otherwise have to trust yourself to make.
+crossexam's entire value is that it externalises judgment you'd otherwise have to trust yourself to make.
 A tool like that has one characteristic way to fail: **laundering confidence** — being right enough,
 often enough, on the easy cases that you stop checking it on the hard ones. The defense against that
 is not "trust the green checks." It's keeping a standing, public set of the cases that break it, so
@@ -32,7 +32,7 @@ asking for exactly the unexamined trust it claims to cure.
 
 Most probes are an **openly-constructed adversarial input** — fluent, hedged, plausible prose
 engineered to carry **one** specific defect while staying clean on every other axis, so a flag on the
-target axis is unambiguous signal. Six target one of assay's seven substance axes each; one targets the
+target axis is unambiguous signal. Six target one of crossexam's seven substance axes each; one targets the
 gaps *between* the axes; one — the priority — is real, not constructed; and one targets the **critic's
 own calibration** (a suspected false-attack bias) rather than any claim defect.
 
@@ -58,7 +58,7 @@ Each probe directory contains:
 
 ### On "openly constructed" vs. the no-fabrication rule
 
-assay's [`CLAUDE.md`](../../CLAUDE.md) forbids fabricating inputs — synthesizing a fake artifact and
+crossexam's [`CLAUDE.md`](../../CLAUDE.md) forbids fabricating inputs — synthesizing a fake artifact and
 passing it off as real. These probes do **not** violate that rule, because they are not standing in
 for anything real: **the construction *is* the ground truth.** When `DEFECT.md` says "this contains a
 motte-and-bailey," that is a fact about a thing we built on purpose, not a claim about the world that
@@ -74,14 +74,14 @@ You need the binary (`./build.sh` from the repo root) and `ANTHROPIC_API_KEY` se
 Single probe, by hand:
 
 ```sh
-./assay -md examples/destructive/motte-and-bailey/claim.txt          # substance probes
+./crossexam -md examples/destructive/motte-and-bailey/claim.txt          # substance probes
 ```
 
 The laundering probe is an audit (all three modes) and needs its source recreated first — it is
 gitignored; see [`laundering/PROVENANCE.md`](laundering/PROVENANCE.md) for the one-liner:
 
 ```sh
-./assay -md -audit -source examples/destructive/laundering/sources/ballmer_usatoday_2007.txt \
+./crossexam -md -audit -source examples/destructive/laundering/sources/ballmer_usatoday_2007.txt \
         examples/destructive/laundering/summary.txt
 ```
 
@@ -95,7 +95,7 @@ cd examples/destructive
 ./run.sh canary                # just the reflexive grounding canary (TESTING.md 3d)
 ```
 
-A full `./run.sh` pass ends with the **reflexive grounding canary**: `./assay -evidence` on assay's
+A full `./run.sh` pass ends with the **reflexive grounding canary**: `./crossexam -evidence` on crossexam's
 own headline, which must come back `unverifiable` every run. A `supported` there is a self-sealing
 failure inside the instrument — grounding confirming the tool's own value proposition from the
 armchair — and is printed as a `CANARY BREACH`. Per-fragment chains from every run now persist under
@@ -134,10 +134,10 @@ anything.
 Two consequences, both load-bearing:
 
 1. **Every result is dated and model-stamped.** A distribution from `claude-haiku-4-5` in June 2026 is
-   a measurement of *that model at that time*, not a permanent property of assay. Re-run on new models.
+   a measurement of *that model at that time*, not a permanent property of crossexam. Re-run on new models.
 2. **Treat a *too*-clean run on a famous probe with suspicion.** On `laundering/`, the diagnostic
    columns are faithfulness and substance (the hard, register-sensitive judgments), not the grounding
    refutation everyone "knows." When the easy column gets easier, lean on the hard ones.
 
-The day these probes stop catching anything, the honest question is whether assay got better or
+The day these probes stop catching anything, the honest question is whether crossexam got better or
 whether the probes got memorized. That question is part of the instrument.

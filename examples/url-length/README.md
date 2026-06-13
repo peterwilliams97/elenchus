@@ -2,7 +2,7 @@
 
 This is the example the rest of the repo was missing. The others exercise the machinery; this one
 shows the intended user — someone trained in close reading and dialectic — watching that training
-help decisively on two of assay's three columns and turn into a trap on the third. The point is not
+help decisively on two of crossexam's three columns and turn into a trap on the third. The point is not
 the verdict on the claim. The point is seeing where your own rigour stops.
 
 ## The claim
@@ -39,8 +39,8 @@ Sources:
 ## Run it
 
 ```
-./assay examples/url-length/claim.txt              # substance
-./assay examples/url-length/claim.txt -evidence    # grounding (uses web_search)
+./crossexam examples/url-length/claim.txt              # substance
+./crossexam examples/url-length/claim.txt -evidence    # grounding (uses web_search)
 ```
 
 The verdict tables are deliberately not pre-filled — see the note at the bottom for why.
@@ -86,9 +86,9 @@ running the tool would fabricate the one column the tool exists to protect. Run 
 paste your output below. The example refuses to invent its own grounding column — which is the
 whole point.
 
-<!-- VERDICT TABLES: paste real ./assay output here. Do not fabricate. -->
+<!-- VERDICT TABLES: paste real ./crossexam output here. Do not fabricate. -->
 
-### Substance (`./assay examples/url-length/claim.txt -md`)
+### Substance (`./crossexam examples/url-length/claim.txt -md`)
 
 Run: 2026-06-01, model `claude-sonnet-4-6`, 7 claims, 15 calls, est $0.1334.
 
@@ -106,7 +106,7 @@ Summary: 5 hollow · 2 partial.
 
 ---
 
-### Grounding (`./assay examples/url-length/claim.txt -evidence -md -max-claims 15`)
+### Grounding (`./crossexam examples/url-length/claim.txt -evidence -md -max-claims 15`)
 
 Run: 2026-06-01, model `claude-sonnet-4-6`, 2 raw claims (no decomposition in evidence mode), 2 web searches, est $0.2052.
 

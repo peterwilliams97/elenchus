@@ -70,6 +70,6 @@ SRC
 Then run the audit (see `../run.sh laundering` for the calibrated N-run version):
 
 ```sh
-./assay -audit -source examples/destructive/laundering/sources/ballmer_usatoday_2007.txt \
+./crossexam -audit -source examples/destructive/laundering/sources/ballmer_usatoday_2007.txt \
         examples/destructive/laundering/summary.txt -md
 ```

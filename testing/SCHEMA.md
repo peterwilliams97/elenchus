@@ -5,7 +5,7 @@ rewritten** — corrections are added as new lines that reference the originals 
 below). Multiple record *types* share the file, distinguished by their fields.
 
 The companion per-fragment evidence lives under `testing/chains/<date>-<model>/<probe>/run-N/`
-(persisted Tier-2 chains, gitignored — raw assay output). The ledger summarises; the chains are the
+(persisted Tier-2 chains, gitignored — raw crossexam output). The ledger summarises; the chains are the
 fragment-level record the summaries are derived from.
 
 ## Why the schema grew (2026-06-11)
@@ -71,7 +71,7 @@ for metrics.
 {"date","model","fixture":"reflexive-canary","mode":"grounding","runs",
  "verdict_counts":{...},"canary":"headline","required":"unverifiable every run","held":true|false}
 ```
-`./assay -evidence` on the repo's own headline. `unverifiable` every run = the boundary held. Any
+`./crossexam -evidence` on the repo's own headline. `unverifiable` every run = the boundary held. Any
 `supported` = a self-sealing failure inside the instrument (grounding confirming the tool's own value
 proposition from the armchair) — investigate before trusting any grounding verdict.
 

@@ -1,10 +1,10 @@
-# assay
+# crossexam
 
 Three questions, kept separate.
 
 ## What it does
 
-assay takes prose — a summary, a transcript, a list of claims — and splits it into atomic claims. ([critique](CRITIQUE.md#the-atomism-gap))
+crossexam takes prose — a summary, a transcript, a list of claims — and splits it into atomic claims. ([critique](CRITIQUE.md#the-atomism-gap))
 Of each claim it asks three separate questions:
 did the source actually say it (**faithfulness**),
 is it well-formed and falsifiable (**substance**),
@@ -47,25 +47,24 @@ envelope they map: [LIMITS.md](LIMITS.md).
 
 ## Status
 
-This is the v2 rebuild. The binary is not built yet. The build sequence and the acceptance test —
-reproduce v1's calibration distributions within sampling noise — are in [PLAN.md](PLAN.md).
-Until that passes, the commands below are the contract the binary must satisfy, not a
+The binary is not built yet. The build sequence and acceptance test are in [PLAN.md](PLAN.md);
+until that passes, the commands below are the contract the binary must satisfy, not a
 description of working software.
 
 ## Usage
 
 ```sh
 export ANTHROPIC_API_KEY=sk-...   # required; fatal if unset
-go build -o assay ./cmd/assay
+go build -o crossexam ./cmd/crossexam
 ```
 
 The three modes, and the cross-tab that runs all of them:
 
 ```sh
-./assay claims.txt                                  # substance — is each claim well-formed?
-./assay -source transcript.txt summary.txt          # faithfulness — did the source say it?
-./assay -evidence claims.txt                        # grounding — is it true, per external evidence?
-./assay -audit -source transcript.txt summary.txt   # all three, cross-tabulated
+./crossexam claims.txt                                  # substance — is each claim well-formed?
+./crossexam -source transcript.txt summary.txt          # faithfulness — did the source say it?
+./crossexam -evidence claims.txt                        # grounding — is it true, per external evidence?
+./crossexam -audit -source transcript.txt summary.txt   # all three, cross-tabulated
 ```
 
 Results go to stdout; progress and the SUMMARY block go to stderr. Verdicts by mode — substance:
@@ -80,8 +79,7 @@ Full flag and output reference: [spec/CLI.md](spec/CLI.md).
 
 [examples/dan_shipper/](examples/dan_shipper/) shows the tool working end-to-end on a real
 transcript. [examples/destructive/](examples/destructive/) shows where it bends, on purpose —
-eight adversarial probes with dated verdict distributions; both are v1 artifacts, imported
-byte-identical as the acceptance baselines (PLAN.md §2).
+eight adversarial probes with dated verdict distributions.
 
 ## Who it's for
 

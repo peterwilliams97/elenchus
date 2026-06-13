@@ -6,7 +6,7 @@
 
 ## What this probe is for
 
-The characteristic failure of a tool like assay is **laundering confidence**: scoring real wins on the
+The characteristic failure of a tool like crossexam is **laundering confidence**: scoring real wins on the
 two armchair-reachable columns (faithfulness, substance) and then letting that earned authority bleed
 onto the third column (grounding) — pronouncing a *false* claim trustworthy because it was *well-
 attributed* and *well-formed*. (See `../../../CLAUDE.md`, "The axis boundary," and `BACKGROUND.md`

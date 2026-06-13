@@ -1,5 +1,39 @@
 # SESSION.md
 
+## 2026-06-13 — rename tool `assay` → `crossexam` + writing-discipline notes (d021)
+
+Renamed the tool/binary from **`assay`** to **`crossexam`** at the user's direction (`assay`
+collided with "chemical assay" — the exact misread the tool's own critic made on its own docs; see
+the reflexive pass and the atomism gap). Name chosen by the user from {claimgrade, crossexam,
+claimsort}: it names the producer-critic *method* (adversarial cross-examination; v1's "elenchus" is
+the obscure Greek for it) and, unlike `claimcheck`, does not read as a fact-checker. Pre-registered
+as **d021** before any edit.
+
+**spec/ stays frozen and was NOT touched** — `spec/CLI.md`, `spec/FIXTURES.md`, `spec/PROMPTS.md`
+still invoke `./assay`. The resulting **binary-name divergence is accepted and recorded** (the user's
+chosen option), not hidden. Code side was trivial: all 5 `.go` files are package-comment scaffolds +
+a no-op `main`; module name is `elenchus2`, unaffected. `git mv cmd/assay cmd/crossexam`; two doc.go
+comments, `.gitignore` binary paths, and `README.md` build/usage updated.
+
+**Rename vs. preserve (provenance discipline).** Renamed: tool identity in prose, runnable `./assay`
+commands, the `cmd/assay` structural ref, and orphaned verb uses ("assayed" → "examined"). **Preserved
+byte-for-byte:** dated run records (`examples/*/results/*`, `testing/calibration_log.jsonl`), v1
+`assay.go:NNN` source citations, the whole **sealed reflexive experiment** (`examples/reflexive/` —
+its `claims.txt` is graded input and the finding *depends* on the word "assay"; added one orienting
+header note only), and every chemical-assay *cautionary* reference (CRITIQUE/FAQ/LIMITS/PLAN). The
+critique's atomism-gap section gained a note: the rename is itself the "one-line anchor" move it warns
+about — it fixes one instance, not the architecture. `FAQ.answers.md` (a superseded internal draft)
+was left as-is.
+
+**Also this session (writing discipline, per user):** added a `## Writing` section to repo `CLAUDE.md`
+— plain English (no pompous/obscure language), and name components for what they do / never in a way
+that confuses the reader; rewrote CRITIQUE.md's "load-bearing first step" into plain prose.
+
+**Build state (reported, not fixed):** `go build ./...` exits non-zero, but the cause is environmental
+and pre-existing — a toolchain mismatch (`go.mod` pins `go 1.26.3`; installed tool is `go1.26.4`),
+failing the *standard library* compile, independent of this rename. The `build.sh` staticcheck change
+remains uncommitted and unbundled (out of scope, the user's call), as noted at d020.
+
 ## 2026-06-13 — FAQ formatted into FAQ.md (consolidation, docs only, step 4 of 4)
 
 This session formatted the reviewed `FAQ.answers.md` draft into the reader-facing **FAQ.md** (repo
@@ -77,7 +111,7 @@ the repo does"): the dialectic-vs-alternatives comparison, Producer-Critic alter
 fact-checker/LLM-judge/RAG comparison, all four LLM questions (agnostic refactor, performance
 measurement, removing LLMs, local model), and the "why ship grounding" rationale. The six Uses
 examples are CONTRACT-tagged worked micro-examples (decompose → three-questions flow + the documented
-limit that bites each); the science/spectra one is explicit that assay validates **prose claims, not
+limit that bites each); the science/spectra one is explicit that crossexam validates **prose claims, not
 spectra**, with the Given and externalism gaps biting hardest. Two questions were softened to honest
 non-answers rather than guessed: usefulness to untrained users (no field data) and the deeper "why
 rebuild v2" motivation (not argued in the v2 docs) — both flagged `[OPEN]`, none required a STOP.
