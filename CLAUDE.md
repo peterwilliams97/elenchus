@@ -57,6 +57,9 @@ permitted edit to `spec/`; finding any other modification still means STOP and r
 A running, itemised list of concrete failures in this repo's sessions — so degradation is recorded,
 not waved away. Read it before working; do not repeat what is here. Newest first.
 
+- **2026-06-14 — left a doc file with no statement of what it is.** SESSION.md opened straight into
+  dated entries with no line saying what the file is (a newest-first log of session handoffs). Every
+  doc starts with a one-line statement of what it is and what it is for.
 - **2026-06-14 — used the directory name as the project name.** Wrote "elenchus2 build plan" in
   PLAN.md. `elenchus2` is the directory this repo is cloned into; the project name is the git repo
   name, `elenchus` (remote `git@github.com:peterwilliams97/elenchus.git`). A git project's name is

@@ -1,5 +1,8 @@
 # SESSION.md
 
+A reverse-chronological log of session handoffs: what each working session changed and why, plus any
+debt or carry-forward left for the next session. Newest first, one `##` section per session.
+
 ## 2026-06-14 — fix project name (elenchus, not elenchus2); start failure log (d026)
 
 PLAN.md:1 named the project by the clone directory (`elenchus2`); the git remote is
