@@ -1,4 +1,4 @@
-# PLAN.md — elenchus2 build plan
+# PLAN.md — elenchus build plan
 
 Sources: spec/FINDINGS.md, spec/FIXTURES.md, spec/LESSONS.md, testing/SCHEMA.md. spec/ is frozen.
 FINDINGS.md erratum: cites calibration_log.jsonl lines 1–22; the file has 21 — the log itself is
@@ -72,7 +72,7 @@ empty critique raises a warning, plus re-calibration of both probes showing fals
 the clean-scaffolding substantive verdicts (8/9 and 6/8 of which were the critic being correct)
 regressing toward hollow.
 
-**(c) Referent anchoring for bare fragments.** ([critique](CRITIQUE.md#the-atomism-gap)) Running substance on the repo's own claims showed
+**(c) Referent anchoring for bare fragments.** ([critique](CRITIQUE.md#the-externalism-gap)) Running substance on the repo's own claims showed
 the critic reading "assay" as a chemical assay in 4 fragments and rating "two of assay's three
 columns" hollow because "columns" has no referent out of context — decontextualised specialist
 terms collide their referents and skew hollow. Test: the candidate referent-ambiguity fixture

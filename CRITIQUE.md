@@ -11,16 +11,13 @@ own open problems are these critiques resurfacing as engineering work —
 §3d and the W2/W3 limits are the Myth of the Given.
 
 ## The atomism gap
-Everything downstream rests on the first step: `decompose` splits the prose into atomic
-claims, which are then graded one fragment at a time.
+Everything downstream rests on the first step:
+`decompose` splits the prose into atomic claims, which are then graded one fragment at a time.
 Frege's context principle — never ask for the meaning of a word in isolation, only in the context of
 a proposition — says atomic content is context-relative. Quine's confirmation holism says claims
 meet evidence only as a corporate body, never individually, so "is THIS atomic claim grounded?" is
-malformed at the root. The Tractatus was the high-water mark of logical atomism,
-and Wittgenstein himself retracted it. §3c (the critic reading "columns" as
-referent-less, "assay" as a chemical assay) is the context principle biting; a
-one-line anchor patches the symptom while the architecture keeps committing the
-error elsewhere, silently.
+malformed at the root. The Tractatus was the high-water mark of logical atomism, and Wittgenstein
+himself retracted it.
 
 ## The analytic/substance vs. synthetic/grounding gap
 The substance/grounding split — well-formed-and-falsifiable on one side, true on

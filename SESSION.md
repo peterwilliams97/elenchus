@@ -1,5 +1,35 @@
 # SESSION.md
 
+## 2026-06-14 — fix project name (elenchus, not elenchus2); start failure log (d026)
+
+PLAN.md:1 named the project by the clone directory (`elenchus2`); the git remote is
+`peterwilliams97/elenchus`, so the project name is `elenchus`. Fixed PLAN.md:1, and added a
+CLAUDE.md `## Replace Degraded Claude Code` section — a newest-first itemised failure log to read
+before working — starting with this failure. `SESSION.md:59` left as-is (a factual go.mod
+module-path statement, not a project-name claim). Docs only; `spec/` clean. Registered as **d026**.
+
+## 2026-06-14 — name crossexam in OVERVIEW; "don't invent names" rule (d025)
+
+Replaced the generic "the tool" with the actual name `crossexam` throughout OVERVIEW.md (intro,
+section heading, mode paragraph, examples lines, README doc line), and added a CLAUDE.md Writing
+rule: call things by their existing name, don't invent names or write "the tool". Docs only;
+`spec/` clean. Registered as **d025**.
+
+## 2026-06-14 — move §3c from atomism to externalism (d024)
+
+Deleted the §3c sentence from CRITIQUE.md's atomism gap (it is reference-fixing, already covered
+under externalism) and repointed PLAN.md §3c's cross-link from `#the-atomism-gap` to
+`#the-externalism-gap`. Docs only; `spec/` clean. Registered as **d024**.
+
+## 2026-06-13 — add OVERVIEW.md, a plain whole-repo map (d023)
+
+Wrote `OVERVIEW.md` describing every part of the repo (tool, frozen `spec/`, decision log, `testing/`,
+`examples/`, docs, build gate) by what it reads/does/emits, existing terms only, binary-not-built and
+spec-as-contract stated; docs only, `spec/` clean. Registered as **d023** (the brief said "d021" but
+d021/d022 were already used this session). Debt noted, not side-fixed: `examples/reflexive/README.md:3`
+still has a stray "assay" in body prose; `go build` currently fails on a `go.mod` 1.26.3 vs installed
+1.26.4 toolchain mismatch (environmental).
+
 ## 2026-06-13 — change binary name in frozen spec; drop reader-facing lineage (d022)
 
 Two follow-ups to the d021 rename, both at the user's explicit direction.

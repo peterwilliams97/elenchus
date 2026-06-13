@@ -39,6 +39,11 @@ permitted edit to `spec/`; finding any other modification still means STOP and r
   own prose into fragments — in the repo's own dogfooding the critic read "assay" as a
   chemical assay (CRITIQUE.md, the atomism gap). If the best descriptive name is
   ambiguous out of context, gloss it on first use.
+- **Call things by their name; don't invent names and don't write "the tool".** Things
+  that already have a name (`crossexam`, the packages, the modes, the files) are
+  referred to by that name, not by a coined label and not by a vague placeholder. If
+  something genuinely has no name yet, describe what it does in concrete terms rather
+  than minting a term and using it as if it were established.
 
 ## Carried disciplines
 
@@ -46,3 +51,13 @@ permitted edit to `spec/`; finding any other modification still means STOP and r
 - **provenance propagation** — synthetic input taints downstream; conclusions drawn from it are marked invalid.
 - **red-then-green** — the failing test exists before the code that passes it.
 - **pre-register decisions** — decisions are recorded before coding, not rationalised after.
+
+## Replace Degraded Claude Code
+
+A running, itemised list of concrete failures in this repo's sessions — so degradation is recorded,
+not waved away. Read it before working; do not repeat what is here. Newest first.
+
+- **2026-06-14 — used the directory name as the project name.** Wrote "elenchus2 build plan" in
+  PLAN.md. `elenchus2` is the directory this repo is cloned into; the project name is the git repo
+  name, `elenchus` (remote `git@github.com:peterwilliams97/elenchus.git`). A git project's name is
+  its repo name, never the clone directory. Check `git remote -v` before naming the project.
