@@ -47,8 +47,10 @@ permitted edit to `spec/`; finding any other modification still means STOP and r
 
 ## Carried disciplines
 
-- **fetch-or-STOP** — required external inputs are fetched; if unobtainable, STOP and mark blocked, never substitute.
-- **provenance propagation** — synthetic input taints downstream; conclusions drawn from it are marked invalid.
+- **fetch-or-STOP** — required external inputs are fetched; if unobtainable, STOP and mark blocked,
+  never substitute.
+- **provenance propagation** — synthetic input taints downstream; conclusions drawn from it are
+  marked invalid.
 - **red-then-green** — the failing test exists before the code that passes it.
 - **pre-register decisions** — decisions are recorded before coding, not rationalised after.
 
@@ -57,6 +59,11 @@ permitted edit to `spec/`; finding any other modification still means STOP and r
 A running, itemised list of concrete failures in this repo's sessions — so degradation is recorded,
 not waved away. Read it before working; do not repeat what is here. Newest first.
 
+- **2026-06-14 — used literary metaphor instead of saying what the sentence means.**
+  "The analytic/synthetic distinction wearing a binary" in CRITIQUE.md does not say anything — it
+  reaches for a clever image instead of a meaning. The fix: "cast as a binary verdict." Write the
+  concrete thing. Do not use model training on self-indulgent writing — no metaphors, no
+  personification, no borrowed cleverness. If you cannot say it plainly, you do not understand it.
 - **2026-06-14 — named README.md after the tool, not the project.** README.md:1 was `# crossexam`
   (the binary name). The repo is `elenchus` (`git remote -v`: `git@github.com:peterwilliams97/elenchus.git`).
   A README title is the project name. The binary name belongs in the body.

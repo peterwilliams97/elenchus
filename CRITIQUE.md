@@ -15,13 +15,13 @@ Everything downstream rests on the first step:
 `decompose` splits the prose into atomic claims, which are then graded one fragment at a time.
 Frege's context principle — never ask for the meaning of a word in isolation, only in the context of
 a proposition — says atomic content is context-relative. Quine's confirmation holism says claims
-meet evidence only as a corporate body, never individually, so "is THIS atomic claim grounded?" is
+meet evidence only as a corporate body, never ind2ividually, so "is THIS atomic claim grounded?" is
 malformed at the root. The Tractatus was the high-water mark of logical atomism, and Wittgenstein
 himself retracted it.
 
 ## The analytic/substance vs. synthetic/grounding gap
-The substance/grounding split — well-formed-and-falsifiable on one side, true on
-the other — is the analytic/synthetic distinction wearing a binary. Quine's "Two
+The substance/grounding split — well-formed-and-falsifiable on one side, true on the other —
+is the analytic/synthetic distinction cast as a binary verdict. Quine's "Two
 Dogmas" denies the distinction can be drawn in principle: falsifiability and
 well-formedness already carry synthetic background commitments. The line
 "survives the challenges → well-formed and falsifiable; not thereby true" is
