@@ -56,9 +56,10 @@ category error stays the silent gap; the canary holds. Nothing in §3 starts bef
 
 ## 3. Design queue (priority order, from spec/FINDINGS.md open questions)
 
-**(a) Forward-prediction handling (the Counterexample question).** ([critique](CRITIQUE.md#the-rule-following-gap)) The Counterexample axis fires
-fatally on probabilistic forward predictions because a conceivable counterexample is always
-constructible — the bare and contextualized Ballmer forecast both rated hollow 10/10, fatal axis
+**(a) Forward-prediction handling (the Counterexample question).**
+([critique](CRITIQUE.md#the-rule-following-gap)) The Counterexample axis fires fatally on
+probabilistic forward predictions because a conceivable counterexample is always constructible — the
+bare and contextualized Ballmer forecast both rated hollow 10/10, fatal axis
 Counterexample (9/10, 8/10), and the Evidence-penalty hypothesis was falsified, so this is a
 critic design question, not a prompt tweak. Test: a graded pair — a categorical "no chance"
 claim vs. a hedged quantified forecast of the same event. The fix works if the categorical form
