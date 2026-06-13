@@ -1,0 +1,16 @@
+version: "2"
+
+linters:
+  default: none
+  enable:
+    - govet
+    - staticcheck
+    - errcheck
+    - gocyclo
+    - funlen
+  settings:
+    gocyclo:
+      min-complexity: 15
+    funlen:
+      lines: 80
+      statements: 40

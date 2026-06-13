@@ -1,0 +1,26 @@
+# --- elenchus chain / eval output ---
+# Tier-2 JSONL verification chains default to eval/<stamp>-<model>/; never committed.
+/eval/
+
+# --- laundering source (carried from v1) ---
+# Real third-party text; recreate from PROVENANCE.md. Never committed.
+examples/destructive/laundering/sources/
+
+# --- Go ---
+# Test binaries and compiled output
+*.test
+*.out
+/assay
+/cmd/assay/assay
+
+# Coverage / profiling
+*.prof
+coverage.out
+coverage.html
+
+# Go workspace
+go.work
+go.work.sum
+
+# --- editor / OS ---
+.DS_Store
