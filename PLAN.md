@@ -56,7 +56,7 @@ category error stays the silent gap; the canary holds. Nothing in §3 starts bef
 
 ## 3. Design queue (priority order, from spec/FINDINGS.md open questions)
 
-**(a) Forward-prediction handling (the Counterexample question).** The Counterexample axis fires
+**(a) Forward-prediction handling (the Counterexample question).** ([critique](CRITIQUE.md#the-rule-following-gap)) The Counterexample axis fires
 fatally on probabilistic forward predictions because a conceivable counterexample is always
 constructible — the bare and contextualized Ballmer forecast both rated hollow 10/10, fatal axis
 Counterexample (9/10, 8/10), and the Evidence-penalty hypothesis was falsified, so this is a
@@ -71,7 +71,7 @@ empty critique raises a warning, plus re-calibration of both probes showing fals
 the clean-scaffolding substantive verdicts (8/9 and 6/8 of which were the critic being correct)
 regressing toward hollow.
 
-**(c) Referent anchoring for bare fragments.** Running substance on the repo's own claims showed
+**(c) Referent anchoring for bare fragments.** ([critique](CRITIQUE.md#the-atomism-gap)) Running substance on the repo's own claims showed
 the critic reading "assay" as a chemical assay in 4 fragments and rating "two of assay's three
 columns" hollow because "columns" has no referent out of context — decontextualised specialist
 terms collide their referents and skew hollow. Test: the candidate referent-ambiguity fixture
@@ -79,7 +79,7 @@ from FINDINGS.md — a domain-polysemous term graded with vs. without a one-line
 the fix works if the anchored and unanchored distributions converge.
 
 **(d) Citation-block provenance.** `crossCheckEvidence` matches retrieved URLs by host+path,
-proving a URL was retrieved, not that the cited span backs the sentence (W3; W2 makes
+proving a URL was retrieved, not that the cited span backs the sentence ([critique](CRITIQUE.md#the-given-gap)) (W3; W2 makes
 `supported` the structurally weakest verdict). True API citation blocks are never read. Test: a
 fixture whose claim cites a genuinely retrieved page that does not support the sentence — today
 it can pass URL-presence matching; with citation blocks read, it must not yield `supported`.

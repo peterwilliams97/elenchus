@@ -4,13 +4,13 @@ Three questions, kept separate.
 
 ## What it does
 
-assay takes prose — a summary, a transcript, a list of claims — and splits it into atomic claims.
+assay takes prose — a summary, a transcript, a list of claims — and splits it into atomic claims. ([critique](CRITIQUE.md#the-atomism-gap))
 Of each claim it asks three separate questions:
 did the source actually say it (**faithfulness**),
 is it well-formed and falsifiable (**substance**),
 and is it actually true (**grounding**).
 It refuses to merge the answers — each question gets its own mode and its own verdict, and a win on
-one is never spent on another.
+one is never spent on another. ([critique](CRITIQUE.md#the-analyticsubstance-vs-syntheticgrounding-gap))
 
 ## Why
 
@@ -18,9 +18,9 @@ The target failure is confidence laundering:
 real wins on the questions reasoning can reach, spent as authority on the one it can't.
 Reasoning can verify attribution and structure, and it can refute a claim by deduction —
 but it cannot confirm one.
-Positive grounding is a retrieval, not a deduction, however rigorous.
+Positive grounding is a retrieval, not a deduction ([critique](CRITIQUE.md#the-given-gap)), however rigorous.
 A system that runs faithfulness and substance checks and then pronounces on truth from the armchair
-has crossed that line; the tool is built to refuse the move, including about itself.
+has crossed that line; the tool is built to refuse the move, including about itself. ([critique](CRITIQUE.md#the-reflexive-thesis-is-itself-ungrounded))
 The full argument is in [THEORY.md](THEORY.md).
 
 ## Show it
@@ -39,8 +39,8 @@ rather than hidden. The honest row is the demonstration.
 ## What it can't do
 
 The critic is a language model, not an oracle: a blind spot in the producer survives in the
-critic, and specialist domains deserve the most suspicion. Verdicts are distributions, not
-facts — a single run is one draw, and the calibration protocol reports full distributions per
+critic, and specialist domains deserve the most suspicion. ([critique](CRITIQUE.md#the-externalism-gap)) Verdicts are distributions, not
+facts ([critique](CRITIQUE.md#the-psychologism-gap)) — a single run is one draw, and the calibration protocol reports full distributions per
 probe. `supported` is the structurally weakest verdict: it currently proves a URL was retrieved,
 not that the page backs the sentence. We publish the probes that break the tool and the measured
 envelope they map: [LIMITS.md](LIMITS.md).

@@ -6,16 +6,16 @@ Three questions can be asked of any claim in a text:
 did the source actually say it (**faithfulness**),
 is it well-formed and falsifiable (**substance**), and
 is it actually true (**grounding**)?
-The tool answers each in a separate mode and keeps the answers separate, because the modes reach
+The tool answers each in a separate mode and keeps the answers separate ([critique](CRITIQUE.md#the-analyticsubstance-vs-syntheticgrounding-gap)), because the modes reach
 different things.
 
 Close reading reaches faithfulness.
-The faithfulness critic's task is sense-preservation, not truth:
+The faithfulness critic's task is sense-preservation, not truth ([critique](CRITIQUE.md#the-force--speech-act-gap)):
 whether the summary reports the speaker accurately, never whether the speaker was right.
 A faithfully reported claim can still be wrong; that question belongs to a different column.
 
 Dialectic reaches substance.
-The producer-critic loop tests whether a claim survives seven named challenges —
+The producer-critic loop tests whether a claim survives seven named challenges ([critique](CRITIQUE.md#the-rule-following-gap)) —
 evidence,
 hidden premise,
 falsifiability,
@@ -25,13 +25,13 @@ counterexample,
 causality versus correlation —
 applied to the strongest defensible version of the claim.
 A claim that survives is well-formed and falsifiable.
-It is not thereby true.
+It is not thereby true. ([critique](CRITIQUE.md#the-analyticsubstance-vs-syntheticgrounding-gap))
 
 Reasoning can refute a grounding claim without a lookup: an internal contradiction
 kills a claim by deduction alone. But reasoning cannot confirm one. Positive grounding
-is a retrieval — the actual truth-maker, a page that backs the sentence — not a
+is a retrieval — the actual truth-maker, a page that backs the sentence ([critique](CRITIQUE.md#the-given-gap)) — not a
 deduction, however rigorous. That boundary is not a contingent limitation of the
-design; it is the limit of what close reading and dialectic can do.
+design; it is the limit of what close reading and dialectic can do. ([critique](CRITIQUE.md#the-reflexive-thesis-is-itself-ungrounded))
 
 The failure this guards against is laundering: confidence earned on the reachable
 columns — faithfulness and substance — spent on the unreachable one. A system that
@@ -61,7 +61,7 @@ holds no truth-maker. Separating production from critique tests whether the stro
 version of a claim survives named structural challenges, not whether that structure
 corresponds to anything in the world. This is the difference between this tool and
 verifier systems graded against an external score or database. Separation buys honesty
-about what the claim asserts. It cannot buy truth about whether the assertion holds.
+about what the claim asserts. It cannot buy truth about whether the assertion holds. ([critique](CRITIQUE.md#the-analyticsubstance-vs-syntheticgrounding-gap))
 
 ---
 
@@ -83,7 +83,7 @@ distribution, not of the claim.
 The calibration protocol is designed around this: N runs per probe, fragment-level
 distributions reported in full, each false pass examined for its signature. A verdict
 from a single run on a single claim should be read as one draw. Repeated runs shift the
-question from what the model said to what the claim tends to do under examination.
+question from what the model said to what the claim tends to do under examination. ([critique](CRITIQUE.md#the-psychologism-gap))
 
 ---
 
