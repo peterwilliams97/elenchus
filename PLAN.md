@@ -54,7 +54,10 @@ A material divergence is a porting bug until proven otherwise. Expected qualitat
 equivocation fires 10/10; reference-class and unfalsifiable-dress stay at 0 substantive;
 category error stays the silent gap; the canary holds. Nothing in §3 starts before this passes.
 
-## 3. Design queue (priority order, from spec/FINDINGS.md open questions)
+## 3. Design queue (priority order)
+
+Items (a)–(d) are the open questions from spec/FINDINGS.md. Item (e) was added 2026-06-14 (d030)
+from the review-to-rebuttal investigation (REVIEWER.md Q2); it is not from FINDINGS.
 
 **(a) Forward-prediction handling (the Counterexample question).**
 ([critique](CRITIQUE.md#the-rule-following-gap)) The Counterexample axis fires fatally on
@@ -72,7 +75,8 @@ empty critique raises a warning, plus re-calibration of both probes showing fals
 the clean-scaffolding substantive verdicts (8/9 and 6/8 of which were the critic being correct)
 regressing toward hollow.
 
-**(c) Referent anchoring for bare fragments.** ([critique](CRITIQUE.md#the-externalism-gap)) Running substance on the repo's own claims showed
+**(c) Referent anchoring for bare fragments.** ([critique](CRITIQUE.md#the-externalism-gap))
+Running substance on the repo's own claims showed
 the critic reading "assay" as a chemical assay in 4 fragments and rating "two of assay's three
 columns" hollow because "columns" has no referent out of context — decontextualised specialist
 terms collide their referents and skew hollow. Test: the candidate referent-ambiguity fixture
@@ -80,7 +84,23 @@ from FINDINGS.md — a domain-polysemous term graded with vs. without a one-line
 the fix works if the anchored and unanchored distributions converge.
 
 **(d) Citation-block provenance.** `crossCheckEvidence` matches retrieved URLs by host+path,
-proving a URL was retrieved, not that the cited span backs the sentence ([critique](CRITIQUE.md#the-given-gap)) (W3; W2 makes
+proving a URL was retrieved, not that the cited span backs the sentence
+([critique](CRITIQUE.md#the-given-gap)) (W3; W2 makes
 `supported` the structurally weakest verdict). True API citation blocks are never read. Test: a
 fixture whose claim cites a genuinely retrieved page that does not support the sentence — today
 it can pass URL-presence matching; with citation blocks read, it must not yield `supported`.
+
+**(e) Source-coverage traversal for faithfulness (the unanswered-reviewer-point question).**
+([proposal](REVIEWER.md#q2--review-to-rebuttal-and-which-reviewer-points-went-unanswered)) Today
+faithfulness decomposes the *downstream* text (`splitSummary(input)`) and grades each downstream
+claim against the `-source` file, which is never decomposed (spec/BEHAVIOR.md Mode 2). So
+`crossexam -source review.txt rebuttal.txt` keys `absent` to *rebuttal* claims (a rebuttal claim
+not found in the review), and cannot report which *review* points the rebuttal left unanswered.
+Surfacing unanswered source points needs the reverse traversal — decompose the source and report
+coverage of each source point by the downstream text — plus a verdict vocabulary for a source point
+(answered / partially-answered / overstated-in-response / unanswered) distinct from the
+summary-distortion taxonomy in spec/PROMPTS.md §5. This is a new mode, not a flag on the existing
+one; the argument swap `-source rebuttal.txt review.txt` does not substitute for it (it misreads the
+source/summary roles and only `absent` carries over). Test: a review with N enumerable points and a
+rebuttal that answers some, overstates one, and silently drops one — the mode must name the dropped
+point `unanswered` and the inflated one `overstated`.

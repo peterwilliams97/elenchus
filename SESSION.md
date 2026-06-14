@@ -3,6 +3,167 @@
 A reverse-chronological log of session handoffs: what each working session changed and why, plus any
 debt or carry-forward left for the next session. Newest first, one `##` section per session.
 
+## 2026-06-14 — consolidation: one typed verdict vocabulary (d034)
+
+Consolidation session (no feature work), pre-registered as **d034**. Extracted the verdict
+vocabulary into a single typed definition and pointed the disagreement render at it.
+
+**Two files changed.** `internal/claims/claims.go` gains `type Verdict string` + the full closed
+vocabulary as named consts (verbatim from spec/BEHAVIOR.md "Verdict enums and routing", grouped by
+mode; shared values partial/error defined once) — replacing the old substance-only 4-const block.
+The rest of claims (Axis, SubstanceDetail, Substance, substanceVerdicts, ValidSubstanceVerdict) is
+untouched. `internal/render/disagreements.go` now references the consts: `tierOf`'s switch types
+over `claims.Verdict`, and the six clause maps are `map[claims.Verdict]string`. No bare verdict
+literal remains in render code.
+
+**The consts are deliberately untyped.** Typing them (`Substantive Verdict = …`) would break three
+out-of-scope call sites that compare/assign against `string` — `claims`' own `substanceVerdicts`
+map, `modes` (`verdict = claims.Hollow` into a string field), and `cmd` (`r.Verdict == claims.Error`).
+An untyped string const is assignable to both `string` and `Verdict`, so it serves the existing
+result path and the new typed maps/switch with zero edits outside the two files. End-to-end typing
+(retyping `Substance.Verdict` to `Verdict` and threading it through modes/cmd) is deferred — a
+larger change outside consolidation scope.
+
+**Gate (behavior identical).** The existing `internal/render/disagreements_test.go` (64 tier-triples
++ verdict→tier map + rendered text) passes **unchanged** — zero edits to it — and the `&&`→`||` and
+mis-tier mutations still fail. Full build/vet/test/lint green (5 pkgs, 0 lint issues) via
+`GOROOT=/usr/local/Cellar/go/1.26.4/libexec`. spec/ read-only and clean.
+
+**CLAUDE.md.** Added a Structural-rules bullet (enum-like vocabularies get one typed definition;
+others import the consts, none re-spells literals) and a newest-first Replace-Degraded entry
+(the bare verdict literals duplicated across tierOf + six maps, a renamed verdict falling through
+to NULL silently).
+
+## 2026-06-14 — substance vertical slice: ./crossexam runs one mode end to end (d033)
+
+Feature session. The user re-scoped (after a Step-0 check found client/claims/modes were empty
+stubs with nothing to wire) to build a substance-only vertical slice across four packages in one
+session, deviating from one-package-per-session — pre-registered as **d033** before any code.
+Bottom-up, each layer red-then-green against the `internal/client` fake (no network in tests).
+
+**What shipped (substance mode only).**
+- `internal/client` — bespoke raw-HTTP Anthropic client (not the SDK; matches the frozen spec and
+  adds no dependency): `CallJSON` (parse + one retry with augmented system), HTTP retry on
+  429/503/529 with full-jitter backoff + Retry-After, `max_tokens=1500`, truncation→error, usage
+  accounting. The injectable seam is `Doer`; `Stub`/`DoerFunc` are the one network fake (exported so
+  upstream tests reuse it — no other package stubs the network).
+- `internal/claims` — substance verdict constants + `Substance`/`SubstanceDetail`/`Axis` types +
+  `ValidSubstanceVerdict` boundary check (pure).
+- `internal/modes` — the three substance prompts **verbatim** from spec/PROMPTS.md (verified
+  byte-for-byte by script) + `Decompose` + `AssayClaim` (the producer-critic loop exactly per
+  BEHAVIOR.md Mode 1: maxRounds, the four-part continue condition, the survives-only-by-conditioning
+  hollow downgrade). Prompts live here per the package contract.
+- `internal/render` — `TermSubstance` + `Summary` + `UsageLine`, string-returning to match the
+  existing `Disagreements` idiom (keeps errcheck clean; caller does the IO).
+- `cmd/crossexam` — replaced the no-op `main()`: flag parsing, `resolveInput` (-text > file > stdin
+  > defaultInput), API-key check, run-state, dispatch, best-effort chain JSONL, and a fatal-with-
+  message guard on -source/-evidence/-audit/-md (never a silent no-op).
+
+**Proof, two ways (both delivered).** (1) Loop/wiring tests through the fake at the modes and cmd
+levels — a substance verdict comes out, no network. (2) Real `ANTHROPIC_API_KEY` smoke run on a
+two-line file (`claude-sonnet-4-6`): both claims rated `partial`, 5 API calls, full SUMMARY/USAGE to
+stderr, and a chain JSONL with the envelope + substanceDetail (steelman, per-axis critique). Actual
+stdout/stderr pasted into the session report.
+
+**Decisions settled in d033 (see the log):** raw HTTP over the SDK (frozen spec + no-new-deps +
+HTTP-level fake); model default `claude-sonnet-4-6` per frozen CLI.md (not the claude-api skill's
+opus default); `decompose` in modes not claims (purity + prompts-location); 7-key JSON schemas split
+via embedded structs to honor the ≤6-fields rule; `est_usd` reported `n/a` (the v1 price table is
+out of this repo's boundary — not invented); the ANSI `termSubstance` layout is a minimal readable
+rendering (the spec pins only the markdown schema, out of scope).
+
+**Gate:** gofmt / vet / `go build ./...` / `go test ./...` / golangci-lint all green (via
+`GOROOT=/usr/local/Cellar/go/1.26.4/libexec` — the env-GOROOT bug from d031, still unfixed by the
+user). spec/ read-only and clean.
+
+**Out of scope, for follow-on sessions:** faithfulness, grounding, -audit, the -disagreements
+wiring, -md, the est_usd price table, the ANSI/color output detail, and the §2 calibration run.
+
+**Carry-forward (tooling hazard, recurring):** the markdown auto-formatter reflowed `spec/CLI.md`
+(table alignment) after it was merely read — same on-read mutation that hit `spec/BEHAVIOR.md` last
+session. Restored with `git checkout -- spec/CLI.md`; spec/ clean. The frozen-spec invariant remains
+at risk from a format-on-save tool that does not exclude `spec/`; the guard suggested last session
+(editorconfig/formatter ignore for `spec/`, or a pre-commit check that `spec/` matches HEAD bar the
+d022 lines) is still not in place. Always `git status --porcelain spec/` before committing.
+
+## 2026-06-14 — build the -disagreements render rule, red-then-green (d031, d032)
+
+Feature session implementing d029 Q1 (the `-disagreements` rule). Red-then-green; `spec/` read-only
+and clean.
+
+**What shipped.** `internal/render/disagreements.go`: `tierOf` (verdict→tier via the spec's vcolor
+routing — PASS/WEAK/FAIL/NULL), `surfaces` (a claim disagrees iff ≥1 column PASS and ≥1 FAIL),
+`disagree`, and `Disagreements([]AuditRow) string` (renders only surfaced claims, each as one
+plain-English question + its three verdicts, numbered by original position). RED first:
+`internal/render/disagreements_test.go` written and run to a compile failure before any
+implementation, then GREEN. The test pins the whole behaviour — all 64 tier-triples (independent
+oracle + the arithmetic fact that exactly 18 surface + hand-written truth-table anchors), the
+verdict→tier map over each mode's full vocabulary, the rule over real verdict strings, and the
+rendered text. Verdict-triples are constructed directly; no model run, no dan_shipper as input.
+Mutation-checked (`||` for `&&`, and a mis-tiered `faithful`, each fail the suite). Gate green: gofmt,
+go vet, `go build ./...`, `go test ./...`, golangci-lint (0 issues). No new model calls; no new fields
+on shared structs (`AuditRow` is a render input).
+
+**Reported blocked, not faked (the STOP half of the brief).** The `-disagreements` flag and its wiring
+into `cmd/crossexam` are NOT built: there is no flag parsing, no audit runner, and no audit-result
+type to render from — `cmd/crossexam` is still `func main() {}`. Wiring needs PLAN §1 steps 1–4 (the
+whole binary), which the brief forbids inventing this session. `render.AuditRow` is the adapter
+boundary the future audit→render wiring will fill.
+
+**Grounding deferred (d032, blocked).** The truth table grounds *what the rule computes*; it does not
+ground *whether the rule surfaces the claims a reviewer cares about*. That needs audit output over a
+corpus (N runs per input, distributions recorded), is blocked on the base build, and must never be
+validated against a single fixture — dan_shipper stays an illustration in REVIEWER.md, never the
+validation set. Pre-registered with its protocol.
+
+**Docs.** REVIEWER.md Q1 gained a Status line; its two example blocks were updated to the actual
+rendered output (the clause table uses "the source really says it", not the earlier looser
+"Faithfully reported") — the feature's own doc, not an unrelated side-fix.
+
+**Carry-forward (environment, reported not self-fixed).** A bare `go build`/`go test` fails with
+`compile: version "go1.26.3" does not match go tool version "go1.26.4"`: an exported
+`GOROOT=/usr/local/go` (a stale go1.26.3 tree) shadows the Homebrew `go1.26.4` binary
+(`/usr/local/bin/go` → Cellar). Worked around this session per-command with
+`GOROOT=/usr/local/Cellar/go/1.26.4/libexec`. The user's shell profile was not modified (repo
+boundary). Permanent fix is the user's: unset/repoint `GOROOT`, or align go.mod. Note go.mod pins
+`go 1.26.3`.
+
+## 2026-06-14 — reviewer-facing design: -disagreements projection + review-to-rebuttal (d029, d030)
+
+Research/design session, docs only. Two questions investigated against the frozen `spec/` and
+pre-registered; no code, no spec edits (`spec/` clean, 6 files).
+
+**Q1 — recognition output (d029, projection/cheap).** Proposed `-disagreements`: a render-only
+flag over the data `-audit` already computes (the three per-claim verdicts handed to `progressDone`
+and drawn by `mdAudit`). Surfaces only claims where, under the existing `vcolor` tiering
+(PASS=faithful/substantive/supported, FAIL=hollow/absent/refuted/contradicted), at least one column
+is PASS and at least one is FAIL — i.e. genuine conflicts a reviewer must adjudicate; unanimous and
+merely-unsettled rows drop. Each surfaced claim renders as one plain-English question (deterministic
+clause-per-column template, no model call) plus its three verdicts. Verified against
+`examples/dan_shipper/`: surfaces #3/#5/#12, drops #6/#8/#9. Confirmed: no new model calls, no new
+fields on shared structs — one new render function + flag wiring.
+
+**Q2 — review-to-rebuttal (d030, new behavior/deferred).** Settled from spec alone: faithfulness
+decomposes the *downstream* text, not `-source`, so `crossexam -source review.txt rebuttal.txt` keys
+`absent` to *rebuttal* claims, not review points. "Which reviewer points went unanswered" needs the
+reverse (source-decomposition + coverage) traversal — new behavior. Written up as **PLAN.md §3(e)**;
+not implemented. No example pair drafted (that branch's condition — `absent` keyed to source points
+— is false). The `-source rebuttal.txt review.txt` swap was considered and rejected as a non-fit.
+
+Deliverables: `REVIEWER.md` (the proposal), `rigour-map/decision_log.jsonl` d029/d030, PLAN.md §3(e)
++ header note, this entry. Spec-silent points flagged in REVIEWER.md (cross-mode agreement is not a
+spec concept; the tiering rule and error→NULL handling are pre-registered design choices, not spec).
+Note: d028 was the README-title failure logged in CLAUDE.md (commit `dc3e324`) with no jsonl entry,
+so this session continues the log at d029.
+
+**Carry-forward (tooling hazard):** during this session a markdown auto-formatter reflowed
+`spec/BEHAVIOR.md` (table alignment + line wraps, and it introduced a double-space in
+`evidence,  what_source_actually_says`) after the file was merely read — no human or Claude edit. It
+was restored with `git checkout -- spec/BEHAVIOR.md`; `spec/` ended clean. The frozen-spec invariant
+is at risk from a format-on-save tool that does not exclude `spec/`; the next session should consider
+a guard (e.g. an editorconfig/formatter ignore for `spec/`, or a pre-commit check that `spec/` matches
+HEAD except the d022 lines). Always `git status --porcelain spec/` before committing.
+
 ## 2026-06-14 — fix project name (elenchus, not elenchus2); start failure log (d026)
 
 PLAN.md:1 named the project by the clone directory (`elenchus2`); the git remote is

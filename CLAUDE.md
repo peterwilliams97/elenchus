@@ -17,7 +17,8 @@ permitted edit to `spec/`; finding any other modification still means STOP and r
 ## Structural rules
 
 - No new fields on shared structs. New state is passed as parameters. Any struct wanting
-  a 7th field requires a split proposal, approved before coding.
+  a 7th field requires a split proposal, approved before coding. This applies to shared
+  run-state structs, not per-call JSON DTOs (which mirror a fixed external schema — keep flat).
 - Options are immutable after `main()`. Run-state lives in the function that runs.
 - The API test fake lives in `internal/client` only. No other package stubs the network.
 - Every session is feature OR consolidation, never both. Debt found mid-feature is logged
@@ -25,6 +26,10 @@ permitted edit to `spec/`; finding any other modification still means STOP and r
 - Reviews are of code (the diff). A review of a report or doc must say so.
 - Prompts in `internal/modes` are verbatim from `spec/PROMPTS.md`; any deliberate change
   to a prompt is a design-queue item (PLAN.md §3), never a port-time edit.
+- A closed set of string values the code switches on or matches (an enum-like vocabulary) gets
+  one typed definition (`type X string` + named consts) in the package that owns it. Other
+  packages import those consts; none re-spells the literals. The compiler then catches a renamed
+  or mistyped value; bare literals let it fall through a default silently.
 
 ## Writing
 
@@ -59,6 +64,19 @@ permitted edit to `spec/`; finding any other modification still means STOP and r
 A running, itemised list of concrete failures in this repo's sessions — so degradation is recorded,
 not waved away. Read it before working; do not repeat what is here. Newest first.
 
+- **2026-06-14 — bare verdict literals duplicated across `tierOf` and six clause maps.**
+  `internal/render/disagreements.go` re-spelled the verdict strings (`"faithful"`, `"hollow"`, …)
+  in `tierOf`'s switch and again in the six PASS/FAIL clause maps, with no compiler link to a
+  single definition. A renamed verdict would fall through `tierOf`'s `default` to `NULL` with no
+  error. Fix: one typed `claims.Verdict` (`type Verdict string` + named consts) owns the
+  vocabulary; render imports the consts (maps are `map[claims.Verdict]string`), and nothing
+  re-spells a literal.
+- **2026-06-14 — used `flag.String`/`Bool`/`Int` (pointer-returning) instead of `flag.XxxVar`.**
+  `cmd/crossexam/main.go` declared flags as `model := flag.String(...)` and then dereferenced `*model`
+  everywhere. Bind flags with `flag.StringVar(&model, ...)` / `BoolVar` / `IntVar` into named vars
+  instead — no `*` at every use site, and it matches how the spec describes the binding (spec/CLI.md:
+  "defaults are read from the `flag.XxxVar` calls in `main`"). Use the `Var` form for all flag
+  declarations.
 - **2026-06-14 — used literary metaphor instead of saying what the sentence means.**
   "The analytic/synthetic distinction wearing a binary" in CRITIQUE.md does not say anything — it
   reaches for a clever image instead of a meaning. The fix: "cast as a binary verdict." Write the
