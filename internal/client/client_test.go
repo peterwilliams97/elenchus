@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 // helper: a Doer returning a fixed sequence of (status, apiResponse) pairs.
@@ -57,17 +58,18 @@ func TestCallJSONFenceStripped(t *testing.T) {
 }
 
 func TestCallJSONValueWithCommaBrace(t *testing.T) {
-	// A value containing ",}" must survive — the old trailing-comma regex ran
-	// inside quoted strings and corrupted it.
-	c := New(Config{APIKey: "k", Model: "m", HTTP: Stub(`{"reason":"holds at 60%,} per the data"}`)})
+	// The value is exactly "60%,}" — a naive trailing-comma stripper that ran
+	// inside quoted strings would eat the comma and change the value, so this
+	// asserts the in-string comma survives intact.
+	c := New(Config{APIKey: "k", Model: "m", HTTP: Stub(`{"reason":"60%,}"}`)})
 	var out struct {
 		Reason string `json:"reason"`
 	}
 	if err := c.CallJSON("sys", "user", &out); err != nil {
 		t.Fatalf("CallJSON: %v", err)
 	}
-	if out.Reason != "holds at 60%,} per the data" {
-		t.Errorf("reason corrupted: %q", out.Reason)
+	if out.Reason != "60%,}" {
+		t.Errorf("in-string comma not preserved: reason = %q, want %q", out.Reason, "60%,}")
 	}
 }
 
@@ -153,6 +155,40 @@ func TestHTTPRetryOn429(t *testing.T) {
 	}
 	if out.V != "partial" {
 		t.Errorf("verdict = %q, want partial", out.V)
+	}
+}
+
+// BEHAVIOR.md Example K: a positive Retry-After header is honored exactly,
+// overriding the jitter backoff. retryDelay is what callClaude sleeps for, so
+// asserting its return value asserts the sleep without a real wall-clock wait.
+func TestRetryAfterHonored(t *testing.T) {
+	c := New(Config{APIKey: "k", Model: "m"})
+	h := http.Header{}
+	h.Set("Retry-After", "7")
+	if d := c.retryDelay(h, 3); d != 7*time.Second {
+		t.Errorf("retryDelay with Retry-After: 7 = %v, want 7s", d)
+	}
+}
+
+// BEHAVIOR.md Example L: when every attempt is retryable, the loop exhausts
+// retryMaxAttempts and returns the status error — it does not retry forever.
+func TestRetryExhaustion(t *testing.T) {
+	attempts := 0
+	doer := DoerFunc(func(*http.Request) (*http.Response, error) {
+		attempts++
+		return resp(503, apiResponse{}), nil
+	})
+	c := New(Config{APIKey: "k", Model: "m", HTTP: doer})
+	c.retryBase = 0 // collapse backoff to zero in tests
+	var out struct {
+		V string `json:"v"`
+	}
+	err := c.CallJSON("sys", "user", &out)
+	if err == nil || !strings.Contains(err.Error(), "503") {
+		t.Fatalf("want a 503 error after exhausting retries, got %v", err)
+	}
+	if attempts != retryMaxAttempts {
+		t.Errorf("made %d HTTP attempts, want %d", attempts, retryMaxAttempts)
 	}
 }
 
