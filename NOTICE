@@ -1,0 +1,11 @@
+Copyright © 2026 Peter Williams
+
+The source code and build configuration in this repository are licensed under the Apache License,
+Version 2.0 (see LICENSE).
+
+The documentation listed in LICENSE-docs (README.md, THEORY.md, CRITIQUE.md, OVERVIEW.md, LIMITS.md,
+FAQ.md, and FAQ.answers.md) is licensed under the Creative Commons Attribution 4.0 International
+license (see LICENSE-docs).
+
+The third-party inputs under examples/ remain their owners' copyright, are included here for
+research and criticism, and are covered by neither license.

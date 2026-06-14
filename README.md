@@ -87,3 +87,12 @@ People trained to separate attribution from structure from truth — and who wan
 skill operating on material from their own work. That seeing the three columns disagree causes
 such a user to recognise the skill as transferable is a hypothesis awaiting field evidence, not
 a finding ([THEORY.md](THEORY.md)).
+
+## Licensing
+
+The source code and build configuration are under the Apache License, Version 2.0 ([LICENSE](LICENSE)).
+The reader-facing documentation prose — README.md, THEORY.md, CRITIQUE.md, OVERVIEW.md, LIMITS.md,
+FAQ.md, and FAQ.answers.md — is under the Creative Commons Attribution 4.0 International license
+([LICENSE-docs](LICENSE-docs)). The third-party inputs under `examples/` remain their owners'
+copyright, included for research and criticism, and are covered by neither. See [NOTICE](NOTICE)
+for the copyright statement and a summary of the split.

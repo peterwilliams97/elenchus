@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package modes orchestrates the evaluation modes and holds their prompts.
 //
 // Prompts are verbatim from spec/PROMPTS.md, co-located with the code that

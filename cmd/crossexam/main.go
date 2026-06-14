@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 // Command crossexam parses flags and wires the packages together per spec/CLI.md.

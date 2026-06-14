@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package claims holds the claim and verdict types for the evaluation modes,
 // together with enum validation at the boundary.
 //
