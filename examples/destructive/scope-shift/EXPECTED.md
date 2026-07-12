@@ -61,7 +61,35 @@ substance mode on any multi-sentence scope move. This is why the discriminator i
 persisted per-fragment critique, not `run.sh`'s `AXIS_KEYS` substring scan — the automated scan cannot
 tell "caught the subject-shift" from "called a fragment unsupported."
 
+## Observed — 2026-07-12, `claude-sonnet-4-6`, N=5 (by hand)
+
+Run by hand (`./crossexam claim.txt`), **not** via `../run.sh` — its substance path hard-codes `-md`,
+a fatal stub on this build, so the automated calibrator cannot run any substance probe here (logged,
+not fixed). Full data in `results/2026-07-12-claude-sonnet-4-6.md`. `decompose` split the passage into
+5–7 fragments/run; verdict totals **17 partial · 5 substantive · 7 hollow** (all 5 `substantive` are
+the arithmetic fragment "1:50 < 2 min").
+
+- **Headline held (5/5):** the company-wide claim never survived `substantive`.
+- **Target catch failed (0/5):** no critique named the subject substitution. Every objection to a
+  company claim was *unsupportedness* / *bare-assertion* / *condition-laundering*, treating "the
+  company" as a **fixed** subject with an evidence gap — the right-answer-wrong-reason branch.
+- **False pass: 0/5.** **Over-catch: 1/5** (run 03 rated the honest flagship measurement `hollow`).
+- **The pre-registered W4 dissolution is the cause, confirmed 5/5:** `decompose` puts the flagship
+  measurement and the company conclusion in *separate* fragments every run, so the critic never sees
+  the widening as one move. This is a **harness limitation, not a grader one** — exactly the outcome
+  flagged above as most worth knowing.
+- **Caution on the automated scan:** `equivocat` matched 5/5 by substring, but on the predicate
+  ("fast" senses) / "flagship" senses — **never** the subject shift. The scan would falsely report the
+  target axis firing; only the human read shows 0/5.
+
+**Next probe (to isolate grader from harness):** a **single-sentence** scope-shift, so `decompose`
+cannot separate the two subjects and the critic is forced to see both at once. Only then can we tell
+whether the critic *itself* can name a subject substitution.
+
 ## Calibration results
 
-Populated by `../run.sh scope-shift`. Summary in `results/`; ledger in
-`../../../testing/calibration_log.jsonl`. Status: **`[ ]`** — pre-registered, not yet run.
+Populated by `../run.sh scope-shift` (blocked on this build — `-md` stub) or by hand. Summary in
+`results/`; ledger in `../../../testing/calibration_log.jsonl`. Status: **`[~]`** — measured
+2026-07-12/sonnet (N=5, by hand): envelope headline held, but the target catch was **0/5** due to
+decompose dissolving the multi-sentence move. The grader-level demonstration (single-sentence probe,
+N≥10, haiku for comparability) is *pending* — advanced, not done.
