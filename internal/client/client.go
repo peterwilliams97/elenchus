@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package client is the Anthropic API boundary: HTTP transport, retry, and
 // response parsing (including usage accounting and truncation handling).
 //

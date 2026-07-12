@@ -3,6 +3,39 @@
 A reverse-chronological log of session handoffs: what each working session changed and why, plus any
 debt or carry-forward left for the next session. Newest first, one `##` section per session.
 
+## 2026-06-14 — consolidation: license the repo (d036)
+
+This entry records a consolidation session that added licensing only — no feature work, no
+behaviour change, no other edits. Pre-registered as **d036**.
+
+**The split.** Source code and build config under Apache-2.0; reader-facing documentation prose
+under CC BY 4.0; the third-party inputs under `examples/` covered by neither. Copyright owner
+Peter Williams, 2026.
+
+**Files added at the repo root.** `LICENSE` is the verbatim Apache-2.0 text (fetched from
+apache.org, 202 lines — byte-for-byte identical to the source, not reproduced from memory).
+`LICENSE-docs` is the verbatim CC BY 4.0 legal code (fetched from creativecommons.org, 396 lines)
+prefixed with a one-line statement of what it covers. `NOTICE` states the copyright and the split
+in three plain sentences.
+
+**Boundary (user-confirmed).** CC BY 4.0: README.md, THEORY.md, CRITIQUE.md, OVERVIEW.md, LIMITS.md,
+FAQ.md, FAQ.answers.md. Apache-2.0: all `.go`, build config (.gitignore, .golangci.yml, build.sh,
+go.mod), `spec/` (the extracted contract — LICENSE only states coverage; nothing is written inside
+the frozen tree), and operational docs (CLAUDE.md, SESSION.md, PLAN.md, REVIEWER.md,
+testing/SCHEMA.md, the decision and calibration logs). The three files the brief did not name
+(REVIEWER.md, testing/SCHEMA.md, testing/calibration_log.jsonl) were confirmed as Apache.
+
+**SPDX.** `// SPDX-License-Identifier: Apache-2.0` is now the first line of all 16 `.go` files
+(blank line below it, so each package doc comment stays attached to its `package`). No copyright
+block — one machine-readable line per file.
+
+**README.** A new "Licensing" section near the end points at LICENSE, LICENSE-docs, and NOTICE.
+The `# elenchus` title is unchanged.
+
+**Gate.** `./build.sh` green: golangci-lint 0 issues, staticcheck clean, `go test ./...` ok across
+5 packages, `go build ./...` ok — via `GOROOT=/usr/local/Cellar/go/1.26.4/libexec`. spec/ read-only
+and untouched.
+
 ## 2026-06-14 — consolidation: one typed verdict vocabulary (d034)
 
 Consolidation session (no feature work), pre-registered as **d034**. Extracted the verdict

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+
 // Package render produces terminal (ANSI) and markdown output for results.
 //
 // It takes explicit values and holds no global state, so the same results
