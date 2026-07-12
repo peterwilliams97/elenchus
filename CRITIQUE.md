@@ -3,9 +3,9 @@
 A doc-level critique of this repo's claims, read through analytic philosophy from Frege forward.
 This is a review of documentation, not of code. It is not a bug list: several items here are
 in-principle limits, not defects awaiting a patch.
-The tell throughout is that
+The clearest sign is that
 [PLAN.md §3](PLAN.md#3-design-queue-priority-order-from-specfindingsmd-open-questions)'s
-own open problems are these critiques resurfacing as engineering work —
+own open problems are these same critiques showing up as engineering work —
 §3a is the rule-following paradox,
 §3c is the context principle,
 §3d and the W2/W3 limits are the Myth of the Given.
@@ -43,7 +43,7 @@ application requires a shared practice the rule cannot encode. (Popper hit the
 same wall: probabilistic statements are not strictly falsifiable.)
 
 ## The Given gap
-This is where the repo is proudest and weakest at once. "Positive grounding is a
+This is the repo's strongest-sounding claim and its weakest point at once. "Positive grounding is a
 retrieval — the actual truth-maker, a page that backs the sentence" is Sellars'
 Myth of the Given: a non-inferential foundation that grounds without itself
 standing in the space of reasons. The page is another claim needing its own

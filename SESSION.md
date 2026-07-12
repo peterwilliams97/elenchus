@@ -67,11 +67,11 @@ others import the consts, none re-spells literals) and a newest-first Replace-De
 (the bare verdict literals duplicated across tierOf + six maps, a renamed verdict falling through
 to NULL silently).
 
-## 2026-06-14 — substance vertical slice: ./crossexam runs one mode end to end (d033)
+## 2026-06-14 — substance check: ./crossexam runs one mode end to end (d033)
 
 Feature session. The user re-scoped (after a Step-0 check found client/claims/modes were empty
-stubs with nothing to wire) to build a substance-only vertical slice across four packages in one
-session, deviating from one-package-per-session — pre-registered as **d033** before any code.
+stubs with nothing to wire) to build substance only across four packages in one session, one feature
+end to end, deviating from one-package-per-session — pre-registered as **d033** before any code.
 Bottom-up, each layer red-then-green against the `internal/client` fake (no network in tests).
 
 **What shipped (substance mode only).**
@@ -92,7 +92,7 @@ Bottom-up, each layer red-then-green against the `internal/client` fake (no netw
   > defaultInput), API-key check, run-state, dispatch, best-effort chain JSONL, and a fatal-with-
   message guard on -source/-evidence/-audit/-md (never a silent no-op).
 
-**Proof, two ways (both delivered).** (1) Loop/wiring tests through the fake at the modes and cmd
+**Proof, two ways.** (1) Loop/wiring tests through the fake at the modes and cmd
 levels — a substance verdict comes out, no network. (2) Real `ANTHROPIC_API_KEY` smoke run on a
 two-line file (`claude-sonnet-4-6`): both claims rated `partial`, 5 API calls, full SUMMARY/USAGE to
 stderr, and a chain JSONL with the envelope + substanceDetail (steelman, per-axis critique). Actual

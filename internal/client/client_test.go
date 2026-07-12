@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 )
 
 // helper: a Doer returning a fixed sequence of (status, apiResponse) pairs.
@@ -59,17 +60,18 @@ func TestCallJSONFenceStripped(t *testing.T) {
 }
 
 func TestCallJSONValueWithCommaBrace(t *testing.T) {
-	// A value containing ",}" must survive — the old trailing-comma regex ran
-	// inside quoted strings and corrupted it.
-	c := New(Config{APIKey: "k", Model: "m", HTTP: Stub(`{"reason":"holds at 60%,} per the data"}`)})
+	// The value is exactly "60%,}" — a naive trailing-comma stripper that ran
+	// inside quoted strings would eat the comma and change the value, so this
+	// asserts the in-string comma survives intact.
+	c := New(Config{APIKey: "k", Model: "m", HTTP: Stub(`{"reason":"60%,}"}`)})
 	var out struct {
 		Reason string `json:"reason"`
 	}
 	if err := c.CallJSON("sys", "user", &out); err != nil {
 		t.Fatalf("CallJSON: %v", err)
 	}
-	if out.Reason != "holds at 60%,} per the data" {
-		t.Errorf("reason corrupted: %q", out.Reason)
+	if out.Reason != "60%,}" {
+		t.Errorf("in-string comma not preserved: reason = %q, want %q", out.Reason, "60%,}")
 	}
 }
 
@@ -158,36 +160,63 @@ func TestHTTPRetryOn429(t *testing.T) {
 	}
 }
 
-// counting wraps a Doer and records how many HTTP attempts were made. Usage().Calls
-// counts only successful (200, parsed) responses, so it stays 0 on an error path and
-// can't see retries; this counts the transport itself.
-type counting struct {
-	inner Doer
-	n     int
+// BEHAVIOR.md Example K: a positive Retry-After header is honored exactly,
+// overriding the jitter backoff. retryDelay is what callClaude sleeps for, so
+// asserting its return value asserts the sleep without a real wall-clock wait.
+func TestRetryAfterHonored(t *testing.T) {
+	c := New(Config{APIKey: "k", Model: "m"})
+	h := http.Header{}
+	h.Set("Retry-After", "7")
+	if d := c.retryDelay(h, 3); d != 7*time.Second {
+		t.Errorf("retryDelay with Retry-After: 7 = %v, want 7s", d)
+	}
 }
 
-func (c *counting) Do(r *http.Request) (*http.Response, error) {
-	c.n++
-	return c.inner.Do(r)
+// BEHAVIOR.md Example L: when every attempt is retryable, the loop exhausts
+// retryMaxAttempts and returns the status error — it does not retry forever.
+func TestRetryExhaustion(t *testing.T) {
+	attempts := 0
+	doer := DoerFunc(func(*http.Request) (*http.Response, error) {
+		attempts++
+		return resp(503, apiResponse{}), nil
+	})
+	c := New(Config{APIKey: "k", Model: "m", HTTP: doer})
+	c.retryBase = 0 // collapse backoff to zero in tests
+	var out struct {
+		V string `json:"v"`
+	}
+	err := c.CallJSON("sys", "user", &out)
+	if err == nil || !strings.Contains(err.Error(), "503") {
+		t.Fatalf("want a 503 error after exhausting retries, got %v", err)
+	}
+	if attempts != retryMaxAttempts {
+		t.Errorf("made %d HTTP attempts, want %d", attempts, retryMaxAttempts)
+	}
 }
 
+// BEHAVIOR.md: a non-retryable status breaks the loop immediately — one HTTP
+// attempt, no retries. Counting the attempts is what gives this test teeth: if
+// retryable() were widened to include 400, the loop would retry up to
+// retryMaxAttempts and this count would jump, failing here. Asserting only "an
+// error came back" would not — an exhausted retry loop also returns a 400 error.
+// Usage().Calls stays 0 on the error path (usage is billed only on a 200), so the
+// fake must do the counting.
 func TestNonRetryableStatusIsError(t *testing.T) {
-	// A 400 is not retryable: CallJSON must return an error AND the transport must be
-	// hit exactly once. The error alone has no teeth — making the loop retry a 400
-	// still ends in an error once attempts run out, so without counting the attempts a
-	// retried-400 bug passes silently. The one attempt is the boundary: a fixed value
-	// (1) that a retry bug pushes to 4 (retryMaxAttempts).
-	tr := &counting{inner: seq(resp(400, apiResponse{}))}
-	c := New(Config{APIKey: "k", Model: "m", HTTP: tr})
-	c.retryBase = 0
+	attempts := 0
+	doer := DoerFunc(func(*http.Request) (*http.Response, error) {
+		attempts++
+		return resp(400, apiResponse{}), nil
+	})
+	c := New(Config{APIKey: "k", Model: "m", HTTP: doer})
+	c.retryBase = 0 // collapse backoff to zero in tests
 	var out struct {
 		V string `json:"v"`
 	}
 	if err := c.CallJSON("sys", "user", &out); err == nil {
 		t.Fatal("expected error on a non-retryable 400")
 	}
-	if tr.n != 1 {
-		t.Errorf("HTTP attempts = %d, want 1 (a non-retryable status must not be retried)", tr.n)
+	if attempts != 1 {
+		t.Errorf("made %d HTTP attempts on a non-retryable 400, want 1 (no retry)", attempts)
 	}
 }
 

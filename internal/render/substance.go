@@ -31,9 +31,9 @@ func TermSubstance(results []claims.Substance) string {
 // verdictOrder is the fixed display order for the SUMMARY verdict line
 // (spec/CLI.md). Unknown verdicts sort after these; "error" is always last.
 var verdictOrder = []string{
-	"supported", "mixed", "refuted", "unverifiable",
-	"faithful", "partial", "overstated", "absent", "contradicted",
-	"substantive", "hollow", "skipped (over cap)",
+	claims.Supported, claims.Mixed, claims.Refuted, claims.Unverifiable,
+	claims.Faithful, claims.Partial, claims.Overstated, claims.Absent, claims.Contradicted,
+	claims.Substantive, claims.Hollow, claims.Skipped,
 }
 
 // Summary renders the SUMMARY block for stderr. errored counts "error" verdicts,
@@ -47,7 +47,7 @@ func Summary(fixture, mode string, results []claims.Substance, wall time.Duratio
 		counts[r.Verdict]++
 	}
 	total := len(results)
-	errored := counts["error"]
+	errored := counts[claims.Error]
 	verified := total - errored
 
 	var b strings.Builder
@@ -77,7 +77,7 @@ func verdictLine(counts map[string]int) string {
 	}
 	var unknown []string // verdicts not in verdictOrder, excluding error (added last)
 	for v := range counts {
-		if v != "error" && !seen[v] {
+		if v != claims.Error && !seen[v] {
 			unknown = append(unknown, v)
 		}
 	}
@@ -85,7 +85,7 @@ func verdictLine(counts map[string]int) string {
 	for _, v := range unknown {
 		add(v)
 	}
-	add("error")
+	add(claims.Error)
 	if len(parts) == 0 {
 		return "(none)"
 	}
@@ -96,6 +96,6 @@ func verdictLine(counts map[string]int) string {
 // substance mode (no web tool). est_usd is n/a (see Summary).
 func UsageLine(model string, u client.Usage, wall time.Duration) string {
 	return fmt.Sprintf(
-		"USAGE model=%s calls=%d in=%d out=%d cache_read=%d cache_create=%d web_searches=0 wall=%.0fs est_usd=n/a\n",
+		"USAGE model=%s calls=%d in=%d out=%d cache_read=%d cache_create=%d web_searches=0 wall=%.1fs est_usd=n/a\n",
 		model, u.Calls, u.InputTokens, u.OutputTokens, u.CacheReadTokens, u.CacheCreateTokens, wall.Seconds())
 }
