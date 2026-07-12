@@ -1,6 +1,8 @@
 # --- elenchus chain / eval output ---
 # Tier-2 JSONL verification chains default to eval/<stamp>-<model>/; never committed.
 /eval/
+# Calibration-run chains land here when -chain-dir points at testing/chains/; run output, never committed.
+/testing/chains/
 
 # --- laundering source (carried from v1) ---
 # Real third-party text; recreate from PROVENANCE.md. Never committed.
@@ -12,6 +14,8 @@ examples/destructive/laundering/sources/
 *.out
 /crossexam
 /cmd/crossexam/crossexam
+# Stray v1-name binary; the build now produces crossexam, not assay.
+/assay
 
 # Coverage / profiling
 *.prof

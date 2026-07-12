@@ -158,14 +158,36 @@ func TestHTTPRetryOn429(t *testing.T) {
 	}
 }
 
+// counting wraps a Doer and records how many HTTP attempts were made. Usage().Calls
+// counts only successful (200, parsed) responses, so it stays 0 on an error path and
+// can't see retries; this counts the transport itself.
+type counting struct {
+	inner Doer
+	n     int
+}
+
+func (c *counting) Do(r *http.Request) (*http.Response, error) {
+	c.n++
+	return c.inner.Do(r)
+}
+
 func TestNonRetryableStatusIsError(t *testing.T) {
-	c := New(Config{APIKey: "k", Model: "m", HTTP: seq(resp(400, apiResponse{}))})
+	// A 400 is not retryable: CallJSON must return an error AND the transport must be
+	// hit exactly once. The error alone has no teeth — making the loop retry a 400
+	// still ends in an error once attempts run out, so without counting the attempts a
+	// retried-400 bug passes silently. The one attempt is the boundary: a fixed value
+	// (1) that a retry bug pushes to 4 (retryMaxAttempts).
+	tr := &counting{inner: seq(resp(400, apiResponse{}))}
+	c := New(Config{APIKey: "k", Model: "m", HTTP: tr})
 	c.retryBase = 0
 	var out struct {
 		V string `json:"v"`
 	}
 	if err := c.CallJSON("sys", "user", &out); err == nil {
 		t.Fatal("expected error on a non-retryable 400")
+	}
+	if tr.n != 1 {
+		t.Errorf("HTTP attempts = %d, want 1 (a non-retryable status must not be retried)", tr.n)
 	}
 }
 
