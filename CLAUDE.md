@@ -59,11 +59,53 @@ permitted edit to `spec/`; finding any other modification still means STOP and r
 - **red-then-green** — the failing test exists before the code that passes it.
 - **pre-register decisions** — decisions are recorded before coding, not rationalised after.
 
+## Testing
+
+- **A test must fail when the code is wrong.** Break, on purpose, the exact thing the test
+  covers and confirm the test fails. If it still passes, it tests nothing.
+- **Assert the result, not just that the code ran.** "An error came back" or "it parsed" is
+  not enough — check the value, the count, the message.
+- **Pick the input where right and wrong code behave differently.** Count the attempts; put a
+  boundary case exactly on the edge.
+- **Coverage is not proof.** A line running is not a result being checked.
+- **Write the failing test first, watch it fail, then make it pass.**
+- **One test per spec rule** — each BEHAVIOR.md GIVEN/WHEN/THEN.
+- **No network, no clock, no randomness.** Use the one fake (`internal/client`), set the retry
+  delay to zero.
+- **A test's name and its body must match.**
+
+## Answering a code review
+
+- A code-review fix is answered with the test code and the run output, never a prose "done".
+  Show four things: the test, the run where it fails (red), the run where it passes (green), and
+  the run where it fails again when the fix is reverted (the break-it check). No "all green"
+  without the pasted `go test` output.
+
 ## Replace Degraded Claude Code
 
 A running, itemised list of concrete failures in this repo's sessions — so degradation is recorded,
 not waved away. Read it before working; do not repeat what is here. Newest first.
 
+- **2026-06-15 — over-corrected the last plain-English pass: a dash-definition glued onto every
+  phrase.** Fixing coined shorthand, REVIEW.md swung the other way: every phrase dragged a dash and a
+  definition behind it ("built end to end — one feature taken all the way through so it runs from
+  start to finish"; "Substance, the mode that tests whether a claim holds up under scrutiny or is
+  hollow, is the only mode connected up so it runs"). The glosses say one idea two or three ways and
+  bury the sentence. That is clutter, not clarity — the opposite failure from coined shorthand, same
+  root cause: not trusting the plain words to carry the meaning. Fix: say the thing once, in short
+  sentences, one idea each. Gloss a genuinely hard idea once (Frege, holism, the Given); for ordinary
+  wording, write the plain words and add no gloss. The test for next time: if you are about to add a
+  dash-gloss to explain a phrase, the phrase is wrong — replace it with the plain words and delete the
+  gloss.
+- **2026-06-14 — shipped coined in-house shorthand in a doc a newcomer can't read.**
+  REVIEW.md used "substance vertical slice", "the slice", "wired"/"wired mode", and "walking-skeleton
+  main()" — terms that only parse if you already built the repo. A reader who has never seen the code
+  cannot tell what "the slice" is or what "wired" means here. Fix: say the plain words — "vertical
+  slice"/"the slice" → "one feature built end to end"; "wired"/"wired mode" → "connected up so it
+  runs"; "walking-skeleton main()" → "the bare start-to-finish wiring with most features stubbed out".
+  The test for next time: if a phrase only makes sense to someone who already knows this repo, it is
+  banned — write the plain words instead. (This is the writing rule in action: a phrase that needs the
+  repo as its glossary is the same failure as one that needs an academic glossary.)
 - **2026-06-14 — bare verdict literals duplicated across `tierOf` and six clause maps.**
   `internal/render/disagreements.go` re-spelled the verdict strings (`"faithful"`, `"hollow"`, …)
   in `tierOf`'s switch and again in the six PASS/FAIL clause maps, with no compiler link to a

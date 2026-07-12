@@ -32,7 +32,7 @@ It is not thereby true. ([critique](CRITIQUE.md#the-analyticsubstance-vs-synthet
 
 Reasoning can refute a grounding claim without a lookup: an internal contradiction
 kills a claim by deduction alone. But reasoning cannot confirm one. Positive grounding
-is a retrieval — the actual truth-maker, a page that backs the sentence
+is a retrieval — looking up a page that backs the sentence
 ([critique](CRITIQUE.md#the-given-gap)) — not a
 deduction, however rigorous. That boundary is not a contingent limitation of the
 design; it is the limit of what close reading and dialectic can do.
@@ -61,7 +61,7 @@ input — it sees the framing — but it runs in a fresh context and did
 not author what it grades. This removes self-defense bias: the critic is not evaluating
 a position it has already committed to.
 
-The limit of this design is as sharp as the design itself. An independent critic still
+This design has a sharp limit. An independent critic still
 holds no truth-maker. Separating production from critique tests whether the strongest
 version of a claim survives named structural challenges, not whether that structure
 corresponds to anything in the world. This is the difference between this tool and

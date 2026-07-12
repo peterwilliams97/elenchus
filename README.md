@@ -34,7 +34,7 @@ One claim, three verdicts (`claude-haiku-4-5-20251001`, 2026-06-10, N=10):
 The summary reported Ballmer accurately, and what he said was false — two different facts, kept
 in different columns. The `hollow` in the middle is not a verdict to trust: it is the tool's own
 measured bias on forward predictions ([LIMITS.md](LIMITS.md#known-biases-and-bugs)), printed
-rather than hidden. The honest row is the demonstration.
+rather than hidden. That honest row is the whole demonstration.
 
 ## What it can't do
 

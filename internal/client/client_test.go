@@ -192,14 +192,29 @@ func TestRetryExhaustion(t *testing.T) {
 	}
 }
 
+// BEHAVIOR.md: a non-retryable status breaks the loop immediately — one HTTP
+// attempt, no retries. Counting the attempts is what gives this test teeth: if
+// retryable() were widened to include 400, the loop would retry up to
+// retryMaxAttempts and this count would jump, failing here. Asserting only "an
+// error came back" would not — an exhausted retry loop also returns a 400 error.
+// Usage().Calls stays 0 on the error path (usage is billed only on a 200), so the
+// fake must do the counting.
 func TestNonRetryableStatusIsError(t *testing.T) {
-	c := New(Config{APIKey: "k", Model: "m", HTTP: seq(resp(400, apiResponse{}))})
-	c.retryBase = 0
+	attempts := 0
+	doer := DoerFunc(func(*http.Request) (*http.Response, error) {
+		attempts++
+		return resp(400, apiResponse{}), nil
+	})
+	c := New(Config{APIKey: "k", Model: "m", HTTP: doer})
+	c.retryBase = 0 // collapse backoff to zero in tests
 	var out struct {
 		V string `json:"v"`
 	}
 	if err := c.CallJSON("sys", "user", &out); err == nil {
 		t.Fatal("expected error on a non-retryable 400")
+	}
+	if attempts != 1 {
+		t.Errorf("made %d HTTP attempts on a non-retryable 400, want 1 (no retry)", attempts)
 	}
 }
 
