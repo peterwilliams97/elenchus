@@ -1,5 +1,50 @@
 # CLAUDE.md
 
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Commands
+
+- **Build gate (run before every commit):** `./build.sh` — runs, stopping on the first failure:
+  `golangci-lint run`, `staticcheck ./...`, `go test ./...`, `go build ./...`. All four must pass.
+- **One package's tests:** `go test ./internal/client/`
+- **One test:** `go test ./internal/client/ -run TestNonRetryableStatusIsError -count=1`
+  (`-count=1` bypasses the test cache; use it for the red/green/break-it runs).
+- **Run the binary:** `go build -o crossexam ./cmd/crossexam` then `./crossexam claims.txt`.
+  `ANTHROPIC_API_KEY` must be set or it exits 1. Only substance mode is wired; `-source`,
+  `-evidence`, `-audit`, `-md` are rejected loudly (see main.go).
+- **Break-it check** (required when answering a code review): revert the one line the test guards,
+  confirm the test goes red, restore it. Never claim a test has teeth without this.
+
+Toolchain gotcha: two Go installs on this machine can mismatch (`go1.26.3` compiler under a
+`go1.26.4` driver via a stale `GOROOT`). If `go build` reports a version mismatch, run with the
+matching binary (`/usr/local/go/bin/go`) or unset `GOROOT`. Not a repo bug.
+
+## Architecture
+
+`crossexam` (module `github.com/peterwilliams97/elenchus2`) reads prose, splits it into atomic
+claims, and grades each. Four modes are specified — substance, faithfulness, grounding, audit — but
+**only substance is built**; the rest are stubbed and rejected at the flag boundary. The design
+refuses to merge verdicts across modes (the "confidence laundering" target — see README.md, THEORY.md).
+
+Dependency order (a package only imports ones above it):
+
+- **`internal/client`** — the Anthropic API boundary and the *only* network seam. HTTP, retry
+  (429/503/529, 4 attempts, Retry-After, jittered backoff), one parse-retry, truncation handling,
+  usage accounting. `CallJSON(system, user, &out)` in, parsed JSON out. Tests inject `client.Stub`
+  (fake.go) via the `Doer` interface — **no other package stubs the network.**
+- **`internal/claims`** — pure types, no network, no global state. The verdict vocabulary
+  (`type Verdict string` + named consts) and boundary validation (`ValidSubstanceVerdict`) live here;
+  other packages import the consts and never re-spell the literals.
+- **`internal/modes`** — mode orchestration and prompts. `Decompose` splits input into claims;
+  `AssayClaim` runs the producer→critic loop (BEHAVIOR.md Mode 1). Prompts (prompts.go) are
+  **verbatim from `spec/PROMPTS.md`**, co-located with the code that parses their output.
+- **`internal/render`** — terminal and markdown output. Stateless: explicit values in, string out.
+- **`cmd/crossexam`** — flags, input resolution (`-text` > file arg > piped stdin > default), the run
+  loop, and the best-effort Tier-2 JSONL chain (chain.go, written under `eval/<stamp>-<model>/`).
+
+`spec/` is the frozen contract (see below); the code implements it and tests check against its
+GIVEN/WHEN/THEN examples. PLAN.md holds the build sequence; SESSION.md is the newest-first handoff log.
+
 ## spec/ is frozen input
 
 `spec/` was copied once, byte-for-byte, from v1 (`elenchus/spec/`) on 2026-06-13.
