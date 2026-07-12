@@ -3,6 +3,47 @@
 A reverse-chronological log of session handoffs: what each working session changed and why, plus any
 debt or carry-forward left for the next session. Newest first, one `##` section per session.
 
+## 2026-07-12 — feature: scope-shift substance probe (`fixture/scope-shift`)
+
+Added `examples/destructive/scope-shift/`, a constructed Equivocation-axis probe: a claim's subject
+widens from the subset it was measured on (one flagship store) to the whole it's asserted of (the
+company), predicate frozen to the defined median. Sibling to motte-and-bailey, opposite motion — a
+*referential* fault (subject widens, no interlocutor) vs. a *lexical* one (a term's sense retreats
+under challenge). Two commits: `5c8383f` pre-registers the envelope before any data; `07219d7` records
+the first calibration.
+
+**Result (N=5, `claude-sonnet-4-6`, by hand).** Envelope headline held — the company-wide claim never
+survived `substantive` (5/5) — but the target catch was **0/5**: no critique named the
+flagship→company subject substitution. Pre-registered cause: `decompose` splits the flagship
+measurement from the company conclusion into separate atomic claims, so the critic never sees the
+widening as one move. **A harness limitation; the grader itself is untested on this defect** (the
+decompose step dissolves the move before the critic sees it — see carry-forward, Item A). Status `[~]`
+— measured, not settled (one model, hand-run).
+
+**Lesson — a keyword tally can issue a vacuous certificate.** `run.sh`'s `equivocat` substring scan
+matched 5/5, but on the predicate ("fast" senses) / "flagship" senses — never the subject shift; the
+per-run human read showed 0/5 target catch. The pre-registered human-read discriminator is
+load-bearing, not ceremony — an axis-keyword count must not stand in for it.
+
+**Carry-forward.**
+
+- **Item A — single-sentence scope-shift fixture (grader probe). Own session, not started.** Build a
+  scope-shift whose sentence is *indivisible* — no clause boundary `decompose` can cut — fusing the
+  measurement and the widened assertion into one predication (shape: *"Our Oxford Street flagship's
+  1:50 median makes the company fast"*). Purpose: test whether the *critic* can name the subject
+  substitution when forced to see both subjects in one atomic claim — the question `scope-shift/` left
+  open, since decompose dissolved the move before the critic was tested. Its `DEFECT.md` carries the
+  pairing note: `examples/destructive/scope-shift/` is its **harness-level twin** (that one tests
+  whether `decompose` preserves a cross-claim scope move; this one tests the critic in isolation) — the
+  pair is deliberate, not redundant.
+- **Item B — `run.sh` substance path hard-codes `-md`, fatal on this build. Consolidation session.**
+  The substance calibration path (`$BIN -md …`) dies on `-md` (substance-mode-only build; `-md` is a
+  fatal stub), so `run.sh` cannot calibrate *any* substance probe here — it swallows the error and logs
+  `parse-miss`. Logged 2026-07-12 during scope-shift calibration; not side-fixed (feature-vs-
+  consolidation rule). **Re-run condition:** once the stub is fixed, re-run the scope-shift envelope at
+  **N≥10 on haiku** for baseline comparability with the other probes (current datum: N=5 sonnet,
+  hand-run, `[~]`).
+
 ## 2026-06-14 — consolidation: license the repo (d036)
 
 This entry records a consolidation session that added licensing only — no feature work, no
