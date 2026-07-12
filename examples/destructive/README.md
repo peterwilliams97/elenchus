@@ -32,13 +32,15 @@ asking for exactly the unexamined trust it claims to cure.
 
 Most probes are an **openly-constructed adversarial input** — fluent, hedged, plausible prose
 engineered to carry **one** specific defect while staying clean on every other axis, so a flag on the
-target axis is unambiguous signal. Six target one of crossexam's seven substance axes each; one targets the
+target axis is unambiguous signal. Seven target crossexam's substance axes — two of them the
+Equivocation axis from opposite directions (a predicate retreating, a subject widening); one targets the
 gaps *between* the axes; one — the priority — is real, not constructed; and one targets the **critic's
 own calibration** (a suspected false-attack bias) rather than any claim defect.
 
 | Probe                                          | Targets               | Defect |
 |------------------------------------------------|-----------------------|--------|
 | [`motte-and-bailey/`](motte-and-bailey/)       | Equivocation          | a key term retreats from a strong sense to a trivial one |
+| [`scope-shift/`](scope-shift/)                 | Equivocation          | a claim's subject widens from the subset it was measured on to the whole it's asserted of |
 | [`reference-class/`](reference-class/)         | Base rate / magnitude | a real number compared against a gamed reference class |
 | [`hidden-premise/`](hidden-premise/)           | Hidden premise        | a conclusion valid only under an unstated load-bearing premise |
 | [`unfalsifiable-dress/`](unfalsifiable-dress/) | Falsifiability        | a claim no observation could disconfirm, in empirical dress |

@@ -46,7 +46,7 @@ N="${2:-10}"
 MODEL="${3:-claude-haiku-4-5-20251001}"
 
 # Substance-mode probes (run on claim.txt). The laundering probe is audit-mode, handled separately.
-SUBSTANCE_PROBES="motte-and-bailey reference-class hidden-premise unfalsifiable-dress causal-narrative axis-gaps"
+SUBSTANCE_PROBES="motte-and-bailey reference-class hidden-premise unfalsifiable-dress causal-narrative axis-gaps scope-shift"
 
 # Axis keywords we scan the critic's "Why" column for (approximate — substring match, lower-cased).
 AXIS_KEYS="equivocat|hidden premise|falsifiab|base rate|magnitude|counterexample|causal|correlation|evidence"
