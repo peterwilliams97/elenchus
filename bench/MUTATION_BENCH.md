@@ -341,3 +341,57 @@ the authored one.
 - Phase 2 implementation is authorized for v1 scope only, after the A2.2 gates resolve.
 - Scoring runs are **not** authorized. They require the read protocol and separate authorization.
 - Nothing is pushed without instruction.
+
+---
+
+# MUTATION_BENCH.md — Amendment 3 (append; do not edit §§0–9, A1, A2)
+
+Status: RATIFIED 2026-07-15 (Comrade). Amends A1.2 (metrics/read protocol), A2.2 (pre-flight gates, struck), A1.3/A-T5 (claim wording). Triggered by the pre-flight of 2026-07-15 (G1 = 1/8 = 0.12, FAIL; scheme re-opened per A2.2).
+
+## A3.0 Findings of record
+
+- Anchoring falsified: decompose re-predicates single-sentence input into 3–5 claims; no clause boundary is required. Claim-position anchoring is dead. The lone G1 pass was the MFC mutant (bare clause, nothing left to split).
+- Dissolution prediction falsified for single-sentence input: decompose did not erase the scope transfer; it isolated the transfer as its own claim (E2 [2], E3 [2]). E3 named the equivocation unprompted, violating its "Do not evaluate" prompt contract. The 2026-07-12 attribution (decompose dissolves cross-claim structure) stands for cross-claim input only. Correction-by-reference to be logged in CRITIQUE.md.
+- Design defect of record: G1 gated the deterministic match rule of §5, which A1.2 had already replaced with human target-catch. The gate protected an abandoned scheme; ~2/3 of pre-flight spend was attributable to this.
+- Component-attribution hazard: decompose is a model component that sometimes emits meta-level findings inside a step the scoring path treated as preprocessing. Any per-component recall claim on this architecture is confounded.
+
+## A3.1 Unit of measurement (amends A1.2, A-T5)
+
+The measured unit is the pipeline: decompose → producer → critic → verdict, at a stamped (commit, model). No result row, ledger entry, or external claim attributes recall to "the critic" or any single component. Rows name the pipeline.
+
+Component attribution is a recorded diagnostic only: the reader tags catch-source ∈ {decompose, critic, verdict} per catch. Diagnostic rows never aggregate into a component recall number.
+
+## A3.2 Anchoring (replaces the PHASE1-PLAN §3(a) scheme)
+
+Anchor is the input claim ID in the sidecar (claims.jsonl). Manifest rows map to full-chain outputs per input; the reader performs the mapping by reading. Decompose output cardinality is recorded per input as a diagnostic, ungated. axis-fired is redefined per input: any axis emitted non-empty critique on any claim derived from input i. Still deterministic; still never recall (A-T4 unchanged).
+
+## A3.3 Gates struck (amends A2.2)
+
+G1 and G2 are struck. G1's referent (per-claim correspondence) no longer exists. G2's hazard (defect erased pre-grader, measuring a foregone conclusion) was empirically falsified for single-sentence input by the pre-flight; residual dissolution is henceforth inside the measurement — a dissolved defect that no chain text identifies is a system miss, scored as such.
+
+No pre-flight gate blocks Phase 2. The pre-flight record (25 calls, G1 = 0.12, isolation finding) is retained in the ledger as the falsification event for the prior scheme.
+
+## A3.4 Read protocol (amends A1.2)
+
+Per input: reader sees the full chain (decompose output, critic critique, verdict) plus the manifest row, in randomized input order, and records before any pooled results: catch y/n; catch-source; free note.
+
+Catch standard: chain text must identify the specific defect. Neutral re-predication of the inferential move is NOT a catch; meta-level naming of the move IS. Calibration boundary pair, verbatim in the protocol:
+- NOT a catch — E2 [2]: "The Frankfurt replica's p99 latency determines the service's p99 latency."
+- Catch — E3 [2]: "The author equates the pass rate among onsite candidates with the hiring funnel's overall pass rate."
+
+The read sheet of 2026-07-15 (bench/preflight/READ-SHEET-2026-07-15.md) is VOID — it poses the struck G2 question against decompose output only. Reads were not spent; the sealed key is discarded unopened.
+
+## A3.5 Decompose prompt-contract tension (record, not action)
+
+E3 [2] violates decompose's "Do not evaluate" instruction. The prompt is NOT to be tightened for v1: suppressing meta-level output would raise component purity by lowering pipeline recall — tuning the tool against its users to clean up a measurement. Recorded in CRITIQUE.md as a standing architectural fact; BEHAVIOR.md must eventually either license decompose findings or a redesign must remove them. Out of v1 scope.
+
+## A3.6 Thresholds and non-tuning declaration
+
+A-T1 (MFC ≥ 0.80), A-T2 (SCP-1 ≥ 0.60), A-T3 (over-catch ≤ 0.30) carry over unchanged as pipeline numbers. Declaration of record: these were ratified before the pre-flight, whose isolation finding is weakly favorable to SCP-1 recall; they are retained unmodified so no later reading can construe them as tuned to the signal.
+
+## A3.7 Explicitly not built (v1)
+
+- Decompose-only probe / entry point: serves a struck question. Not built.
+- Any per-component recall reporting path.
+Phase 2 may parallelize pipeline calls if the change is trivial; no other harness scope is added by this amendment.
+

@@ -1,4 +1,18 @@
-# G2 READ SHEET — pre-flight 2026-07-15
+# VOID — G2 READ SHEET, pre-flight 2026-07-15
+
+> **THIS SHEET IS VOID. DO NOT COMPLETE IT.** Voided in place 2026-07-15 by MUTATION_BENCH.md
+> Amendment 3 §A3.3/§A3.4: it poses the **struck** G2 question ("both scopes present"), and it poses
+> it against `decompose` output only, whereas the A3.4 read protocol requires the **full chain**
+> (decompose output, critic critique, and verdict) plus the manifest row.
+>
+> No reads were spent on it. Its sealed key was discarded unopened.
+>
+> Retained unedited below as the record of what was issued. A replacement sheet is issued from
+> generated mutants in Phase 2 under the A3.4 protocol.
+
+---
+
+## Superseded sheet as issued (VOID)
 
 Protocol (A1.2 / A2.2): record each row **before** looking at anything else. This sheet carries
 `decompose` output only — no verdicts, no critique, no downstream output. Rows are blinded and
