@@ -358,6 +358,48 @@ scheme, not the ratification. A3.6 carried all thresholds forward unmodified.
 Correction is by reference only. The three status lines are not edited: each was true when written,
 and §§0–9 and Amendments 1–2 carry their own instruction not to edit them.
 
+## R.6 Pre-registration — over-catch predicate at cardinality > 1
+
+(2026-07-15, before any read is evaluated). A clean input is over-caught iff any claim derived from
+it receives a verdict mapped to failing/flagged. The verdict-type → failing/flagged mapping is
+enumerated from the verdict type system in code, committed in this entry, and is not derived from run
+data. Anchor-only counting is rejected: the measured unit is the pipeline (A3.1), and a flag on any
+fragment of a clean document is a flag the user sees.
+
+### The mapping
+
+Enumerated from `substanceVerdicts` in `internal/claims/claims.go` — the closed set
+`ValidSubstanceVerdict` gates on. Substance is the only wired mode, so no other verdict can reach a
+v1 chain.
+
+| Verdict | Const | Failing/flagged | Basis |
+|---|---|---|---|
+| `substantive` | `claims.Substantive` | **No** | The claim stands as written. This is the survival bar. |
+| `partial` | `claims.Partial` | **Yes** | The claim did **not** survive as stated; the critic replaced it with a narrower `surviving_claim`. The user's claim comes back rewritten, which is a flag they see. |
+| `hollow` | `claims.Hollow` | **Yes** | No defensible core. |
+| `error` | `claims.Error` | **Excluded from the denominator** | Not a judgement about the claim — a transport or parse failure. |
+
+### Basis, from the type system and prior doc precedent — not from run data
+
+`partial` is the only live question, and two prior entries already treat `substantive` as the
+survival bar and group `partial` with `hollow` as non-survival:
+
+- `examples/destructive/scope-shift/EXPECTED.md`: "The success condition requires the honest narrow
+  core to **survive**", and "A grade of `hollow`/`partial` is therefore attributable to the
+  scope-shift and nothing else."
+- SESSION.md, 2026-07-12: "the company-wide claim never survived `substantive` (5/5)."
+
+`error`'s exclusion follows PLAN.md §2's standing rule that "`error` verdicts are excluded from
+n_valid". It is a definitional loose end rather than a live one: the 2026-07-15 run recorded zero.
+
+### Disclosure
+
+CC enumerated this mapping and had prior sight of one clean-twin verdict (`M01.clean`, reported
+while verifying the run completed). The mapping is derived from the type definitions and the two
+precedents cited above, and no verdict distribution over the 42 chains was computed before this entry
+was committed. The prior sight is recorded here so R.6's "not derived from run data" can be read
+against what CC had actually seen, rather than asserted.
+
 ---
 
 # MUTATION_BENCH.md — Amendment 3 (append; do not edit §§0–9, A1, A2)
