@@ -3,6 +3,39 @@
 A reverse-chronological log of session handoffs: what each working session changed and why, plus any
 debt or carry-forward left for the next session. Newest first, one `##` section per session.
 
+## 2026-07-15 — feature: mutation benchmark — built, run, and **parked unevaluated**
+
+Built `mutbench` and ran the first scored run. **The thread is closed-parked, not finished.** Full
+status: `bench/MUTATION_BENCH.md` **R.7**. Read that entry, not this summary, before resuming.
+
+**There is no capability number, and none may be stated.** The read sheet
+(`bench/reads/READ-SHEET-scored-2026-07-15.md`, 42 rows) is unevaluated and its key is sealed. Recall
+is target-catch, target-catch is a human read, and no read has been performed. Under A-T4/A-T5 no
+document, internal or external, may state or imply a detection-capability number for `crossexam`
+until the reads are done under the A3.4 protocol and the Step-4 computation runs.
+
+**The one resumption step:** Comrade completes the read sheet. Then the Step-4 computation runs from
+the standing authorization. Nothing else is pending.
+
+**What the pre-flight cost and bought.** The anchoring scheme in `bench/PHASE1-PLAN.md` §3(a) — one
+mutant to one graded claim — was falsified by its own 25-call pre-flight before any harness existed:
+`decompose` re-predicates a single sentence into 3–5 claims, so the "indivisible sentence" premise is
+false. It also showed `decompose` does **not** dissolve a scope move on single-sentence input; it
+isolates the transfer as its own claim, and once named the equivocation outright despite a prompt
+telling it not to evaluate. Amendment 3 re-based the measured unit on the pipeline
+(`decompose+critic`) rather than the critic, and struck both pre-flight gates. The 2026-07-12
+attribution is corrected by reference in CRITIQUE.md: it holds for multi-sentence input only.
+
+**axis-fired fired on 42/42 inputs, including all 21 clean twins**, which have no defect at all. It
+is parked as the standing demonstration of why axis-fired is never recall: it measures that the
+critic said something, not that it caught anything.
+
+**Carried forward, applying to whoever reads.** Reader-priming: `M01.clean` — a clean twin, criterion
+intact — came back `hollow` via `survives_only_by_conditioning`, seen while verifying the run
+completed and disclosed in R.6. Protocol notes: sheet order is deterministic ascending-hash
+(accepted); the scored run used `-max-rounds 2` against the pre-flight's `1`, so **cardinality
+diagnostics across the two runs are not comparable**.
+
 ## 2026-07-12 — feature: scope-shift substance probe (`fixture/scope-shift`)
 
 Added `examples/destructive/scope-shift/`, a constructed Equivocation-axis probe: a claim's subject
