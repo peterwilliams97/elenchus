@@ -342,6 +342,22 @@ the authored one.
 - Scoring runs are **not** authorized. They require the read protocol and separate authorization.
 - Nothing is pushed without instruction.
 
+## R.5 Correction of record — status-line condition (2026-07-15)
+
+The three status lines at §§0–9, Amendment 1, and Amendment 2 read "RATIFIED 2026-07-15 (Comrade),
+conditional on the A2.2 pre-flight gates." Amendment 3 §A3.3 struck both gates: G1's referent
+(per-claim correspondence) no longer exists, and G2's hazard was empirically falsified for
+single-sentence input. The condition was not met — G1 recorded 1/8 = 0.12, FAIL — and it was not
+discharged; its referent was removed by a later ratified amendment. The ratifications therefore stand
+unconditional as of 03d499e.
+
+A reader encountering "RATIFIED … conditional on the A2.2 pre-flight gates" alongside the recorded G1
+FAIL must not read the ratification as void or pending: the pre-flight falsified the anchoring
+scheme, not the ratification. A3.6 carried all thresholds forward unmodified.
+
+Correction is by reference only. The three status lines are not edited: each was true when written,
+and §§0–9 and Amendments 1–2 carry their own instruction not to edit them.
+
 ---
 
 # MUTATION_BENCH.md — Amendment 3 (append; do not edit §§0–9, A1, A2)
