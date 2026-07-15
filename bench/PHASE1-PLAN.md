@@ -11,9 +11,11 @@ Every claim below cites the file and line it came from. Where I could not confir
 ## 0. Headline
 
 **Five of the seven defect classes cannot be scored against this build, and no amount of harness
-work changes that.** Substance mode is the only mode wired (`cmd/crossexam/main.go:73-75` makes
-`-source`/`-evidence`/`-audit`/`-md` a fatal error). Substance mode grades **one claim string at a
-time, with no source document and no sight of any other claim** — `AssayClaim(c, claim, maxRounds)`
+work changes that.**
+Substance mode is the only mode wired (`cmd/crossexam/main.go:73-75` makes
+`-source`/`-evidence`/`-audit`/`-md` a fatal error). Substance mode grades
+**one claim string at a time, with no source document and no sight of any other claim** —
+`AssayClaim(c, claim, maxRounds)`
 takes a single claim and nothing else (`internal/modes/substance.go:56`), and the producer and
 critic prompts receive only that claim's text (`substance.go:64-76`).
 
@@ -40,8 +42,7 @@ The spec was written against README.md's usage block. CLAUDE.md already flags th
 
 ## 1. Question 1 — decompose-fix status
 
-**There is no decompose fix. There is no plan for one. The phrase names something that does not
-exist.**
+**There is no decompose fix. There is no plan for one. The phrase names something that does not exist.**
 
 Evidence:
 
@@ -491,3 +492,40 @@ an original.** A pre-registration document's entire value is that it says later 
 so this is worth one byte-check by the author against their source before the ratification commit
 lands. If no original exists outside the chat, this commit *is* the original, and that fact belongs
 in the record rather than in an assumption.
+
+**Byte-check performed 2026-07-15 against the author's hashes. Result: PASS.** Commit `6211245`'s
+`bench/MUTATION_BENCH.md`, split at the two section rules and each part hashed:
+
+| Authored original | sha256 | Lines |
+|---|---|---|
+| `MUTATION_BENCH.md` (§§0–9) | `1a8ac0b1bc599acc7abae1d649af90d4d2a09de63fb9c197b6a3eeb674084f4f` | 112 |
+| `MUTATION_BENCH-AMENDMENT-1.md` | `13331f6fef180fd2bdad7e9a1bbe9df7b158e01cee4477b1950cdf65303a6956` | 55 |
+| `MUTATION_BENCH-AMENDMENT-2.md` | `9ccf81b0017bfb036dc2fb702305f3252deb6dd491e1a942873eb4a0e793cf30` | 35 |
+
+All three match. Line counts match. **Transcription verified against authored originals; delta at
+`6211245` = section rules only.** So the transcription route introduced no content change, and the
+question §9.5 was written to raise is answered: an original did exist, and this repo now agrees with
+it.
+
+**Re-baselining after the 2026-07-15 reflow.** The documents were then re-wrapped in the working
+tree. The canned finding above no longer describes the ratified file, so it is not reused: the delta
+is now **section rules + line re-wrapping + markdown table-column padding**. The reflow also
+introduced two word-splits, caught by this check and repaired before ratification — `claims` → `c` +
+`laims` in §1 Purpose, and `harness work` → `harnesswork` in this document's §0. Post-repair, a
+whitespace-insensitive token comparison against the authored originals shows **0 differing tokens in
+Amendments 1 and 2, and in §§0–9 only the table separator row's column padding** — no prose content
+differs anywhere.
+
+The ratified files therefore **do not hash to the authored originals**, and claiming otherwise would
+be false. New baseline, over the ratified (reflowed, repaired) text:
+
+| Ratified section | sha256 | Lines |
+|---|---|---|
+| §§0–9 | `11f44a2d2dd4af72f036766cb762feeb6c6902de8c4c9b80858bbf89a7f3cc28` | 147 |
+| Amendment 1 | `a7f4fa7cb625c51f95cb6433ca360ba095a4351ff937ba6747ce2ec562457146` | 82 |
+| Amendment 2 | `6dcf40d56761da85e48811353673209ceece9973fd2efb0964d069009e49d34f` | 61 |
+
+Amendments 1 and 2 hash identically before and after repair, because the reflow left them
+content-clean; only §§0–9 needed a fix. Both hash sets are recorded because the pre-registration
+claim that matters is **content** identity with the authored original, which is verified, not byte
+identity with it, which the reflow ended.
