@@ -400,6 +400,19 @@ precedents cited above, and no verdict distribution over the 42 chains was compu
 was committed. The prior sight is recorded here so R.6's "not derived from run data" can be read
 against what CC had actually seen, rather than asserted.
 
+## R.7 PARKED (2026-07-15, Comrade)
+
+Harness complete and green; scored run executed (42/42, fc09018, sonnet pinned); read sheet
+READ-SHEET-scored-2026-07-15.md unevaluated; key sealed. No recall, over-catch, or capability number
+exists. Per A-T4/A-T5, no document, internal or external, may state or imply a detection-capability
+number for crossexam until the reads are performed under the A3.4 protocol and Step-4 computation
+runs. axis-fired 42/42 including all clean twins is recorded as the standing demonstration of why
+axis-fired is never recall. Resumption requires only: Comrade completes the sheet, then the Step-4
+computation from the standing authorization. Reader-priming note (M01.clean,
+survives_only_by_conditioning) carries forward and applies to whoever reads. Protocol notes: sheet
+order is deterministic ascending-hash, accepted; scored run used max-rounds 2 vs pre-flight's 1, so
+cardinality diagnostics across the two are not comparable.
+
 ---
 
 # MUTATION_BENCH.md — Amendment 3 (append; do not edit §§0–9, A1, A2)
