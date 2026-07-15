@@ -28,3 +28,10 @@ go.work.sum
 
 # --- editor / OS ---
 .DS_Store
+
+# --- mutbench generated mutants ---
+# Reproducible from fixture + manifest + seed (I3); never committed.
+/mutants/
+/cmd/mutbench/mutbench
+# Sealed read-sheet keys: opened only after reads are recorded. Never committed.
+bench/reads/*.SEALED.md

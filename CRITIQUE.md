@@ -19,6 +19,33 @@ meet evidence only as a corporate body, never individually, so "is THIS atomic c
 malformed at the root. The Tractatus was the high-water mark of logical atomism, and Wittgenstein
 himself retracted it.
 
+### Correction of record — 2026-07-15
+
+Three things have been measured since this section was written. They are recorded here by reference;
+the entries they correct are not edited, because each was true of what it measured. Evidence:
+`bench/preflight/PREFLIGHT-2026-07-15.md`, `bench/MUTATION_BENCH.md` Amendment 3.
+
+**The 2026-07-12 scope-shift attribution holds for input spanning several sentences, and only that.**
+That run concluded `decompose` splits a measurement away from the conclusion drawn on it, so the
+critic never sees the widening as one move (SESSION.md 2026-07-12;
+`examples/destructive/scope-shift/EXPECTED.md`). Measured again on 2026-07-15 against input built as
+a single sentence, it does not hold: `decompose` still broke the sentence into three to five claims,
+but it kept the move, isolating the transfer from the narrow subject to the wide one as a claim of
+its own. The original entry stands for the input it describes. It does not generalize.
+
+**A cross-claim scope move is dissolved by atomization. That is a standing constraint here, not a
+pending fix.** Nothing in the repo plans to change `decompose`, and a change that preserved
+cross-claim structure would be in tension with atomism itself — which is this section's subject. So
+a benchmark measuring that case measures the architecture, not the grader.
+
+**`decompose` sometimes evaluates, although its prompt tells it not to.** On the same run it returned
+"The author equates the pass rate among onsite candidates with the hiring funnel's overall pass
+rate" — a finding about the argument, produced by a step whose prompt says only "Do not evaluate
+them" (`internal/modes/prompts.go`). The prompt is deliberately left alone: suppressing that output
+would buy tidier component boundaries by making the tool worse at the thing it exists to do.
+BEHAVIOR.md must eventually either license findings from `decompose` or a redesign must remove them.
+Until then, no number from this pipeline can be attributed to the critic alone.
+
 ## The analytic/substance vs. synthetic/grounding gap
 The substance/grounding split — well-formed-and-falsifiable on one side, true on the other —
 is the analytic/synthetic distinction cast as a binary verdict.
