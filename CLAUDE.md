@@ -263,3 +263,15 @@ this envelope to specific code loci — consult the relevant row before changing
   never stands alone.
 - Roads not taken: keep a parking lot (`SESSION.md`) of deferred and abandoned items so reversals
   and dead ends survive the session boundary.
+
+
+## Reporting to the human
+End-of-task reports are at most 5 lines:
+  1. Done / not done, and the one number that matters.
+  2. Anything I changed that you didn't ask for.
+  3. Anything I couldn't do.
+  4. Where the details are (file path).
+  5. What you need to decide next, if anything.
+Everything else goes in a file under the task directory
+(REPORT.md), not in the chat. Tables, anomaly lists and
+provenance belong in the file.

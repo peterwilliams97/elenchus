@@ -1,0 +1,15 @@
+[  1/5] ✓ partial       "COVID-19 took away critical training opportunities from t…"  42.89s
+[heartbeat] elapsed=1m0s calls=2 in=315800 out=1157 web=0 est=$0.9648 (rates 2026-06-01) verified=1 errored=4 seen=1/5 claim="faithfulness 2/5"
+[  2/5] ✓ faithful      "COVID-19 led to worsening mental health in the industries…"  54.29s
+[heartbeat] elapsed=2m0s calls=5 in=789354 out=3144 web=0 est=$2.4152 (rates 2026-06-01) verified=2 errored=3 seen=2/5 claim="faithfulness 3/5"
+[  3/5] ✓ faithful      "Ticket prices are a key barrier for people wanting to eng…"  34.82s
+[  4/5] ✓ faithful      "Victoria receives its fair share of funding from Creative…"  32.26s
+[heartbeat] elapsed=3m0s calls=9 in=1420883 out=4883 web=0 est=$4.3359 (rates 2026-06-01) verified=4 errored=1 seen=4/5 claim="faithfulness 5/5"
+[  5/5] ✓ faithful      "Regional Victoria does not receive its fair share of fund…"  30.21s
+
+SUMMARY claims-faith-5 faithfulness
+  cases 5 · verified 5 · errored 0
+  faithful 4 · partial 1
+  wall 3m14s · est_usd $4.8184 (rates 2026-06-01)
+  detail: examples/vic-lceic/eval-5/claims-faith-5.faithfulness.jsonl
+USAGE model=claude-sonnet-4-6 calls=10 in=1579046 out=5419 cache_read=0 cache_create=0 web_searches=0 wall=194s est_usd=$4.8184 (rates 2026-06-01)

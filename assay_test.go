@@ -1207,3 +1207,118 @@ func TestChainJSONLWritten(t *testing.T) {
 		t.Errorf("rec2 error_cause: want 'network timeout', got %q", det.ErrorCause)
 	}
 }
+
+// TestCallClaudeCacheControl verifies the request puts a cachedSource in its own content block
+// marked cache_control ephemeral, ahead of the prompt block, and caches the system prompt too.
+func TestCallClaudeCacheControl(t *testing.T) {
+	var body []byte
+	c := cfg{
+		model: "claude-sonnet-4-6", apiKey: "k",
+		cachedSource: "SOURCE:\nbig corpus",
+		httpClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			body, _ = io.ReadAll(r.Body)
+			return fakeResp(200, okBody, nil), nil
+		})},
+	}
+	if _, _, err := c.callClaude("SYSTEM", "CLAIM:\nx", false); err != nil {
+		t.Fatalf("callClaude: %v", err)
+	}
+	var req apiReq
+	if err := json.Unmarshal(body, &req); err != nil {
+		t.Fatalf("unmarshal req: %v", err)
+	}
+	if len(req.System) != 1 || req.System[0].CacheControl == nil {
+		t.Errorf("system prompt not cache-marked: %+v", req.System)
+	}
+	if len(req.Messages) != 1 || len(req.Messages[0].Content) != 2 {
+		t.Fatalf("want 2 content blocks, got %+v", req.Messages)
+	}
+	blocks := req.Messages[0].Content
+	if blocks[0].CacheControl == nil || !strings.Contains(blocks[0].Text, "big corpus") {
+		t.Errorf("first block should be the cached source: %+v", blocks[0])
+	}
+	if blocks[1].CacheControl != nil || !strings.Contains(blocks[1].Text, "CLAIM") {
+		t.Errorf("second block should be the uncached claim: %+v", blocks[1])
+	}
+}
+
+// TestCallClaudeNoCacheSingleBlock confirms that with no cachedSource the user message is a single
+// uncached block while the system prompt is still cached.
+func TestCallClaudeNoCacheSingleBlock(t *testing.T) {
+	var body []byte
+	c := cfg{
+		model: "claude-sonnet-4-6", apiKey: "k",
+		httpClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			body, _ = io.ReadAll(r.Body)
+			return fakeResp(200, okBody, nil), nil
+		})},
+	}
+	if _, _, err := c.callClaude("SYSTEM", "CLAIM:\nx", false); err != nil {
+		t.Fatalf("callClaude: %v", err)
+	}
+	var req apiReq
+	if err := json.Unmarshal(body, &req); err != nil {
+		t.Fatalf("unmarshal req: %v", err)
+	}
+	if len(req.Messages[0].Content) != 1 || req.Messages[0].Content[0].CacheControl != nil {
+		t.Errorf("want one uncached block, got %+v", req.Messages[0].Content)
+	}
+}
+
+// TestReadChainOrdersAndValidates covers the happy path (idx-ordered, one mode) plus the two refused
+// shapes: a gap in the idx sequence and mixed modes.
+func TestReadChainOrdersAndValidates(t *testing.T) {
+	dir := t.TempDir()
+	good := filepath.Join(dir, "good.jsonl")
+	os.WriteFile(good, []byte(
+		`{"idx":1,"total":2,"mode":"faithfulness","claim":"b","verdict":"faithful","detail":{}}`+"\n"+
+			`{"idx":0,"total":2,"mode":"faithfulness","claim":"a","verdict":"overstated","detail":{}}`+"\n"), 0o644)
+	recs, mode, err := readChain(good)
+	if err != nil {
+		t.Fatalf("readChain: %v", err)
+	}
+	if mode != "faithfulness" || len(recs) != 2 || recs[0].Claim != "a" || recs[1].Claim != "b" {
+		t.Errorf("bad reconstruction: mode=%q recs=%+v", mode, recs)
+	}
+
+	gap := filepath.Join(dir, "gap.jsonl")
+	os.WriteFile(gap, []byte(
+		`{"idx":0,"mode":"faithfulness","claim":"a","verdict":"faithful","detail":{}}`+"\n"+
+			`{"idx":2,"mode":"faithfulness","claim":"c","verdict":"faithful","detail":{}}`+"\n"), 0o644)
+	if _, _, err := readChain(gap); err == nil {
+		t.Error("want error on idx gap, got nil")
+	}
+
+	mixed := filepath.Join(dir, "mixed.jsonl")
+	os.WriteFile(mixed, []byte(
+		`{"idx":0,"mode":"faithfulness","claim":"a","verdict":"faithful","detail":{}}`+"\n"+
+			`{"idx":1,"mode":"substance","claim":"b","verdict":"hollow","detail":{}}`+"\n"), 0o644)
+	if _, _, err := readChain(mixed); err == nil {
+		t.Error("want error on mixed modes, got nil")
+	}
+}
+
+// TestParseAuditVerdict pins the round-trip of auditChainRecord's "faith=X sub=Y ev=Z" verdict.
+func TestParseAuditVerdict(t *testing.T) {
+	f, s, e := parseAuditVerdict("faith=overstated sub=hollow ev=unverifiable")
+	if f != "overstated" || s != "hollow" || e != "unverifiable" {
+		t.Errorf("got faith=%q sub=%q ev=%q", f, s, e)
+	}
+}
+
+// TestHeartbeatErroredIsFailuresNotRemainder pins the 1c fix: mid-run, errored counts actual failed
+// cases, never the not-yet-processed remainder. With 10 total, 3 verified and 1 error seen, errored
+// must be 1 (not 10-3=7) and seen must be 4.
+func TestHeartbeatErroredIsFailuresNotRemainder(t *testing.T) {
+	rt := newRunTally(10)
+	rt.record("faithful")
+	rt.record("partial")
+	rt.record("faithful")
+	rt.record("error")
+	line := heartbeatLine("claude-sonnet-4-6", newUsageCounters(), rt)
+	for _, want := range []string{"verified=3", "errored=1", "seen=4/10"} {
+		if !strings.Contains(line, want) {
+			t.Errorf("heartbeat line missing %q\n  got: %s", want, line)
+		}
+	}
+}

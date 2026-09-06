@@ -13,3 +13,12 @@ examples/destructive/laundering/sources/
 
 # Persisted Tier-2 calibration chains (raw assay output; attribution summaries are committed)
 /testing/chains/
+
+# Raw fetched hearing transcripts for the LCEIC faithfulness analysis (copyright: analysis, not
+# redistribution). The committed PROVENANCE.md records every URL + retrieval date; the derived
+# report-summary.md / submissions-index.md / claims-machine.txt are tracked. See examples/vic-lceic/.
+examples/vic-lceic/sources/
+
+# Local API key export — never commit (holds a live ANTHROPIC_API_KEY)
+/setkey.sh
+/demo-dan.log

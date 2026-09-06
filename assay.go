@@ -27,6 +27,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"assay/internal/brief"
+	"assay/internal/tree"
 )
 
 const (
@@ -55,8 +58,17 @@ type cfg struct {
 	quiet        bool
 	usageOut     string
 	chainFile    string // Tier-2 JSONL destination; set by runners before case loop
+	renderMode   string // stdout renderer: "brief" (default), "full", or "tree"
+	treeAll      bool   // -tree=full: expand every node rather than only Needs-you branches
+	auditPath    string // full-table sink; every run writes it, whichever renderer stdout gets
+	treeHTMLPath string // eval/<stamp>/tree.html sink, written alongside audit.md
 	usage        *usageCounters
 	tally        *runTally
+	// cachedSource is the stable prefix (e.g. the source transcript) that callClaude places in its
+	// own content block with cache_control ephemeral, ahead of the variable prompt. Set per-call by
+	// callJSON/callJSONSourced from their `cached` argument; "" sends a single prompt block. The
+	// stub (`call`) ignores it — caching is only meaningful against the real API.
+	cachedSource string
 	// call is the API dispatch function. When nil, callClaude is used (production).
 	// Returns the response text, any retrieved sources (from web_search_tool_result blocks), and an
 	// error.
@@ -104,8 +116,9 @@ func (rt *runTally) snapshot() (total, verified int, counts map[string]int) {
 
 func main() {
 	var c cfg
-	var src, text, chainDir string
-	var ev, audit bool
+	var src, text, chainDir, fromChain string
+	var ev, audit, full bool
+	var treeF treeFlag
 	flag.StringVar(&c.model, "model", envOr("ANTHROPIC_MODEL", defaultModel), "model id")
 	flag.StringVar(&src, "source", "", "transcript file → faithfulness mode")
 	flag.BoolVar(&ev, "evidence", false, "evidence-grounding mode (web search)")
@@ -121,7 +134,32 @@ func main() {
 	flag.BoolVar(&c.quiet, "quiet", false, "suppress per-case lines + heartbeat; keeps SUMMARY and writes Tier-2")
 	flag.StringVar(&c.usageOut, "usage-out", "", "append one JSON record per run to this file")
 	flag.StringVar(&chainDir, "chain-dir", "", "directory for Tier-2 JSONL verification chain (default: eval/<stamp>/)")
+	flag.BoolVar(&full, "full", false, "print the full table to stdout instead of the brief report")
+	flag.Var(&treeF, "tree", "print the tree report to stdout; -tree=full expands every node")
+	flag.StringVar(&fromChain, "from", "", "render brief/tree/audit from a saved chain JSONL (no model calls)")
 	flag.Parse()
+
+	// -full and -tree select different stdout renderers; refuse to guess which the caller meant.
+	if full && treeF.on {
+		fatal("-full and -tree select different stdout renderers; choose one")
+	}
+	switch {
+	case treeF.on:
+		c.renderMode = "tree"
+		c.treeAll = treeF.all
+	case full:
+		c.renderMode = "full"
+	default:
+		c.renderMode = "brief"
+	}
+
+	// -from replays a saved chain with no model calls, so it needs neither an API key nor a new
+	// chain directory. It renders straight from the JSONL and returns.
+	if fromChain != "" {
+		c.usage = newUsageCounters()
+		c.runFromChain(fromChain, flag.Arg(0))
+		return
+	}
 
 	c.apiKey = os.Getenv("ANTHROPIC_API_KEY")
 	if c.apiKey == "" {
@@ -158,6 +196,8 @@ func main() {
 	}
 	if chainDir != "" {
 		c.chainFile = filepath.Join(chainDir, fixtureName+"."+modeSuffix+".jsonl")
+		c.auditPath = filepath.Join(chainDir, "audit.md")
+		c.treeHTMLPath = filepath.Join(chainDir, "tree.html")
 	}
 
 	stopHeartbeat := func() {}
@@ -276,6 +316,9 @@ func (c *cfg) runSubstance(input string) {
 	}
 	c.tally = newRunTally(len(claims))
 	results := make([]substance, len(claims))
+	rows := make([]brief.Row, len(claims))
+	vs := make([]string, len(claims))
+	details := make(map[string]tree.Leaf, len(claims))
 	for i, cl := range claims {
 		if c.verbose {
 			fmt.Println(c.bold(fmt.Sprintf("▸ claim %d/%d: %s", i+1, len(claims), cl)))
@@ -284,29 +327,41 @@ func (c *cfg) runSubstance(input string) {
 		results[i] = c.assayClaim(cl)
 		c.appendChain(substanceChainRecord(i, len(claims), cl, results[i], t))
 		c.progressDone(i, len(claims), results[i].Verdict, cl, t)
+		reason := results[i].Reason
+		if reason == "" && results[i].SurvivingClaim != "" {
+			reason = "survives as: " + results[i].SurvivingClaim
+		}
+		id := fmt.Sprintf("c%d", i+1)
+		rows[i] = brief.Row{ID: id, Text: cl,
+			Substance: results[i].Verdict, SubstanceReason: reason}
+		details[id] = tree.Leaf{Reason: reason}
+		vs[i] = results[i].Verdict
 	}
-	if c.asMarkdown {
-		fmt.Print(mdSubstance(results))
-	} else {
-		c.termSubstance(results)
-	}
+	c.present(rows, tally(vs), mdSubstance(results), func() { c.termSubstance(results) }, details)
 }
 
 func (c *cfg) runFaithfulness(input, src string) {
-	claims := splitSummary(input)
-	c.tally = newRunTally(len(claims))
-	results := make([]faith, len(claims))
-	for i, cl := range claims {
-		t := c.progressStart(i, len(claims), "faithfulness")
-		results[i] = c.faithClaim(cl, src)
-		c.appendChain(faithChainRecord(i, len(claims), cl, results[i], t))
-		c.progressDone(i, len(claims), results[i].Verdict, cl, t)
+	raw := splitSummary(input)
+	c.tally = newRunTally(len(raw))
+	results := make([]faith, len(raw))
+	rows := make([]brief.Row, len(raw))
+	vs := make([]string, len(raw))
+	details := make(map[string]tree.Leaf, len(raw))
+	for i, item := range raw {
+		id, path, text := parseClaimLine(item)
+		if id == "" {
+			id = fmt.Sprintf("c%d", i+1)
+		}
+		t := c.progressStart(i, len(raw), "faithfulness")
+		results[i] = c.faithClaim(text, src)
+		c.appendChain(faithChainRecord(i, len(raw), text, results[i], t))
+		c.progressDone(i, len(raw), results[i].Verdict, text, t)
+		rows[i] = brief.Row{ID: id, Path: path, Text: text,
+			Faith: results[i].Verdict, FaithReason: results[i].Evidence}
+		details[id] = tree.Leaf{Reason: results[i].Evidence, Quotes: results[i].Quotes}
+		vs[i] = results[i].Verdict
 	}
-	if c.asMarkdown {
-		fmt.Print(mdFaith(results))
-	} else {
-		c.termFaith(results)
-	}
+	c.present(rows, tally(vs), mdFaith(results), func() { c.termFaith(results) }, details)
 }
 
 // intendedProposition returns what_source_actually_says when the faithfulness pass flagged the
@@ -417,7 +472,7 @@ func (c *cfg) runAudit(input, src string) {
 // of the stages operate on these individual claims.
 func (c cfg) decompose(text string) ([]string, error) {
 	var arr []string
-	if err := c.callJSON(decomposeSys, "TEXT:\n"+text, false, &arr); err != nil {
+	if err := c.callJSON(decomposeSys, "", "TEXT:\n"+text, false, &arr); err != nil {
 		return nil, err
 	}
 	return arr, nil
@@ -430,14 +485,14 @@ func (c cfg) assayClaim(claim string) substance {
 	var last substanceJSON
 	for rounds < c.maxRounds {
 		var p producerJSON
-		if err := c.callJSON(producerSys, "CLAIM:\n"+current, false, &p); err != nil {
+		if err := c.callJSON(producerSys, "", "CLAIM:\n"+current, false, &p); err != nil {
 			return substance{Claim: claim, Verdict: "error", Reason: err.Error()}
 		}
 		if rounds == 0 {
 			steel = p.Steelman
 		}
 		u := "CLAIM:\n" + current + "\n\nPRODUCER STEELMAN:\n" + p.Steelman + "\n\nPRODUCER CONDITIONS:\n" + p.Conditions
-		if err := c.callJSON(substanceCriticSys, u, false, &last); err != nil {
+		if err := c.callJSON(substanceCriticSys, "", u, false, &last); err != nil {
 			return substance{Claim: claim, Verdict: "error", Reason: err.Error()}
 		}
 		rounds++
@@ -470,21 +525,26 @@ func (c cfg) assayClaim(claim string) substance {
 // first the defender identifies supporting evidence in the source, then the critic evaluates the
 // faithfulness of the claim based on this evidence.
 func (c cfg) faithClaim(claim, src string) faith {
+	// The source transcript is identical across every claim in a run, so it rides in the cached
+	// prefix (ahead of the claim) rather than being re-sent inline. The two passes use different
+	// system prompts, so each caches its own (system + source) prefix once and reads it thereafter.
+	cached := "SOURCE:\n" + src
 	var d defenderJSON
-	if err := c.callJSON(faithDefenderSys, "SUMMARY CLAIM:\n"+claim+"\n\nSOURCE:\n"+src, false, &d); err != nil {
+	if err := c.callJSON(faithDefenderSys, cached, "SUMMARY CLAIM:\n"+claim, false, &d); err != nil {
 		return faith{Claim: claim, Verdict: "error"}
 	}
 	quotes := "(none)"
 	if len(d.Quotes) > 0 {
 		quotes = "- " + strings.Join(d.Quotes, "\n- ")
 	}
-	u := fmt.Sprintf("SUMMARY CLAIM:\n%s\n\nDEFENDER FOUND SUPPORT: %v\nDEFENDER QUOTES:\n%s\n\nSOURCE:\n%s",
-		claim, d.Found, quotes, src)
+	u := fmt.Sprintf("SUMMARY CLAIM:\n%s\n\nDEFENDER FOUND SUPPORT: %v\nDEFENDER QUOTES:\n%s",
+		claim, d.Found, quotes)
 	var fj faithJSON
-	if err := c.callJSON(faithCriticSys, u, false, &fj); err != nil {
+	if err := c.callJSON(faithCriticSys, cached, u, false, &fj); err != nil {
 		return faith{Claim: claim, Verdict: "error"}
 	}
-	return faith{Claim: claim, Verdict: fj.Verdict, Evidence: fj.Evidence, SourceSays: fj.SourceSays}
+	return faith{Claim: claim, Verdict: fj.Verdict, Evidence: fj.Evidence,
+		SourceSays: fj.SourceSays, Quotes: d.Quotes}
 }
 
 // evidenceClaim is the grounding pass: check the claim against current evidence via web search. If
@@ -494,7 +554,7 @@ func (c cfg) faithClaim(claim, src string) faith {
 // column agrees with -evidence -source.
 func (c cfg) evidenceClaim(claim string) evidence {
 	var e evidenceJSON
-	rs, err := c.callJSONSourced(evidenceSys, "CLAIM:\n"+claim, true, &e)
+	rs, err := c.callJSONSourced(evidenceSys, "", "CLAIM:\n"+claim, true, &e)
 	if err != nil {
 		return evidence{Claim: claim, Verdict: "error", Finding: err.Error()}
 	}
@@ -668,14 +728,17 @@ const defaultInput = `1. The future of work will happen inside Codex or Claude C
 
 // ── API ──────────────────────────────────────────────────────────────────────
 
-func (c cfg) callJSON(system, prompt string, withTools bool, v any) error {
-	_, err := c.callJSONSourced(system, prompt, withTools, v)
+func (c cfg) callJSON(system, cached, prompt string, withTools bool, v any) error {
+	_, err := c.callJSONSourced(system, cached, prompt, withTools, v)
 	return err
 }
 
 // callJSONSourced is callJSON with retrieved sources threaded through. Used by evidenceClaim,
 // which is the only caller that needs to cross-check model-claimed URLs against actual retrieval.
-func (c cfg) callJSONSourced(system, prompt string, withTools bool, v any) ([]retrievedSource, error) {
+// `cached` is the stable prefix (source corpus) callClaude puts in its own cache_control block,
+// ahead of `prompt`; pass "" when the call has no reusable prefix.
+func (c cfg) callJSONSourced(system, cached, prompt string, withTools bool, v any) ([]retrievedSource, error) {
+	c.cachedSource = cached // value copy; only callClaude reads it, the stub ignores it
 	dispatch := c.call
 	if dispatch == nil {
 		dispatch = c.callClaude
@@ -702,8 +765,19 @@ func (c cfg) callJSONSourced(system, prompt string, withTools bool, v any) ([]re
 // engineering,
 // `withTools`==true enables tool use (e.g. web search) when available for the model.
 func (c cfg) callClaude(system, prompt string, withTools bool) (string, []retrievedSource, error) {
-	req := apiReq{Model: c.model, MaxTokens: maxTokens, System: system,
-		Messages: []apiMsg{{Role: "user", Content: prompt}}}
+	// Build the user message. A non-empty cachedSource becomes its own block, marked ephemeral and
+	// placed ahead of the claim so it forms the cacheable prefix reused across every claim in a run.
+	content := make([]textBlock, 0, 2)
+	if c.cachedSource != "" {
+		content = append(content, textBlock{Type: "text", Text: c.cachedSource, CacheControl: ephemeral})
+	}
+	content = append(content, textBlock{Type: "text", Text: prompt})
+	req := apiReq{Model: c.model, MaxTokens: maxTokens,
+		Messages: []apiMsg{{Role: "user", Content: content}}}
+	if system != "" {
+		// The system prompt is stable per mode, so cache it too — one breakpoint, reused every call.
+		req.System = []textBlock{{Type: "text", Text: system, CacheControl: ephemeral}}
+	}
 	if withTools {
 		req.Tools = []apiTool{{Type: "web_search_20250305", Name: "web_search", MaxUses: 5}}
 	}
@@ -712,6 +786,9 @@ func (c cfg) callClaude(system, prompt string, withTools bool) (string, []retrie
 	if c.verbose {
 		fmt.Println(c.cyan("┌─ call · " + c.model + tern(withTools, " (web search)", "")))
 		fmt.Println(c.grey("│ system:\n│   " + strings.ReplaceAll(system, "\n", "\n│   ")))
+		if c.cachedSource != "" {
+			fmt.Printf(c.grey("│ cached prefix: %d bytes\n"), len(c.cachedSource))
+		}
 		fmt.Println(c.grey("│ user:\n│   " + strings.ReplaceAll(prompt, "\n", "\n│   ")))
 	}
 
@@ -769,6 +846,11 @@ func (c cfg) callClaude(system, prompt string, withTools bool) (string, []retrie
 		}
 		c.usage.add(ar.Usage.InputTokens, ar.Usage.OutputTokens,
 			ar.Usage.CacheReadInputTokens, ar.Usage.CacheCreationInputTokens, webSearches)
+		if c.verbose {
+			fmt.Fprintf(os.Stderr, "[call] in=%d out=%d cache_read=%d cache_create=%d\n",
+				ar.Usage.InputTokens, ar.Usage.OutputTokens,
+				ar.Usage.CacheReadInputTokens, ar.Usage.CacheCreationInputTokens)
+		}
 	}
 
 	if ar.StopReason == "max_tokens" {
@@ -842,16 +924,30 @@ func retryDelay(retryAfter string, attempt int) time.Duration {
 }
 
 type apiReq struct {
-	Model     string    `json:"model"`
-	MaxTokens int       `json:"max_tokens"`
-	System    string    `json:"system,omitempty"`
-	Messages  []apiMsg  `json:"messages"`
-	Tools     []apiTool `json:"tools,omitempty"`
+	Model     string      `json:"model"`
+	MaxTokens int         `json:"max_tokens"`
+	System    []textBlock `json:"system,omitempty"`
+	Messages  []apiMsg    `json:"messages"`
+	Tools     []apiTool   `json:"tools,omitempty"`
 }
 type apiMsg struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
+	Role    string      `json:"role"`
+	Content []textBlock `json:"content"`
 }
+
+// textBlock is one content block. A non-nil CacheControl marks the prefix up to and including this
+// block as cacheable, so a repeated source corpus is billed once at cache-write rates and then read.
+type textBlock struct {
+	Type         string        `json:"type"` // always "text"
+	Text         string        `json:"text"`
+	CacheControl *cacheControl `json:"cache_control,omitempty"`
+}
+type cacheControl struct {
+	Type string `json:"type"` // "ephemeral"
+}
+
+// ephemeral is the shared marker for every cache breakpoint; the API caps a request at four.
+var ephemeral = &cacheControl{Type: "ephemeral"}
 type apiTool struct {
 	Type    string `json:"type"`
 	Name    string `json:"name"`
@@ -995,7 +1091,10 @@ type substance struct {
 	NeedsAnother                                     bool
 	Rounds                                           int
 }
-type faith struct{ Claim, Verdict, Evidence, SourceSays string }
+type faith struct {
+	Claim, Verdict, Evidence, SourceSays string
+	Quotes                               []string // defender's verbatim source spans, for the tree leaf
+}
 type source struct{ Title, URL string }
 type evidence struct {
 	Claim, Verdict, Finding string
@@ -1258,6 +1357,80 @@ func mustRead(path string) string {
 	return string(b)
 }
 
+// treeFlag backs -tree, which takes no value (default expansion) or "=full" (expand every node).
+// IsBoolFlag lets `-tree` stand alone; Set still receives "full" for `-tree=full`.
+type treeFlag struct{ on, all bool }
+
+func (f *treeFlag) String() string   { return "" }
+func (f *treeFlag) IsBoolFlag() bool { return true }
+func (f *treeFlag) Set(v string) error {
+	f.on = true
+	switch v {
+	case "", "true":
+		f.all = false
+	case "full":
+		f.all = true
+	default:
+		return fmt.Errorf("-tree takes no value or =full, got %q", v)
+	}
+	return nil
+}
+
+// parseClaimLine pulls an optional "<id>\t<path>\t<text>" prefix off a claim line so the tree can
+// key claims to the source document's headings (path carries "/"-separated key=label segments).
+// A line with no tabs is a bare claim: no id, no path, the whole line is the text.
+func parseClaimLine(raw string) (id, path, text string) {
+	if parts := strings.SplitN(raw, "\t", 3); len(parts) == 3 {
+		return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), strings.TrimSpace(parts[2])
+	}
+	return "", "", raw
+}
+
+// present routes one run's verdicts to the chosen stdout renderer and always writes the full table
+// to auditPath, so the eval directory holds the complete result regardless of what stdout showed.
+// `mdTable` is the markdown full table (also what audit.md gets); `termTable` prints the colour full
+// table for `-full` without `-md`.
+func (c *cfg) present(rows []brief.Row, counts, mdTable string, termTable func(), details map[string]tree.Leaf) {
+	if c.auditPath != "" {
+		if err := os.WriteFile(c.auditPath, []byte(mdTable), 0o644); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.auditPath, err)
+		}
+	}
+	if c.treeHTMLPath != "" {
+		htmlDoc := tree.RenderHTML(rows, details, c.headerLine())
+		if err := os.WriteFile(c.treeHTMLPath, []byte(htmlDoc), 0o644); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.treeHTMLPath, err)
+		} else {
+			fmt.Fprintf(os.Stderr, "tree (html): %s\n", c.treeHTMLPath)
+		}
+	}
+	fmt.Println(c.headerLine())
+	switch c.renderMode {
+	case "full":
+		if c.asMarkdown {
+			fmt.Print(mdTable)
+		} else {
+			termTable()
+		}
+	case "tree":
+		fmt.Print(tree.Render(rows, c.treeAll, c.auditPath))
+	default:
+		s, _ := brief.Brief(rows, counts, c.auditPath)
+		fmt.Print(s)
+	}
+}
+
+// headerLine is the one-line provenance stamp printed atop every brief/tree report and embedded in
+// tree.html: the model, the API call count, the estimated cost, and wall time. Under -from every
+// figure is zero because no model call was made, which is the point — the reader sees the render
+// cost nothing.
+func (c cfg) headerLine() string {
+	calls, in, out, cr, cc, ws, _, elapsed := c.usage.snapshot()
+	cost, _ := estimateCost(c.model, in, out, cr, cc, ws)
+	return fmt.Sprintf("model %s · calls %d · %s · wall %s",
+		c.model, calls, cost, elapsed.Round(time.Second))
+}
+
 func readInput(text string) string {
 	if text != "" {
 		return text
@@ -1321,10 +1494,11 @@ type substanceDetail struct {
 }
 
 type faithDetail struct {
-	DefenderSupport string `json:"defender_support,omitempty"`
-	CriticFinding   string `json:"critic_finding,omitempty"`
-	DistortionType  string `json:"distortion_type,omitempty"`
-	SourceSays      string `json:"source_says,omitempty"`
+	DefenderSupport string   `json:"defender_support,omitempty"`
+	Quotes          []string `json:"quotes,omitempty"` // verbatim source spans the defender cited
+	CriticFinding   string   `json:"critic_finding,omitempty"`
+	DistortionType  string   `json:"distortion_type,omitempty"`
+	SourceSays      string   `json:"source_says,omitempty"`
 }
 
 type evidenceDetail struct {
@@ -1362,6 +1536,7 @@ func substanceChainRecord(i, total int, claim string, s substance, start time.Ti
 
 func faithChainRecord(i, total int, claim string, f faith, start time.Time) chainRecord {
 	det := faithDetail{
+		Quotes:        f.Quotes,
 		CriticFinding: f.Evidence,
 		SourceSays:    f.SourceSays,
 	}
@@ -1400,6 +1575,7 @@ func evidenceChainRecord(i, total int, claim string, e evidence, start time.Time
 func auditChainRecord(i, n int, claim string, f faith, s substance, e evidence, start time.Time) chainRecord {
 	det := auditDetail{
 		Faith: faithDetail{
+			Quotes:        f.Quotes,
 			CriticFinding: f.Evidence,
 			SourceSays:    f.SourceSays,
 		},
@@ -1426,6 +1602,189 @@ func auditChainRecord(i, n int, claim string, f faith, s substance, e evidence, 
 		Claim: claim, Verdict: verdictSummary,
 		ElapsedS: time.Since(start).Seconds(),
 		Detail:   raw,
+	}
+}
+
+// ── -from: replay a saved chain ──────────────────────────────────────────────
+
+// readChain reads a Tier-2 JSONL chain into records ordered by idx and returns the single mode they
+// share. It fails on a gap in the idx sequence, an empty file, or mixed modes — any of which means
+// the chain is not the coherent record of one run that -from expects to replay.
+func readChain(path string) ([]chainRecord, string, error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return nil, "", err
+	}
+	byIdx := make(map[int]chainRecord)
+	maxIdx := -1
+	for _, ln := range strings.Split(strings.TrimSpace(string(b)), "\n") {
+		if ln = strings.TrimSpace(ln); ln == "" {
+			continue
+		}
+		var r chainRecord
+		if err := json.Unmarshal([]byte(ln), &r); err != nil {
+			return nil, "", fmt.Errorf("bad JSONL line: %w", err)
+		}
+		byIdx[r.Idx] = r
+		if r.Idx > maxIdx {
+			maxIdx = r.Idx
+		}
+	}
+	if maxIdx < 0 {
+		return nil, "", fmt.Errorf("empty chain")
+	}
+	recs := make([]chainRecord, 0, maxIdx+1)
+	for i := 0; i <= maxIdx; i++ {
+		r, ok := byIdx[i]
+		if !ok {
+			return nil, "", fmt.Errorf("chain missing idx %d", i)
+		}
+		recs = append(recs, r)
+	}
+	mode := recs[0].Mode
+	for _, r := range recs {
+		if r.Mode != mode {
+			return nil, "", fmt.Errorf("mixed modes in chain: %q and %q", mode, r.Mode)
+		}
+	}
+	return recs, mode, nil
+}
+
+// parseAuditVerdict splits an audit record's "faith=X sub=Y ev=Z" verdict string back into its three
+// component verdicts. auditChainRecord is the sole writer of that format.
+func parseAuditVerdict(s string) (f, sub, ev string) {
+	for _, tok := range strings.Fields(s) {
+		k, v, ok := strings.Cut(tok, "=")
+		if !ok {
+			continue
+		}
+		switch k {
+		case "faith":
+			f = v
+		case "sub":
+			sub = v
+		case "ev":
+			ev = v
+		}
+	}
+	return f, sub, ev
+}
+
+// runFromChain reconstructs the verdict rows from a saved chain and renders them through the same
+// stdout renderers a live run uses (brief / -tree / -full), making no model call. The claims file is
+// required: it supplies the ids and heading paths the tree needs, and cross-checking each record's
+// claim text against it catches a chain paired with the wrong claims file.
+func (c *cfg) runFromChain(chainPath, claimsPath string) {
+	if claimsPath == "" {
+		fatal("-from needs the claims file as INPUT (its claims are checked against the chain)")
+	}
+	recs, mode, err := readChain(chainPath)
+	if err != nil {
+		fatal("read chain " + chainPath + ": " + err.Error())
+	}
+	items := splitSummary(mustRead(claimsPath))
+	if len(recs) != len(items) {
+		fatal(fmt.Sprintf("chain has %d records but %s has %d claims", len(recs), claimsPath, len(items)))
+	}
+	ids := make([]string, len(items))
+	paths := make([]string, len(items))
+	texts := make([]string, len(items))
+	for i, it := range items {
+		id, path, text := parseClaimLine(it)
+		if id == "" {
+			id = fmt.Sprintf("c%d", i+1)
+		}
+		ids[i], paths[i], texts[i] = id, path, text
+	}
+	for i, r := range recs {
+		if strings.TrimSpace(r.Claim) != strings.TrimSpace(texts[i]) {
+			fatal(fmt.Sprintf("claim %d in the chain does not match %s:\n  chain:  %q\n  claims: %q",
+				i+1, claimsPath, r.Claim, texts[i]))
+		}
+	}
+
+	dir := filepath.Dir(chainPath)
+	c.auditPath = filepath.Join(dir, "audit.md")
+	c.treeHTMLPath = filepath.Join(dir, "tree.html")
+
+	rows := make([]brief.Row, len(recs))
+	details := make(map[string]tree.Leaf, len(recs))
+	vs := make([]string, len(recs))
+
+	switch mode {
+	case "faithfulness":
+		fr := make([]faith, len(recs))
+		for i, r := range recs {
+			var det faithDetail
+			_ = json.Unmarshal(r.Detail, &det)
+			fr[i] = faith{Claim: r.Claim, Verdict: r.Verdict, Evidence: det.CriticFinding,
+				SourceSays: det.SourceSays, Quotes: det.Quotes}
+			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
+				Faith: r.Verdict, FaithReason: det.CriticFinding}
+			details[ids[i]] = tree.Leaf{Reason: det.CriticFinding, Quotes: det.Quotes}
+			vs[i] = r.Verdict
+		}
+		c.present(rows, tally(vs), mdFaith(fr), func() { c.termFaith(fr) }, details)
+	case "substance":
+		sr := make([]substance, len(recs))
+		for i, r := range recs {
+			var det substanceDetail
+			_ = json.Unmarshal(r.Detail, &det)
+			reason := det.Reason
+			if reason == "" && det.SurvivingClaim != "" {
+				reason = "survives as: " + det.SurvivingClaim
+			}
+			sr[i] = substance{Claim: r.Claim, Verdict: r.Verdict, Reason: det.Reason,
+				SurvivingClaim: det.SurvivingClaim, Steelman: det.Steelman, Rounds: det.Rounds}
+			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
+				Substance: r.Verdict, SubstanceReason: reason}
+			details[ids[i]] = tree.Leaf{Reason: reason}
+			vs[i] = r.Verdict
+		}
+		c.present(rows, tally(vs), mdSubstance(sr), func() { c.termSubstance(sr) }, details)
+	case "grounding":
+		er := make([]evidence, len(recs))
+		for i, r := range recs {
+			var det evidenceDetail
+			_ = json.Unmarshal(r.Detail, &det)
+			er[i] = evidence{Claim: r.Claim, Verdict: r.Verdict, Finding: det.Finding,
+				Sources: det.Sources, RetrievedSources: det.RetrievedSources,
+				SourcesVerified: det.SourcesVerified, DowngradeReason: det.DowngradeReason,
+				OriginalVerdict: det.OriginalVerdict}
+			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
+				Grounding: r.Verdict, GroundReason: det.Finding}
+			details[ids[i]] = tree.Leaf{Reason: det.Finding}
+			vs[i] = r.Verdict
+		}
+		c.present(rows, tally(vs), mdEvidence(er), func() { c.termEvidence(er) }, details)
+	case "audit":
+		fr := make([]faith, len(recs))
+		sr := make([]substance, len(recs))
+		er := make([]evidence, len(recs))
+		fvs := make([]string, len(recs))
+		svs := make([]string, len(recs))
+		evs := make([]string, len(recs))
+		for i, r := range recs {
+			var det auditDetail
+			_ = json.Unmarshal(r.Detail, &det)
+			fv, sv, evv := parseAuditVerdict(r.Verdict)
+			fr[i] = faith{Claim: r.Claim, Verdict: fv, Evidence: det.Faith.CriticFinding,
+				SourceSays: det.Faith.SourceSays, Quotes: det.Faith.Quotes}
+			sr[i] = substance{Claim: r.Claim, Verdict: sv, Reason: det.Substance.Reason,
+				SurvivingClaim: det.Substance.SurvivingClaim, Steelman: det.Substance.Steelman}
+			er[i] = evidence{Claim: r.Claim, Verdict: evv, Finding: det.Evidence.Finding,
+				Sources: det.Evidence.Sources, DowngradeReason: det.Evidence.DowngradeReason,
+				OriginalVerdict: det.Evidence.OriginalVerdict}
+			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
+				Faith: fv, Substance: sv, Grounding: evv,
+				FaithReason: det.Faith.CriticFinding, GroundReason: det.Evidence.Finding}
+			details[ids[i]] = tree.Leaf{Reason: det.Faith.CriticFinding, Quotes: det.Faith.Quotes}
+			fvs[i], svs[i], evs[i] = fv, sv, evv
+		}
+		counts := fmt.Sprintf("faith[%s] · sub[%s] · ground[%s]", tally(fvs), tally(svs), tally(evs))
+		c.present(rows, counts, mdAudit(texts, fr, sr, er), func() { fmt.Print(mdAudit(texts, fr, sr, er)) }, details)
+	default:
+		fatal("unknown chain mode: " + mode)
 	}
 }
 
@@ -1546,23 +1905,10 @@ func heartbeatLine(model string, u *usageCounters, rt *runTally) string {
 	tallyPart := ""
 	if rt != nil {
 		total, verified, counts := rt.snapshot()
-		errored := (total - verified) - counts["skipped (over cap)"]
-		if errored < 0 {
-			errored = 0
-		}
-		seen := 0
-		for _, v := range counts {
-			seen += v
-		}
-		seen += verified - func() int {
-			n := 0
-			for _, v := range counts {
-				n += v
-			}
-			return n
-		}()
-		// Compute seen as verified + all error/skipped.
-		seen = verified + counts["error"] + counts["skipped (over cap)"]
+		// errored is failures observed so far, not the not-yet-processed remainder. Cases that have
+		// not run yet are simply absent from `seen`, never counted as errors.
+		errored := counts["error"]
+		seen := verified + errored // verified already includes any "skipped (over cap)" cases
 		tallyPart = fmt.Sprintf(" verified=%d errored=%d seen=%d/%d", verified, errored, seen, total)
 	}
 	return fmt.Sprintf("[heartbeat] elapsed=%s calls=%d in=%d out=%d web=%d est=%s%s claim=%q",

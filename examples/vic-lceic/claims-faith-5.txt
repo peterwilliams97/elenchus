@@ -1,0 +1,5 @@
+F8	2=Chapter 2 — Overview of Victoria's cultural and creative industries/2.2.1=Loss of audiences and income	COVID-19 took away critical training opportunities from those looking to enter the industries.
+F12	2=Chapter 2 — Overview of Victoria's cultural and creative industries/2.2.2=Negative mental health impacts	COVID-19 led to worsening mental health in the industries, particularly among children and young people.
+F17	2=Chapter 2 — Overview of Victoria's cultural and creative industries/2.2.5=Broader cost of living crisis	Ticket prices are a key barrier for people wanting to engage with the industries.
+F29	3=Chapter 3 — Government investment in Victoria's cultural and creative industries/3.3.5=Does Victoria get its fair share of federal funding?	Victoria receives its fair share of funding from Creative Australia.
+F31	3=Chapter 3 — Government investment in Victoria's cultural and creative industries/3.3.6=Regional Victoria is not getting its fair share	Regional Victoria does not receive its fair share of funding from Creative Australia.

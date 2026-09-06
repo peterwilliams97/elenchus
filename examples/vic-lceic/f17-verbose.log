@@ -1,0 +1,9 @@
+[chain] examples/vic-lceic/eval-f17v/claims-faith-f17.faithfulness.jsonl idx=0 verdict=faithful
+[  1/1] ✓ faithful      "Ticket prices are a key barrier for people wanting to eng…"  36.91s
+
+SUMMARY claims-faith-f17 faithfulness
+  cases 1 · verified 1 · errored 0
+  faithful 1
+  wall 37s · est_usd $0.9575 (rates 2026-06-01)
+  detail: examples/vic-lceic/eval-f17v/claims-faith-f17.faithfulness.jsonl
+USAGE model=claude-sonnet-4-6 calls=2 in=315623 out=711 cache_read=0 cache_create=0 web_searches=0 wall=36s est_usd=$0.9575 (rates 2026-06-01)

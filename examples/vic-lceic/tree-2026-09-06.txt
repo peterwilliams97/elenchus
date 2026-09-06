@@ -1,0 +1,6 @@
+tree — depth 3, max width 3, score 6.0 (target ≤20) ok
+
+  2  Chapter 2 — Overview of Victoria's cultural and creative industries  [3]
+  3  Chapter 3 — Government investment in Victoria's cultural and creative industries  [2]
+
+Full table: examples/vic-lceic/eval-5/audit.md
