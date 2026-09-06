@@ -1,0 +1,349 @@
+package retrieve
+
+// retrieve turns a corpus of committee-hearing transcripts into speaker-turn passages and ranks them
+// against a claim with BM25 — deterministically, with no model call — so a faithfulness judge sees
+// only the passages a claim is about, not the whole 25K-token corpus. spec/CLI.md §"Retrieval" is the
+// contract.
+//
+// A transcript is Hansard-style: a header naming the committee MEMBERS (the MPs) and the Chair, then a
+// body of turns, each opening with a speaker line — "Vicky GUGLIELMO:", "The CHAIR:". A turn runs from
+// one speaker line to the next. Every passage is tagged with its date, session (source file), speaker,
+// and role. Role matters downstream: a claim that quotes a questioner's question as if it were witness
+// testimony is a distortion, and only a role tag lets the judge catch it — so a speaker whose surname
+// is on the committee roster, or who is the Chair, is tagged `questioner`, everyone else `witness`.
+
+import (
+	"bufio"
+	"bytes"
+	"fmt"
+	"math"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+)
+
+// Role classifies who is speaking. questioner and chair are the committee side (their words are
+// questions, not testimony); witness is everyone appearing before it.
+const (
+	RoleWitness    = "witness"
+	RoleQuestioner = "questioner"
+	RoleChair      = "chair"
+)
+
+// Passage is one speaker turn. ID is stable across runs ("<date>/<file>#t<n>") so it can be recorded
+// in the chain and matched back to the source.
+type Passage struct {
+	ID      string
+	Date    string
+	Session string // source file stem, e.g. "1_yarra-city-council"
+	Speaker string
+	Role    string
+	Text    string
+}
+
+// Index is a searchable corpus of passages plus the BM25 statistics over them.
+type Index struct {
+	Passages []Passage
+	docTerms []map[string]int // term frequencies per passage
+	docLen   []int            // token count per passage
+	df       map[string]int   // document frequency per term
+	avgLen   float64
+}
+
+const (
+	bm25K1 = 1.5
+	bm25B  = 0.75
+)
+
+// speakerLine matches a turn opener: optional indent, a name whose final surname token carries a run
+// of ≥2 uppercase letters (Hansard caps surnames — "McINTOSH", "WELCH", "GUGLIELMO"), or the literal
+// "The CHAIR", followed by a colon. The ≥2-uppercase test is what separates a real speaker line from
+// an ordinary "Word:" mid-sentence.
+var speakerLine = regexp.MustCompile(`^ {0,8}(The CHAIR|[A-Z][A-Za-z.'’-]*(?: [A-Z][A-Za-z.'’-]*)*[A-Z]{2}[A-Za-z.'’-]*):\s`)
+
+// rosterName pulls "Firstname Surname" entries from the MEMBERS header block. `[A-Z][a-zA-Z]+` keeps
+// internal caps as one token so "McIntosh"/"McArthur" survive whole (a `[a-z]+` surname class would
+// split them and lose the match). Two names share a line (a two-column layout), so it is applied with
+// FindAllString.
+var rosterName = regexp.MustCompile(`[A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)+`)
+
+// firstSpeaker (multiline) locates where the header ends and the body begins — the roster must be read
+// only up to here, or witness self-introductions ("My name is Vicky Guglielmo") leak in as questioners.
+var firstSpeaker = regexp.MustCompile(`(?m)` + speakerLine.String())
+
+var wordRe = regexp.MustCompile(`[a-z0-9]+`)
+
+// Load walks path (a file or a directory tree) and splits every .txt into speaker-turn passages,
+// returning a BM25 index over them. The directory layout carries provenance: the parent directory is
+// the hearing date, the file stem is the session.
+func Load(path string) (*Index, error) {
+	var files []string
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+	if info.IsDir() {
+		err = filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if !d.IsDir() && strings.HasSuffix(p, ".txt") {
+				files = append(files, p)
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, err
+		}
+		sort.Strings(files) // deterministic passage order across runs
+	} else {
+		files = []string{path}
+	}
+	if len(files) == 0 {
+		return nil, fmt.Errorf("no .txt files under %s", path)
+	}
+
+	ix := &Index{df: map[string]int{}}
+	for _, f := range files {
+		ps, err := splitFile(f)
+		if err != nil {
+			return nil, err
+		}
+		ix.Passages = append(ix.Passages, ps...)
+	}
+	if len(ix.Passages) == 0 {
+		return nil, fmt.Errorf("no passages parsed from %s (no speaker turns matched)", path)
+	}
+	ix.build()
+	return ix, nil
+}
+
+// splitFile parses one transcript into passages: read the roster, then accumulate lines into the
+// current turn until the next speaker line.
+func splitFile(path string) ([]Passage, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	date := filepath.Base(filepath.Dir(path))
+	session := strings.TrimSuffix(filepath.Base(path), ".txt")
+	roster := parseRoster(string(data))
+
+	var (
+		out     []Passage
+		speaker string
+		role    string
+		buf     []string
+		turn    int
+	)
+	flush := func() {
+		if speaker == "" {
+			return
+		}
+		text := strings.TrimSpace(strings.Join(buf, "\n"))
+		if text == "" {
+			return
+		}
+		out = append(out, Passage{
+			ID:      fmt.Sprintf("%s/%s#t%d", date, session, turn),
+			Date:    date, Session: session, Speaker: speaker, Role: role, Text: text,
+		})
+		turn++
+	}
+
+	sc := bufio.NewScanner(bytes.NewReader(data))
+	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for sc.Scan() {
+		line := sc.Text()
+		if m := speakerLine.FindStringSubmatch(line); m != nil {
+			flush()
+			speaker = strings.TrimSpace(m[1])
+			role = classify(speaker, roster)
+			// The remainder of the speaker line after "Name:" is the first line of the turn.
+			buf = []string{strings.TrimSpace(line[len(m[0]):])}
+			continue
+		}
+		if speaker != "" {
+			buf = append(buf, line)
+		}
+	}
+	flush()
+	return out, sc.Err()
+}
+
+// parseRoster extracts the committee members' surnames from the MEMBERS / PARTICIPATING MEMBERS header
+// block — the authoritative set of questioners for that hearing. Returns uppercased surnames.
+func parseRoster(doc string) map[string]bool {
+	set := map[string]bool{}
+	start := strings.Index(doc, "MEMBERS")
+	if start < 0 {
+		return set
+	}
+	// The roster runs from the first "MEMBERS" to where the body starts — the first speaker line, or a
+	// "WITNESSES" header, whichever comes first. Bounding here is what keeps witness names (listed in
+	// the WITNESSES block and stated in the body) out of the questioner set.
+	rest := doc[start:]
+	end := len(rest)
+	if loc := firstSpeaker.FindStringIndex(rest); loc != nil && loc[0] < end {
+		end = loc[0]
+	}
+	if w := strings.Index(rest, "WITNESS"); w >= 0 && w < end {
+		end = w // matches both "WITNESSES" and the singular "WITNESS (via videoconference)"
+	}
+	for _, name := range rosterName.FindAllString(rest[:end], -1) {
+		fields := strings.Fields(name)
+		surname := strings.ToUpper(fields[len(fields)-1])
+		set[surname] = true
+	}
+	return set
+}
+
+// classify tags a speaker. The Chair is always a questioner; a speaker whose surname is on the roster
+// is a questioner; everyone else is a witness. Surname match is on the final name token, uppercased,
+// because Hansard renders it in caps ("McINTOSH" → "MCINTOSH", roster "Tom McIntosh" → "MCINTOSH").
+func classify(speaker string, roster map[string]bool) string {
+	if strings.Contains(strings.ToUpper(speaker), "CHAIR") {
+		return RoleChair // "The CHAIR", "The DEPUTY CHAIR"
+	}
+	fields := strings.Fields(speaker)
+	if len(fields) == 0 {
+		return RoleWitness
+	}
+	surname := strings.ToUpper(fields[len(fields)-1])
+	if roster[surname] {
+		return RoleQuestioner
+	}
+	return RoleWitness
+}
+
+// build computes the BM25 statistics over the loaded passages.
+func (ix *Index) build() {
+	ix.docTerms = make([]map[string]int, len(ix.Passages))
+	ix.docLen = make([]int, len(ix.Passages))
+	total := 0
+	for i, p := range ix.Passages {
+		tf := map[string]int{}
+		n := 0
+		for _, tok := range tokenize(p.Text) {
+			tf[tok]++
+			n++
+		}
+		ix.docTerms[i] = tf
+		ix.docLen[i] = n
+		total += n
+		for term := range tf {
+			ix.df[term]++
+		}
+	}
+	if len(ix.Passages) > 0 {
+		ix.avgLen = float64(total) / float64(len(ix.Passages))
+	}
+}
+
+// scored pairs a passage index with its BM25 score for ranking.
+type scored struct {
+	i     int
+	score float64
+}
+
+// Search returns the top-k passages for a query, in rank order, stopping early once the running token
+// budget (maxTokens, approx by word count) would be exceeded. Ties break by passage ID so the result
+// is deterministic. A zero or negative k or maxTokens disables that bound.
+func (ix *Index) Search(query string, k, maxTokens int) []Passage {
+	qTerms := tokenize(query)
+	n := float64(len(ix.Passages))
+	ranked := make([]scored, len(ix.Passages))
+	for i := range ix.Passages {
+		var s float64
+		dl := float64(ix.docLen[i])
+		for _, qt := range qTerms {
+			tf := float64(ix.docTerms[i][qt])
+			if tf == 0 {
+				continue
+			}
+			df := float64(ix.df[qt])
+			idf := math.Log((n-df+0.5)/(df+0.5) + 1)
+			s += idf * (tf * (bm25K1 + 1)) / (tf + bm25K1*(1-bm25B+bm25B*dl/ix.avgLen))
+		}
+		ranked[i] = scored{i, s}
+	}
+	sort.SliceStable(ranked, func(a, b int) bool {
+		if ranked[a].score != ranked[b].score {
+			return ranked[a].score > ranked[b].score
+		}
+		return ix.Passages[ranked[a].i].ID < ix.Passages[ranked[b].i].ID
+	})
+
+	var out []Passage
+	tokens := 0
+	for _, r := range ranked {
+		if r.score == 0 {
+			break // no query term present — nothing to retrieve beyond here
+		}
+		if k > 0 && len(out) >= k {
+			break
+		}
+		if maxTokens > 0 && tokens+ix.docLen[r.i] > maxTokens && len(out) > 0 {
+			break // token cap reached; keep at least one passage
+		}
+		out = append(out, ix.Passages[r.i])
+		tokens += ix.docLen[r.i]
+	}
+	return out
+}
+
+// SpeakerInfo is one distinct speaker and the role the corpus assigned them.
+type SpeakerInfo struct {
+	Speaker string
+	Role    string
+	Turns   int
+}
+
+// Speakers returns the distinct speakers across the corpus, questioners/chair first then witnesses,
+// each alphabetical — the roster the speaker-detection check prints.
+func (ix *Index) Speakers() []SpeakerInfo {
+	seen := map[string]*SpeakerInfo{}
+	for _, p := range ix.Passages {
+		key := p.Speaker
+		if s, ok := seen[key]; ok {
+			s.Turns++
+		} else {
+			seen[key] = &SpeakerInfo{Speaker: p.Speaker, Role: p.Role, Turns: 1}
+		}
+	}
+	out := make([]SpeakerInfo, 0, len(seen))
+	for _, s := range seen {
+		out = append(out, *s)
+	}
+	rank := map[string]int{RoleChair: 0, RoleQuestioner: 1, RoleWitness: 2}
+	sort.Slice(out, func(a, b int) bool {
+		if rank[out[a].Role] != rank[out[b].Role] {
+			return rank[out[a].Role] < rank[out[b].Role]
+		}
+		return out[a].Speaker < out[b].Speaker
+	})
+	return out
+}
+
+// Format renders passages as the judge sees them: a provenance header per passage (id, date, speaker,
+// role) above its text, so the model can tell a witness answer from a questioner's question.
+func Format(ps []Passage) string {
+	var b strings.Builder
+	for _, p := range ps {
+		fmt.Fprintf(&b, "[%s · %s · %s (%s)]\n%s\n\n", p.ID, p.Date, p.Speaker, p.Role, p.Text)
+	}
+	return strings.TrimRight(b.String(), "\n")
+}
+
+// IDs returns the passage ids in order, for the chain record.
+func IDs(ps []Passage) []string {
+	out := make([]string, len(ps))
+	for i, p := range ps {
+		out[i] = p.ID
+	}
+	return out
+}
+
+func tokenize(s string) []string { return wordRe.FindAllString(strings.ToLower(s), -1) }

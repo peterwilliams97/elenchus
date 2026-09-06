@@ -69,6 +69,28 @@ Both backends cap output at `backend.MaxTokens` (Anthropic's `max_tokens`, Ollam
 surface a truncated response (`stop_reason=max_tokens` / `done_reason=length`) as an error, so a cut-off
 case collapses to `error` rather than a silent partial.
 
+## Retrieval
+
+In faithfulness mode the source can be a whole corpus of hearing transcripts, not one file. Rather
+than send every claim the full ~25K-token corpus, `internal/retrieve` splits each transcript into
+speaker-turn passages and, per claim, sends the judge only the BM25 top-`k` (default 8, ~8K-token cap).
+Deterministic, no model call. `-retrieve=none` restores the full-corpus behaviour.
+
+- **Passages.** A transcript is Hansard-style: a header naming committee MEMBERS and the Chair, then a
+  body of turns opening with a speaker line ("Vicky GUGLIELMO:", "The CHAIR:"). A turn is one passage,
+  tagged with date (parent directory), session (file stem), speaker, and role. Role is `witness`,
+  `questioner` (a committee member, matched against the MEMBERS roster), or `chair`. The role tag is
+  what lets a judge reject a claim that quotes a questioner's question as though it were testimony.
+- **Query.** The claim text plus its §-heading labels (the `key=Label` path from the claims file).
+- **Chain.** Each faithfulness record carries the ids of the passages the judge saw (`passages`), so a
+  verdict can be traced to its evidence.
+- **`-speakers`.** `assay -speakers -source CORPUS` splits the corpus and prints the distinct speakers
+  and their roles, then exits — a corpus inspection with no model call.
+
+Retrieval is lossy by construction: top-`k` cannot reach evidence a full-corpus judge would find
+scattered across many transcripts. `examples/vic-lceic/RETRIEVAL_REFUTER.md` measures the gap against a
+Sonnet full-corpus run.
+
 ## Flags
 
 | Flag           | Default                     | Meaning                                                        |
@@ -77,7 +99,10 @@ case collapses to `error` rather than a silent partial.
 | `-backend`     | `anthropic`                 | LLM backend: `anthropic` \| `ollama` (see Backends).          |
 | `-ollama-url`  | `$OLLAMA_HOST` or `http://localhost:11434` | Ollama server base URL (`-backend ollama`).      |
 | `-think`       | `false`                     | Ollama only: emit the model's reasoning block (needs a higher token cap). |
-| `-source`      | `""`                        | Transcript file → faithfulness mode.                          |
+| `-retrieve`    | `bm25`                      | Per-claim passage retrieval: `bm25` \| `none` (see Retrieval). |
+| `-k`           | `8`                         | Passages retrieved per claim (BM25 top-k).                    |
+| `-speakers`    | `false`                     | Print the distinct speakers + roles in `-source`, then exit.  |
+| `-source`      | `""`                        | Transcript file or corpus dir → faithfulness mode.            |
 | `-evidence`    | `false`                     | Evidence-grounding mode (enables web search).                 |
 | `-audit`       | `false`                     | Run all three modes and emit a cross-tab (needs `-source`).   |
 | `-text`        | `""`                        | Inline input instead of a file.                               |

@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -28,6 +29,7 @@ import (
 	"assay/internal/backend/anthropic"
 	"assay/internal/backend/ollama"
 	"assay/internal/brief"
+	"assay/internal/retrieve"
 	"assay/internal/tree"
 )
 
@@ -55,6 +57,9 @@ type cfg struct {
 	chainFile    string // Tier-2 JSONL destination; set by runners before case loop
 	renderMode   string // stdout renderer: "brief" (default), "full", or "tree"
 	treeAll      bool   // -tree=full: expand every node rather than only Needs-you branches
+	retrieveMode string // "bm25" (default) retrieves per-claim passages; "none" sends the full corpus
+	k            int    // -k: passages retrieved per claim (BM25 top-k)
+	index        *retrieve.Index // built once from the source corpus when retrieveMode != "none"
 	auditPath    string // full-table sink; every run writes it, whichever renderer stdout gets
 	treeHTMLPath string // eval/<stamp>/tree.html sink, written alongside audit.md
 	usage        *usageCounters
@@ -121,7 +126,11 @@ func main() {
 	flag.StringVar(&backendName, "backend", "anthropic", "LLM backend: anthropic|ollama")
 	flag.StringVar(&ollamaURL, "ollama-url", envOr("OLLAMA_HOST", ollama.DefaultBaseURL), "ollama server base URL")
 	flag.BoolVar(&think, "think", false, "ollama: emit the model's reasoning block (default off; on needs a higher token cap)")
-	flag.StringVar(&src, "source", "", "transcript file → faithfulness mode")
+	var speakers bool
+	flag.StringVar(&c.retrieveMode, "retrieve", "bm25", "per-claim passage retrieval: bm25|none (none sends the full corpus)")
+	flag.IntVar(&c.k, "k", 8, "passages retrieved per claim (BM25 top-k)")
+	flag.BoolVar(&speakers, "speakers", false, "print the distinct speakers + roles found in -source, then exit")
+	flag.StringVar(&src, "source", "", "transcript file or corpus dir → faithfulness mode")
 	flag.BoolVar(&ev, "evidence", false, "evidence-grounding mode (web search)")
 	flag.BoolVar(&audit, "audit", false, "run all three modes and emit a cross-tab (needs -source)")
 	flag.StringVar(&text, "text", "", "inline input instead of a file")
@@ -160,6 +169,20 @@ func main() {
 	if fromChain != "" {
 		c.usage = newUsageCounters()
 		c.runFromChain(fromChain, flag.Arg(0))
+		return
+	}
+
+	// -speakers is a corpus inspection: split the source into passages and print the distinct speakers
+	// and the role each was tagged, then exit. No model call, so no key needed.
+	if speakers {
+		if src == "" {
+			fatal("-speakers needs -source CORPUS")
+		}
+		ix, err := retrieve.Load(src)
+		if err != nil {
+			fatal("load corpus: " + err.Error())
+		}
+		printSpeakers(ix)
 		return
 	}
 
@@ -213,6 +236,22 @@ func main() {
 		c.treeHTMLPath = filepath.Join(chainDir, "tree.html")
 	}
 
+	// Build the retrieval index once from the source corpus, so every claim retrieves from the same
+	// passage set. On failure (e.g. a source with no speaker turns) fall back to full-corpus rather
+	// than aborting — retrieval is an optimisation, not a precondition.
+	if c.retrieveMode != "none" && src != "" {
+		ix, err := retrieve.Load(src)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: retrieval disabled (%v); using full corpus\n", err)
+			c.retrieveMode = "none"
+		} else {
+			c.index = ix
+			if c.verbose {
+				fmt.Fprintf(os.Stderr, "[retrieve] %d passages, k=%d\n", len(ix.Passages), c.k)
+			}
+		}
+	}
+
 	stopHeartbeat := func() {}
 	if !c.quiet && c.showProgress {
 		stopHeartbeat = startHeartbeat(c.model, c.usage, func() *runTally { return c.tally })
@@ -231,7 +270,7 @@ func main() {
 		}
 		c.runEvidence(input, evSrc)
 	case src != "":
-		c.runFaithfulness(input, mustRead(src))
+		c.runFaithfulness(input, src)
 	default:
 		c.runSubstance(input)
 	}
@@ -353,23 +392,26 @@ func (c *cfg) runSubstance(input string) {
 	c.present(rows, tally(vs), mdSubstance(results), func() { c.termSubstance(results) }, details)
 }
 
-func (c *cfg) runFaithfulness(input, src string) {
+func (c *cfg) runFaithfulness(input, srcPath string) {
 	raw := splitSummary(input)
 	c.tally = newRunTally(len(raw))
 	results := make([]faith, len(raw))
 	rows := make([]brief.Row, len(raw))
 	vs := make([]string, len(raw))
 	details := make(map[string]tree.Leaf, len(raw))
+	fullSrc := "" // lazily loaded once, only when retrieval is off
 	for i, item := range raw {
 		id, path, text := parseClaimLine(item)
 		if id == "" {
 			id = fmt.Sprintf("c%d", i+1)
 		}
+		claimSrc, pids := c.sourceForClaim(text, path, srcPath, &fullSrc)
 		t := c.progressStart(i, len(raw), "faithfulness")
-		chosen, spread := c.faithRepeat(text, src)
+		chosen, spread := c.faithRepeat(text, claimSrc)
 		results[i] = chosen
 		rec := faithChainRecord(i, len(raw), text, chosen, t)
 		rec.Spread = spread
+		rec.Passages = pids
 		c.appendChain(rec)
 		c.progressDone(i, len(raw), chosen.Verdict, text, t)
 		rows[i] = brief.Row{ID: id, Path: path, Text: text,
@@ -379,6 +421,77 @@ func (c *cfg) runFaithfulness(input, src string) {
 		vs[i] = chosen.Verdict
 	}
 	c.present(rows, tally(vs), mdFaith(results), func() { c.termFaith(results) }, details)
+}
+
+// retrieveTokenCap bounds the passages sent to the judge in bm25 mode — roughly 8K tokens, a third of
+// a full hearing, enough that the answer is present but small enough to keep the judge focused.
+const retrieveTokenCap = 8000
+
+// sourceForClaim returns the source text the faithfulness judge sees for one claim, plus the ids of
+// any passages it is built from. With retrieval off it is the full corpus (loaded once into *fullSrc);
+// with retrieval on it is the BM25 top-k passages for the claim text plus its §-heading hint.
+func (c cfg) sourceForClaim(text, path, srcPath string, fullSrc *string) (string, []string) {
+	if c.index == nil {
+		if *fullSrc == "" {
+			*fullSrc = readCorpus(srcPath)
+		}
+		return *fullSrc, nil
+	}
+	passages := c.index.Search(text+" "+hintFromPath(path), c.k, retrieveTokenCap)
+	return retrieve.Format(passages), retrieve.IDs(passages)
+}
+
+// hintFromPath turns a claim's "key=Label/key=Label" §-path into a plain-text query hint (the Labels),
+// so retrieval is steered by the section a claim sits under as well as its own words.
+func hintFromPath(path string) string {
+	if path == "" {
+		return ""
+	}
+	var labels []string
+	for _, seg := range strings.Split(path, "/") {
+		if i := strings.Index(seg, "="); i >= 0 {
+			labels = append(labels, seg[i+1:])
+		} else {
+			labels = append(labels, seg)
+		}
+	}
+	return strings.Join(labels, " ")
+}
+
+// readCorpus reads a full-corpus source for retrieval-off mode: a single file, or every .txt under a
+// directory concatenated in sorted order (deterministic).
+func readCorpus(path string) string {
+	info, err := os.Stat(path)
+	if err != nil {
+		fatal("read source " + path + ": " + err.Error())
+	}
+	if !info.IsDir() {
+		return mustRead(path)
+	}
+	var files []string
+	filepath.WalkDir(path, func(p string, d os.DirEntry, err error) error {
+		if err == nil && !d.IsDir() && strings.HasSuffix(p, ".txt") {
+			files = append(files, p)
+		}
+		return nil
+	})
+	sort.Strings(files)
+	var b strings.Builder
+	for _, f := range files {
+		b.WriteString(mustRead(f))
+		b.WriteString("\n\n")
+	}
+	return b.String()
+}
+
+// printSpeakers prints the distinct speakers found in a corpus with their assigned role, questioners
+// and chair before witnesses — the -speakers output.
+func printSpeakers(ix *retrieve.Index) {
+	sp := ix.Speakers()
+	fmt.Printf("%d passages · %d distinct speakers\n", len(ix.Passages), len(sp))
+	for _, s := range sp {
+		fmt.Printf("  %-10s %4d turns  %s\n", s.Role, s.Turns, s.Speaker)
+	}
 }
 
 // intendedProposition returns what_source_actually_says when the faithfulness pass flagged the
@@ -1366,7 +1479,8 @@ type chainRecord struct {
 	Backend  string          `json:"backend,omitempty"` // provider that produced this verdict
 	Claim    string          `json:"claim"`
 	Verdict  string          `json:"verdict"`
-	Spread   string          `json:"spread,omitempty"` // "k/N" agreement when -n>1, else ""
+	Spread   string          `json:"spread,omitempty"`   // "k/N" agreement when -n>1, else ""
+	Passages []string        `json:"passages,omitempty"` // retrieved passage ids the judge saw (bm25 mode)
 	ElapsedS float64         `json:"elapsed_s"`
 	Detail   json.RawMessage `json:"detail"`
 }
