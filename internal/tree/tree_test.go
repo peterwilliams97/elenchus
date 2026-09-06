@@ -164,3 +164,23 @@ func TestSpreadInLeaf(t *testing.T) {
 		t.Errorf("html tree missing spread:\n%s", h)
 	}
 }
+
+// TestSoWhatOnNeedsLeaf pins that a Needs-you leaf carries its one-line stakes in the text tree and
+// that the HTML body shows it, while a clean leaf gets no so-what line.
+func TestSoWhatOnNeedsLeaf(t *testing.T) {
+	rows := []brief.Row{
+		{ID: "F29", Path: "3=Ch3/3.3=Funding", Text: "fair share", Faith: "partial", Gap: "denominator",
+			SoWhat: "Reader thinks Victoria funded fairly overall; true of only 3% of the money."},
+		{ID: "F1", Path: "3=Ch3/3.3=Funding", Text: "clean", Faith: "faithful"},
+	}
+	txt := Render(rows, false, "")
+	if !strings.Contains(txt, "↳ so what:") || !strings.Contains(txt, "3% of the money") {
+		t.Errorf("needs-you leaf missing so-what:\n%s", txt)
+	}
+	if strings.Count(txt, "↳ so what:") != 1 {
+		t.Errorf("so-what should appear once (only on the needs-you leaf):\n%s", txt)
+	}
+	if h := RenderHTML(rows, map[string]Leaf{}, ""); !strings.Contains(h, "so what:") {
+		t.Errorf("html missing so-what:\n%s", h)
+	}
+}

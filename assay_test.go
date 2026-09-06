@@ -1366,3 +1366,18 @@ func TestFaithRepeatSpread(t *testing.T) {
 		t.Errorf("returned run should be the first partial, got reason %q", got.Evidence)
 	}
 }
+
+// TestFaithCriticSysGapAndSoWhat confirms the value-model additions (docs/VALUE.md) are in the
+// faithfulness critic prompt: the structured gap field with all five gap classes plus none, and the
+// so-what stakes line.
+func TestFaithCriticSysGapAndSoWhat(t *testing.T) {
+	for _, needle := range []string{
+		`"gap":"none"|"scope"|"denominator"|"timerange"|"attribution"|"other"`,
+		"SO WHAT", "<=20 words",
+		`"so_what":string`,
+	} {
+		if !strings.Contains(faithCriticSys, needle) {
+			t.Errorf("faithCriticSys missing %q", needle)
+		}
+	}
+}

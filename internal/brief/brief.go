@@ -22,6 +22,8 @@ type Row struct {
 	Faith, Substance, Grounding                string
 	FaithReason, SubstanceReason, GroundReason string
 	Spread                                     string // "k/N" verdict agreement under -n>1, else ""
+	Gap                                        string // judge's gap class; a non-"none" gap on a partial opens the branch
+	SoWhat                                     string // ≤20-word stakes line for a needs-you leaf
 }
 
 // Sel is a selected row plus the tier that selected it (0 = highest priority).
@@ -38,11 +40,15 @@ var numRe = regexp.MustCompile(`[0-9]`)
 //	0 (a) — faithfulness contradicted or absent
 //	1 (b) — faithful AND grounding refuted (the laundering signature)
 //	2 (c) — faithfulness overstated where the claim contains a number
-//	3 (d) — grounding refuted
+//	3 (e) — faithfulness partial with a non-"none" gap (scope/denominator/timerange/attribution/other)
+//	4 (d) — grounding refuted
 //
-// A tier needing a signal the run did not produce (empty verdict) simply does not match, so a
-// faithfulness-only run reaches only tiers a and c. Reused by the tree package for expansion.
-func Qualify(faith, substance, grounding, text string) (tier int, ok bool) {
+// Tier e is the value tier from docs/VALUE.md: a "partial" whose narrowing changes what a reader
+// would do (F29's denominator gap) must reach the summary rather than collapse. The gap is the
+// judge's structured field, so this rule reads a verdict, not prose. A tier needing a signal the run
+// did not produce (empty verdict) simply does not match, so a faithfulness-only run reaches only
+// tiers a, c, and e. Reused by the tree package for expansion.
+func Qualify(faith, substance, grounding, gap, text string) (tier int, ok bool) {
 	switch {
 	case faith == "contradicted" || faith == "absent":
 		return 0, true
@@ -50,8 +56,10 @@ func Qualify(faith, substance, grounding, text string) (tier int, ok bool) {
 		return 1, true
 	case faith == "overstated" && numRe.MatchString(text):
 		return 2, true
-	case grounding == "refuted":
+	case faith == "partial" && gap != "" && gap != "none":
 		return 3, true
+	case grounding == "refuted":
+		return 4, true
 	}
 	return 0, false
 }
@@ -61,7 +69,7 @@ func Qualify(faith, substance, grounding, text string) (tier int, ok bool) {
 func Selected(rows []Row) []Sel {
 	var sels []Sel
 	for _, r := range rows {
-		if tier, ok := Qualify(r.Faith, r.Substance, r.Grounding, r.Text); ok {
+		if tier, ok := Qualify(r.Faith, r.Substance, r.Grounding, r.Gap, r.Text); ok {
 			sels = append(sels, Sel{Row: r, Tier: tier})
 		}
 	}
@@ -77,11 +85,39 @@ func Selected(rows []Row) []Sel {
 	return sels
 }
 
+// OpenedBranches counts the distinct top-level path branches that hold a Needs-you claim — the
+// number of executive-summary lines the tree changes, which docs/VALUE.md calls the run's value. A
+// row whose top segment is empty counts under one "unplaced" branch, matching the tree.
+func OpenedBranches(rows []Row) int {
+	seen := make(map[string]bool)
+	for _, s := range Selected(rows) {
+		seen[topSegment(s.Row.Path)] = true
+	}
+	return len(seen)
+}
+
+// topSegment returns the key of a Path's first "/"-separated `key=label` segment, or "unplaced" when
+// the Path is empty — the same top-level grouping the tree builds.
+func topSegment(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return "unplaced"
+	}
+	first := path
+	if i := strings.IndexByte(path, '/'); i >= 0 {
+		first = path[:i]
+	}
+	if k, _, ok := strings.Cut(first, "="); ok {
+		return strings.TrimSpace(k)
+	}
+	return strings.TrimSpace(first)
+}
+
 // reasonFor returns the rationale to display for the tier that selected the row: the faithfulness
-// finding for the faithfulness tiers (a, c), the grounding finding for the grounding tiers (b, d).
+// finding for the faithfulness tiers (a, c, e), the grounding finding for the grounding tiers (b, d).
 func reasonFor(s Sel) string {
 	switch s.Tier {
-	case 0, 2:
+	case 0, 2, 3:
 		return s.Row.FaithReason
 	default:
 		return s.Row.GroundReason

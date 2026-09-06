@@ -12,17 +12,17 @@ import (
 
 func TestQualifyTiers(t *testing.T) {
 	for _, tc := range qualifyCases {
-		gotTier, gotOK := Qualify(tc.faith, tc.substance, tc.grounding, tc.text)
+		gotTier, gotOK := Qualify(tc.faith, tc.substance, tc.grounding, tc.gap, tc.text)
 		if gotOK != tc.ok || (tc.ok && gotTier != tc.tier) {
-			t.Errorf("%s: Qualify(%q,%q,%q,%q) = (%d,%v), want (%d,%v)",
-				tc.name, tc.faith, tc.substance, tc.grounding, tc.text, gotTier, gotOK, tc.tier, tc.ok)
+			t.Errorf("%s: Qualify(%q,%q,%q,%q,%q) = (%d,%v), want (%d,%v)",
+				tc.name, tc.faith, tc.substance, tc.grounding, tc.gap, tc.text, gotTier, gotOK, tc.tier, tc.ok)
 		}
 	}
 }
 
 func TestSelectedOrder(t *testing.T) {
 	rows := []Row{
-		{ID: "F10", Text: "b", Grounding: "refuted"},                                    // tier 3
+		{ID: "F10", Text: "b", Grounding: "refuted"},                                    // tier 4
 		{ID: "F2", Text: "a", Faith: "absent"},                                          // tier 0
 		{ID: "F30", Text: "has 5 things", Faith: "overstated"},                          // tier 2 (number)
 		{ID: "F3", Text: "faithful yet false", Faith: "faithful", Grounding: "refuted"}, // tier 1
@@ -90,19 +90,28 @@ func TestIdLess(t *testing.T) {
 // ── fixtures ────────────────────────────────────────────────────────────────
 
 var qualifyCases = []struct {
-	name                              string
-	faith, substance, grounding, text string
-	tier                              int
-	ok                                bool
+	name                                   string
+	faith, substance, grounding, gap, text string
+	tier                                   int
+	ok                                     bool
 }{
-	{"contradicted → a", "contradicted", "", "", "x", 0, true},
-	{"absent → a", "absent", "", "", "x", 0, true},
-	{"laundering → b", "faithful", "", "refuted", "x", 1, true},
-	{"overstated+number → c", "overstated", "", "", "up 5%", 2, true},
-	{"overstated no number → miss", "overstated", "", "", "many", 0, false},
-	{"grounding refuted → d", "", "", "refuted", "x", 3, true},
-	{"clean faithful → miss", "faithful", "", "", "x", 0, false},
-	{"substance only → miss", "", "hollow", "", "x", 0, false},
+	{"contradicted → a", "contradicted", "", "", "none", "x", 0, true},
+	{"absent → a", "absent", "", "", "none", "x", 0, true},
+	{"laundering → b", "faithful", "", "refuted", "none", "x", 1, true},
+	{"overstated+number → c", "overstated", "", "", "none", "up 5%", 2, true},
+	{"overstated no number → miss", "overstated", "", "", "none", "many", 0, false},
+	// Tier e (docs/VALUE.md): a partial reaches the summary iff the judge marked a real gap. Each
+	// gap class is a named case; adding a class means adding a line here, not editing the harness.
+	{"partial denominator → e (F29)", "partial", "", "", "denominator", "fair share", 3, true},
+	{"partial scope → e", "partial", "", "", "scope", "x", 3, true},
+	{"partial timerange → e", "partial", "", "", "timerange", "x", 3, true},
+	{"partial attribution → e", "partial", "", "", "attribution", "x", 3, true},
+	{"partial other → e", "partial", "", "", "other", "x", 3, true},
+	{"partial gap none → miss", "partial", "", "", "none", "x", 0, false},
+	{"partial gap empty → miss", "partial", "", "", "", "x", 0, false},
+	{"grounding refuted → d", "", "", "refuted", "none", "x", 4, true},
+	{"clean faithful → miss", "faithful", "", "", "none", "x", 0, false},
+	{"substance only → miss", "", "hollow", "", "none", "x", 0, false},
 }
 
 var idLessCases = []struct {
@@ -113,4 +122,18 @@ var idLessCases = []struct {
 	{"F2a", "F2b", true, false}, // suffix breaks the tie
 	{"F2", "F2", false, true},   // equal
 	{"F10", "F2", false, false}, // greater
+}
+
+// TestOpenedBranches pins the value line: the count of distinct top-level branches holding a
+// Needs-you claim. Two chapters each hold one flagged claim; clean and unplaced rows do not count.
+func TestOpenedBranches(t *testing.T) {
+	rows := []Row{
+		{ID: "F1", Path: "2=Chapter 2/2.1=x", Faith: "absent"},                      // needs, ch2
+		{ID: "F2", Path: "2=Chapter 2/2.2=y", Faith: "faithful"},                    // clean
+		{ID: "F3", Path: "3=Chapter 3/3.1=z", Faith: "partial", Gap: "denominator"}, // needs, ch3
+		{ID: "F4", Faith: "faithful"},                                               // clean, unplaced
+	}
+	if n := OpenedBranches(rows); n != 2 {
+		t.Errorf("OpenedBranches = %d, want 2 (ch2, ch3)", n)
+	}
 }

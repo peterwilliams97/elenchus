@@ -362,7 +362,8 @@ func (c *cfg) runFaithfulness(input, src string) {
 		c.appendChain(rec)
 		c.progressDone(i, len(raw), chosen.Verdict, text, t)
 		rows[i] = brief.Row{ID: id, Path: path, Text: text,
-			Faith: chosen.Verdict, FaithReason: chosen.Evidence, Spread: spread}
+			Faith: chosen.Verdict, FaithReason: chosen.Evidence, Spread: spread,
+			Gap: chosen.Gap, SoWhat: chosen.SoWhat}
 		details[id] = tree.Leaf{Reason: chosen.Evidence, Quotes: chosen.Quotes}
 		vs[i] = chosen.Verdict
 	}
@@ -549,7 +550,7 @@ func (c cfg) faithClaim(claim, src string) faith {
 		return faith{Claim: claim, Verdict: "error"}
 	}
 	return faith{Claim: claim, Verdict: fj.Verdict, Evidence: fj.Evidence,
-		SourceSays: fj.SourceSays, Quotes: d.Quotes}
+		SourceSays: fj.SourceSays, Gap: fj.Gap, SoWhat: fj.SoWhat, Quotes: d.Quotes}
 }
 
 // faithRepeat runs faithClaim c.repeat times (once when repeat ≤ 1) and returns the modal result
@@ -761,8 +762,26 @@ Verdict:
 - "contradicted": the source says the opposite.
 
 For "partial"/"overstated", give what_source_actually_says (the faithful version, including the
-correct register). Return ONLY JSON:
-{"findings":[{"mode":string,"finding":string}],"verdict":"faithful"|"partial"|"overstated"|"absent"|"contradicted","evidence":string,"what_source_actually_says":string|null}`
+correct register).
+
+GAP — classify why the summary overreaches, as the single field that most changes what a reader
+would do. This decides whether a "partial" claim reaches the reader or stays buried, so err toward
+naming a gap rather than "none":
+- "scope": true only of a narrower population, place, or category than the summary implies.
+- "denominator": true only of a specific fraction, share, or subtotal — the summary drops the base
+  it is a fraction of (e.g. a per-capita share of one programme that is itself 3% of total funding,
+  reported as overall fairness).
+- "timerange": true only within a limited period the summary drops.
+- "attribution": the support is about a different actor, programme, or body than the one named.
+- "other": a real gap that is none of the above.
+- "none": the narrowing is benign — no reader would act differently knowing it. Use "none" for
+  "faithful", and for verdicts other than "partial" unless a gap genuinely applies.
+
+SO WHAT — if a reader who believed the summary would act on a false impression, state in <=20 words
+what they would get wrong. Empty string when the summary is faithful or the gap is benign.
+
+Return ONLY JSON:
+{"findings":[{"mode":string,"finding":string}],"verdict":"faithful"|"partial"|"overstated"|"absent"|"contradicted","evidence":string,"what_source_actually_says":string|null,"gap":"none"|"scope"|"denominator"|"timerange"|"attribution"|"other","so_what":string}`
 
 const evidenceSys = `You are the Evidence Grounder. Decide whether the CLAIM is TRUE, using web
 search to find real, current evidence — the actual truth-makers, not anyone's assertion that it is
@@ -1003,6 +1022,7 @@ type cacheControl struct {
 
 // ephemeral is the shared marker for every cache breakpoint; the API caps a request at four.
 var ephemeral = &cacheControl{Type: "ephemeral"}
+
 type apiTool struct {
 	Type    string `json:"type"`
 	Name    string `json:"name"`
@@ -1148,6 +1168,8 @@ type substance struct {
 }
 type faith struct {
 	Claim, Verdict, Evidence, SourceSays string
+	Gap                                  string   // {none,scope,denominator,timerange,attribution,other}
+	SoWhat                               string   // ≤20 words: what a reader who believed the summary gets wrong
 	Quotes                               []string // defender's verbatim source spans, for the tree leaf
 }
 type source struct{ Title, URL string }
@@ -1192,6 +1214,8 @@ type faithJSON struct {
 	Verdict    string `json:"verdict"`
 	Evidence   string `json:"evidence"`
 	SourceSays string `json:"what_source_actually_says"`
+	Gap        string `json:"gap"`
+	SoWhat     string `json:"so_what"`
 }
 type evidenceJSON struct {
 	Verdict string `json:"verdict"`
@@ -1460,6 +1484,8 @@ func (c *cfg) present(rows []brief.Row, counts, mdTable string, termTable func()
 		}
 	}
 	fmt.Println(c.headerLine())
+	// The value line (docs/VALUE.md): how many executive-summary lines this run changes.
+	fmt.Printf("changes %d summary lines\n", brief.OpenedBranches(rows))
 	switch c.renderMode {
 	case "full":
 		if c.asMarkdown {
@@ -1555,6 +1581,8 @@ type faithDetail struct {
 	CriticFinding   string   `json:"critic_finding,omitempty"`
 	DistortionType  string   `json:"distortion_type,omitempty"`
 	SourceSays      string   `json:"source_says,omitempty"`
+	Gap             string   `json:"gap,omitempty"`     // the judge's gap classification
+	SoWhat          string   `json:"so_what,omitempty"` // the stakes line for a needs-you leaf
 }
 
 type evidenceDetail struct {
@@ -1595,6 +1623,8 @@ func faithChainRecord(i, total int, claim string, f faith, start time.Time) chai
 		Quotes:        f.Quotes,
 		CriticFinding: f.Evidence,
 		SourceSays:    f.SourceSays,
+		Gap:           f.Gap,
+		SoWhat:        f.SoWhat,
 	}
 	raw, _ := json.Marshal(det)
 	return chainRecord{
@@ -1634,6 +1664,8 @@ func auditChainRecord(i, n int, claim string, f faith, s substance, e evidence, 
 			Quotes:        f.Quotes,
 			CriticFinding: f.Evidence,
 			SourceSays:    f.SourceSays,
+			Gap:           f.Gap,
+			SoWhat:        f.SoWhat,
 		},
 		Substance: substanceDetail{
 			Steelman:       s.Steelman,
@@ -1774,9 +1806,10 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 			var det faithDetail
 			_ = json.Unmarshal(r.Detail, &det)
 			fr[i] = faith{Claim: r.Claim, Verdict: r.Verdict, Evidence: det.CriticFinding,
-				SourceSays: det.SourceSays, Quotes: det.Quotes}
+				SourceSays: det.SourceSays, Gap: det.Gap, SoWhat: det.SoWhat, Quotes: det.Quotes}
 			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
-				Faith: r.Verdict, FaithReason: det.CriticFinding, Spread: r.Spread}
+				Faith: r.Verdict, FaithReason: det.CriticFinding, Spread: r.Spread,
+				Gap: det.Gap, SoWhat: det.SoWhat}
 			details[ids[i]] = tree.Leaf{Reason: det.CriticFinding, Quotes: det.Quotes}
 			vs[i] = r.Verdict
 		}
@@ -1825,7 +1858,8 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 			_ = json.Unmarshal(r.Detail, &det)
 			fv, sv, evv := parseAuditVerdict(r.Verdict)
 			fr[i] = faith{Claim: r.Claim, Verdict: fv, Evidence: det.Faith.CriticFinding,
-				SourceSays: det.Faith.SourceSays, Quotes: det.Faith.Quotes}
+				SourceSays: det.Faith.SourceSays, Gap: det.Faith.Gap, SoWhat: det.Faith.SoWhat,
+				Quotes: det.Faith.Quotes}
 			sr[i] = substance{Claim: r.Claim, Verdict: sv, Reason: det.Substance.Reason,
 				SurvivingClaim: det.Substance.SurvivingClaim, Steelman: det.Substance.Steelman}
 			er[i] = evidence{Claim: r.Claim, Verdict: evv, Finding: det.Evidence.Finding,
@@ -1833,7 +1867,8 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 				OriginalVerdict: det.Evidence.OriginalVerdict}
 			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
 				Faith: fv, Substance: sv, Grounding: evv,
-				FaithReason: det.Faith.CriticFinding, GroundReason: det.Evidence.Finding}
+				FaithReason: det.Faith.CriticFinding, GroundReason: det.Evidence.Finding,
+				Gap: det.Faith.Gap, SoWhat: det.Faith.SoWhat}
 			details[ids[i]] = tree.Leaf{Reason: det.Faith.CriticFinding, Quotes: det.Faith.Quotes}
 			fvs[i], svs[i], evs[i] = fv, sv, evv
 		}

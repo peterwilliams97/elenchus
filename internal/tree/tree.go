@@ -124,6 +124,9 @@ func renderHTML(b *strings.Builder, n *node, details map[string]Leaf) {
 			html.EscapeString(r.ID), html.EscapeString(truncate(r.Text, 60)),
 			html.EscapeString(leafVerdict(r)))
 		b.WriteString(`<div class="d">`)
+		if r.SoWhat != "" {
+			fmt.Fprintf(b, "so what: %s\n", html.EscapeString(r.SoWhat))
+		}
 		fmt.Fprintf(b, "claim: %s\n", html.EscapeString(r.Text))
 		d := details[r.ID]
 		if d.Reason != "" {
@@ -238,6 +241,10 @@ func render(b *strings.Builder, n *node, depth int, needs map[string]bool, expan
 	indent := strings.Repeat("  ", depth)
 	if n.leaf() {
 		fmt.Fprintf(b, "%s%s  %s  %s\n", indent, n.key, truncate(n.row.Text, 60), leafVerdict(*n.row))
+		// A Needs-you leaf states its stakes: what a reader who believed the report would get wrong.
+		if needs[n.key] && n.row.SoWhat != "" {
+			fmt.Fprintf(b, "%s    ↳ so what: %s\n", indent, n.row.SoWhat)
+		}
 		return
 	}
 	fmt.Fprintf(b, "%s%s  %s  [%d]\n", indent, n.key, label12(n.label), directCount(n))

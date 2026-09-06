@@ -85,6 +85,11 @@ by any of this.
 the API-call count, the estimated cost, and the wall time it took. Under `-from` every figure is
 zero (no model call was made), which is the point.
 
+**Value line.** Directly under the header, `changes N summary lines` — the count of distinct
+top-level branches the tree opens (`brief.OpenedBranches`), which `docs/VALUE.md` defines as the
+run's value: how many executive-summary lines a reader would change after reading the tree. The USAGE
+line beside it carries the cost, so value and cost can be weighed against each other.
+
 `-full` and `-tree` are mutually exclusive; passing both is an error (`-full and -tree select
 different stdout renderers; choose one`).
 
@@ -153,12 +158,17 @@ A claim qualifies if it matches any tier. Tiers are the priority order:
 - **b.** audit rows where faithfulness is `faithful` **and** grounding is `refuted` (the laundering
   signature: a claim faithfully transcribed from the source yet false about the world).
 - **c.** faithfulness verdict is `overstated` **and** the claim text contains a number (`[0-9]`).
+- **e.** faithfulness verdict is `partial` **and** the judge's `gap` field is not `none` — a scope,
+  denominator, time-range, or attribution mismatch between what the summary implies and what the
+  source supports. This is the value tier of `docs/VALUE.md`: a `partial` whose narrowing would
+  change a reader's action (the F29 denominator gap) must reach the summary rather than collapse.
+  The gap is a structured judge field, so the rule reads a verdict, not prose.
 - **d.** grounding verdict is `refuted`.
 
-Sort key: tier (a < b < c < d), then claim id, then — to break any remaining tie deterministically —
-the claim text. A claim matching more than one tier is counted once, under its highest (earliest)
-tier. Tiers that need a signal the run didn't produce (e.g. tier b outside audit mode) match
-nothing.
+Sort key: tier (a < b < c < e < d), then claim id, then — to break any remaining tie
+deterministically — the claim text. A claim matching more than one tier is counted once, under its
+highest (earliest) tier. Tiers that need a signal the run didn't produce (e.g. tier b outside audit
+mode, or tier e with no `gap` field) match nothing.
 
 ## Tree report
 
@@ -189,6 +199,10 @@ One node per line:
   verdict (`contradicted` > `absent` > `overstated` > `partial` > `faithful`), so a split surfaces
   the reading a human is likelier to need to check. The fraction rides in the chain (`spread`) and
   appears in the same place in `tree.html`.
+- **So-what line** — a Needs-you leaf is followed by one indented line, `↳ so what: <…>`, the
+  judge's ≤ 20-word statement of what a reader who believed the report would get wrong (`docs/VALUE.md`).
+  It rides in the chain (`so_what`) and shows in the leaf body of `tree.html`. A leaf not in the
+  Needs-you set gets no such line.
 - **Label** — for an internal node, the document's heading text truncated to 12 words. Where no
   heading exists, and only there, a model is asked with the prompt *"one line, ≤ 12 words, using
   only nouns that appear in the children"*; a model-written label is flagged in the JSONL chain.
