@@ -36,14 +36,47 @@ faithfulness pass returns `partial`/`overstated`.
 
 | Variable            | Effect                                                              |
 |---------------------|--------------------------------------------------------------------|
-| `ANTHROPIC_API_KEY` | Required. The run aborts if unset.                                 |
+| `ANTHROPIC_API_KEY` | Required for `-backend anthropic` (the default); the run aborts if unset. Not needed for `-backend ollama`. |
 | `ANTHROPIC_MODEL`   | Overrides the default model (`claude-sonnet-4-6`). `-model` wins.  |
+| `OLLAMA_HOST`       | Ollama server base URL (default `http://localhost:11434`). `-ollama-url` wins. |
+
+## Backends
+
+Every model call goes through one backend, chosen by `-backend`. A backend is the sole wrapper for
+its provider — the mode runners (substance, faithfulness, evidence, audit) never name a provider, they
+call one `Complete`. `internal/backend` holds the interface and the shared request/response shapes;
+`internal/backend/anthropic` and `internal/backend/ollama` are the two providers; `internal/backend/fake`
+is the test double. The backend's short name (`anthropic` \| `ollama`) is stamped into every chain
+record and the header line.
+
+| Backend     | Model call            | Prompt caching | Web search | Reasoning toggle |
+|-------------|-----------------------|----------------|------------|------------------|
+| `anthropic` | Messages API (POST)   | yes (ephemeral cache blocks) | yes (`web_search`) | n/a |
+| `ollama`    | `/api/chat` (POST, local) | no — the source rides in the prompt | **no** | `-think` (default off) |
+
+Two consequences follow from Ollama's row and are load-bearing:
+
+- **No web search.** `SupportsWebSearch()` is false, so evidence-grounding cannot retrieve on Ollama;
+  the correct result there is `unverifiable`, never a fabricated citation. This is the axis-boundary
+  rule enforced at the backend: reasoning can refute a grounding claim but never confirm one without a
+  truth-maker, and Ollama has no retrieval to supply it.
+- **Reasoning models need `think:false`.** A qwen3.x-class model emits a thinking block that consumes
+  the token budget before any answer, so at the default `MaxTokens` cap the answer comes back empty.
+  Ollama's backend sends `think:false` by default; `-think` turns it on for callers who want the trace
+  and have raised the cap to afford it.
+
+Both backends cap output at `backend.MaxTokens` (Anthropic's `max_tokens`, Ollama's `num_predict`) and
+surface a truncated response (`stop_reason=max_tokens` / `done_reason=length`) as an error, so a cut-off
+case collapses to `error` rather than a silent partial.
 
 ## Flags
 
 | Flag           | Default                     | Meaning                                                        |
 |----------------|-----------------------------|---------------------------------------------------------------|
-| `-model`       | `$ANTHROPIC_MODEL` or `claude-sonnet-4-6` | Model id for every API call.                    |
+| `-model`       | `$ANTHROPIC_MODEL` or `claude-sonnet-4-6` | Model id for every model call.                  |
+| `-backend`     | `anthropic`                 | LLM backend: `anthropic` \| `ollama` (see Backends).          |
+| `-ollama-url`  | `$OLLAMA_HOST` or `http://localhost:11434` | Ollama server base URL (`-backend ollama`).      |
+| `-think`       | `false`                     | Ollama only: emit the model's reasoning block (needs a higher token cap). |
 | `-source`      | `""`                        | Transcript file → faithfulness mode.                          |
 | `-evidence`    | `false`                     | Evidence-grounding mode (enables web search).                 |
 | `-audit`       | `false`                     | Run all three modes and emit a cross-tab (needs `-source`).   |
@@ -81,9 +114,10 @@ under `-md`, otherwise the no-colour text rendering of the same table. The chain
 by any of this.
 
 **Header line.** The brief and tree renderers print one provenance line before their content —
-`model <id> · calls <n> · $<cost> (rates <date>) · wall <d>` — so a pasted report carries the model,
-the API-call count, the estimated cost, and the wall time it took. Under `-from` every figure is
-zero (no model call was made), which is the point.
+`model <id> · backend <name> · calls <n> · $<cost> (rates <date>) · wall <d>` — so a pasted report
+carries the model, the backend that produced it, the API-call count, the estimated cost, and the wall
+time it took. Under `-from` every figure is zero (no model call was made) and the backend shows `—`,
+which is the point.
 
 **Value line.** Directly under the header, `changes N summary lines` — the count of distinct
 top-level branches the tree opens (`brief.OpenedBranches`), which `docs/VALUE.md` defines as the

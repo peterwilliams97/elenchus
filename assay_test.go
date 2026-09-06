@@ -4,13 +4,15 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 	"time"
+
+	"assay/internal/backend"
+	"assay/internal/backend/fake"
 )
 
 func TestSplitSummaryNewlines(t *testing.T) {
@@ -712,9 +714,8 @@ func TestFixtureIngestion(t *testing.T) {
 
 // ── usage accounting tests ────────────────────────────────────────────────────
 
-// TestUsageAccumulatorSumsCorrectly drives callJSON through the stub seam and asserts the
-// usageCounters accumulate correctly from canned API-response-shaped JSON. Because the stub
-// bypasses callClaude entirely, we drive the accumulator directly to test the math.
+// TestUsageAccumulatorSumsCorrectly asserts the usageCounters accumulate correctly. Dispatch only
+// bills usage on the backend path, not the cfg.call stub seam, so we drive the accumulator directly.
 func TestUsageAccumulatorSumsCorrectly(t *testing.T) {
 	u := newUsageCounters()
 	u.add(100, 50, 10, 5, 1)
@@ -817,118 +818,6 @@ func TestPriceLookupUnknownModel(t *testing.T) {
 	// Measured token counts must appear in the string so the caller can still see them.
 	if !strings.Contains(est, "in=500") {
 		t.Errorf("want input token count in estimate, got %q", est)
-	}
-}
-
-// ── transport-retry tests ─────────────────────────────────────────────────────
-//
-// These drive callClaude via a stubbed http.RoundTripper (cfg.httpClient), not
-// the cfg.call seam, so the retry loop and status-code handling are exercised
-// directly. retryBase is set to 0 so retries are instant.
-
-// roundTripFunc adapts a function to the http.RoundTripper interface.
-type roundTripFunc func(*http.Request) (*http.Response, error)
-
-func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
-
-// fakeResp builds a minimal *http.Response with the given status, body, and headers.
-func fakeResp(status int, body string, headers map[string]string) *http.Response {
-	h := http.Header{}
-	for k, v := range headers {
-		h.Set(k, v)
-	}
-	return &http.Response{StatusCode: status, Header: h, Body: io.NopCloser(strings.NewReader(body))}
-}
-
-// okBody is a representative Anthropic API success response (real field layout).
-const okBody = `{"id":"msg_01","type":"message","role":"assistant",` +
-	`"content":[{"type":"text","text":"hello"}],` +
-	`"model":"claude-sonnet-4-6","stop_reason":"end_turn","stop_sequence":null,` +
-	`"usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}`
-
-// maxTokensBody is a response that was cut off mid-output.
-const maxTokensBody = `{"id":"msg_02","type":"message","role":"assistant",` +
-	`"content":[{"type":"text","text":"partial {"}],` +
-	`"model":"claude-sonnet-4-6","stop_reason":"max_tokens","stop_sequence":null,` +
-	`"usage":{"input_tokens":10,"output_tokens":1500,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}`
-
-// TestCallClaude429ThenSuccess confirms that a 429 followed by a 200 succeeds after one retry and
-// returns the expected content.
-func TestCallClaude429ThenSuccess(t *testing.T) {
-	retryBase = 0
-	t.Cleanup(func() { retryBase = time.Second })
-
-	attempts := 0
-	c := cfg{
-		model:  "claude-sonnet-4-6",
-		apiKey: "test-key",
-		httpClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
-			attempts++
-			if attempts == 1 {
-				return fakeResp(429, `{"error":{"type":"rate_limit_error","message":"rate limited"}}`,
-					map[string]string{"Retry-After": "0"}), nil
-			}
-			return fakeResp(200, okBody, nil), nil
-		})},
-	}
-	got, _, err := c.callClaude("sys", "prompt", false)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if got != "hello" {
-		t.Errorf("want %q, got %q", "hello", got)
-	}
-	if attempts != 2 {
-		t.Errorf("want 2 attempts, got %d", attempts)
-	}
-}
-
-// TestCallClaude529PersistentFails confirms that persistent 529s exhaust retries and return a clean
-// error. retryBase=0 keeps the test instant.
-func TestCallClaude529PersistentFails(t *testing.T) {
-	retryBase = 0
-	t.Cleanup(func() { retryBase = time.Second })
-
-	attempts := 0
-	c := cfg{
-		model:  "claude-sonnet-4-6",
-		apiKey: "test-key",
-		httpClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
-			attempts++
-			return fakeResp(529, `{"error":{"type":"overloaded_error","message":"overloaded"}}`, nil), nil
-		})},
-	}
-	if _, _, err := c.callClaude("sys", "prompt", false); err == nil {
-		t.Fatal("expected error on persistent 529, got nil")
-	}
-	if attempts != retryMaxAttempts {
-		t.Errorf("want %d attempts, got %d", retryMaxAttempts, attempts)
-	}
-}
-
-// TestCallClaudeMaxTokensTruncation confirms that a max_tokens stop_reason is returned as a named
-// error and that usage is recorded before the error is returned.
-func TestCallClaudeMaxTokensTruncation(t *testing.T) {
-	u := newUsageCounters()
-	c := cfg{
-		model:  "claude-sonnet-4-6",
-		apiKey: "test-key",
-		usage:  u,
-		httpClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
-			return fakeResp(200, maxTokensBody, nil), nil
-		})},
-	}
-	_, _, err := c.callClaude("sys", "prompt", false)
-	if err == nil {
-		t.Fatal("expected truncation error, got nil")
-	}
-	if !strings.Contains(err.Error(), "max_tokens") {
-		t.Errorf("error should mention max_tokens, got: %v", err)
-	}
-	// Usage must have been accumulated before the error was returned.
-	calls, in, out, _, _, _, _, _ := u.snapshot()
-	if calls != 1 || in != 10 || out != 1500 {
-		t.Errorf("usage not recorded before truncation error: calls=%d in=%d out=%d", calls, in, out)
 	}
 }
 
@@ -1101,58 +990,6 @@ func TestRunTallyCorrect(t *testing.T) {
 
 // TestChainJSONLWritten verifies that appendChain writes a valid JSONL record for a grounding case,
 // including error_cause on an errored case.
-// ── web_search_tool_result parse-path tests ──────────────────────────────────
-// These tests exercise the real callClaude transport path (via httpClient RoundTripper),
-// not cfg.call. They are the only tests that exercise the web_search_tool_result branch.
-
-// TestWebSearchToolResultParsesRetrievedSources loads the live-capture fixture and
-// asserts that callClaude extracts at least one retrievedSource from the
-// web_search_tool_result block. This test is designed to FAIL on the pre-fix code
-// (array unmarshal into struct) and pass after the fix.
-func TestWebSearchToolResultParsesRetrievedSources(t *testing.T) {
-	body, err := os.ReadFile("testdata/web_search_live.json")
-	if err != nil {
-		t.Skipf("live fixture not available: %v", err)
-	}
-	c := cfg{
-		model:  "claude-sonnet-4-6",
-		apiKey: "test-key",
-		httpClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
-			return fakeResp(200, string(body), nil), nil
-		})},
-	}
-	_, rs, err := c.callClaude("sys", "prompt", true)
-	if err != nil {
-		t.Fatalf("callClaude error: %v", err)
-	}
-	if len(rs) == 0 {
-		t.Errorf("want at least 1 retrievedSource from web_search_tool_result block, got 0")
-	}
-}
-
-// TestWebSearchToolResultErrorSkipped loads the error fixture (content is an object, not
-// an array) and asserts that callClaude returns 0 retrievedSources without panicking.
-func TestWebSearchToolResultErrorSkipped(t *testing.T) {
-	body, err := os.ReadFile("testdata/web_search_error.json")
-	if err != nil {
-		t.Fatalf("error fixture missing: %v", err)
-	}
-	c := cfg{
-		model:  "claude-sonnet-4-6",
-		apiKey: "test-key",
-		httpClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
-			return fakeResp(200, string(body), nil), nil
-		})},
-	}
-	_, rs, err := c.callClaude("sys", "prompt", true)
-	if err != nil {
-		t.Fatalf("callClaude error: %v", err)
-	}
-	if len(rs) != 0 {
-		t.Errorf("want 0 retrievedSources for error block, got %d", len(rs))
-	}
-}
-
 func TestChainJSONLWritten(t *testing.T) {
 	dir := t.TempDir()
 	chainPath := filepath.Join(dir, "test.grounding.jsonl")
@@ -1205,63 +1042,6 @@ func TestChainJSONLWritten(t *testing.T) {
 	}
 	if det.ErrorCause != "network timeout" {
 		t.Errorf("rec2 error_cause: want 'network timeout', got %q", det.ErrorCause)
-	}
-}
-
-// TestCallClaudeCacheControl verifies the request puts a cachedSource in its own content block
-// marked cache_control ephemeral, ahead of the prompt block, and caches the system prompt too.
-func TestCallClaudeCacheControl(t *testing.T) {
-	var body []byte
-	c := cfg{
-		model: "claude-sonnet-4-6", apiKey: "k",
-		cachedSource: "SOURCE:\nbig corpus",
-		httpClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
-			body, _ = io.ReadAll(r.Body)
-			return fakeResp(200, okBody, nil), nil
-		})},
-	}
-	if _, _, err := c.callClaude("SYSTEM", "CLAIM:\nx", false); err != nil {
-		t.Fatalf("callClaude: %v", err)
-	}
-	var req apiReq
-	if err := json.Unmarshal(body, &req); err != nil {
-		t.Fatalf("unmarshal req: %v", err)
-	}
-	if len(req.System) != 1 || req.System[0].CacheControl == nil {
-		t.Errorf("system prompt not cache-marked: %+v", req.System)
-	}
-	if len(req.Messages) != 1 || len(req.Messages[0].Content) != 2 {
-		t.Fatalf("want 2 content blocks, got %+v", req.Messages)
-	}
-	blocks := req.Messages[0].Content
-	if blocks[0].CacheControl == nil || !strings.Contains(blocks[0].Text, "big corpus") {
-		t.Errorf("first block should be the cached source: %+v", blocks[0])
-	}
-	if blocks[1].CacheControl != nil || !strings.Contains(blocks[1].Text, "CLAIM") {
-		t.Errorf("second block should be the uncached claim: %+v", blocks[1])
-	}
-}
-
-// TestCallClaudeNoCacheSingleBlock confirms that with no cachedSource the user message is a single
-// uncached block while the system prompt is still cached.
-func TestCallClaudeNoCacheSingleBlock(t *testing.T) {
-	var body []byte
-	c := cfg{
-		model: "claude-sonnet-4-6", apiKey: "k",
-		httpClient: &http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
-			body, _ = io.ReadAll(r.Body)
-			return fakeResp(200, okBody, nil), nil
-		})},
-	}
-	if _, _, err := c.callClaude("SYSTEM", "CLAIM:\nx", false); err != nil {
-		t.Fatalf("callClaude: %v", err)
-	}
-	var req apiReq
-	if err := json.Unmarshal(body, &req); err != nil {
-		t.Fatalf("unmarshal req: %v", err)
-	}
-	if len(req.Messages[0].Content) != 1 || req.Messages[0].Content[0].CacheControl != nil {
-		t.Errorf("want one uncached block, got %+v", req.Messages[0].Content)
 	}
 }
 
@@ -1379,5 +1159,100 @@ func TestFaithCriticSysGapAndSoWhat(t *testing.T) {
 		if !strings.Contains(faithCriticSys, needle) {
 			t.Errorf("faithCriticSys missing %q", needle)
 		}
+	}
+}
+
+// ── backend seam ──────────────────────────────────────────────────────────────
+
+// TestDispatchThroughBackend confirms that with no cfg.call stub, dispatch routes through the
+// configured backend and bills its usage — the production path the mode runners take.
+func TestDispatchThroughBackend(t *testing.T) {
+	u := newUsageCounters()
+	be := fake.New("fake", "m", func(r backend.Request) (backend.Response, error) {
+		if r.Prompt != "prompt" {
+			t.Errorf("prompt not threaded: %q", r.Prompt)
+		}
+		return backend.Response{
+			Text:  `{"claims":["a","b"]}`,
+			Usage: backend.Usage{InputTokens: 4, OutputTokens: 2},
+		}, nil
+	})
+	c := cfg{backend: be, backendName: "fake", usage: u}
+	var got struct {
+		Claims []string `json:"claims"`
+	}
+	if err := c.callJSON("sys", "", "prompt", false, &got); err != nil {
+		t.Fatalf("callJSON: %v", err)
+	}
+	if len(got.Claims) != 2 {
+		t.Fatalf("want 2 claims threaded from backend, got %+v", got.Claims)
+	}
+	calls, in, out, _, _, _, _, _ := u.snapshot()
+	if calls != 1 || in != 4 || out != 2 {
+		t.Errorf("backend usage not billed: calls=%d in=%d out=%d", calls, in, out)
+	}
+}
+
+// TestHeaderLineNamesBackend confirms the provenance header stamps the backend, and falls back to a
+// dash under -from where no backend was wired.
+func TestHeaderLineNamesBackend(t *testing.T) {
+	c := cfg{model: "m", backendName: "ollama", usage: newUsageCounters()}
+	if !strings.Contains(c.headerLine(), "backend ollama") {
+		t.Errorf("header should name the backend: %q", c.headerLine())
+	}
+	from := cfg{model: "m", usage: newUsageCounters()} // backendName "" → -from render
+	if !strings.Contains(from.headerLine(), "backend —") {
+		t.Errorf("from-render header should show a dash backend: %q", from.headerLine())
+	}
+}
+
+// TestChainStampsBackend confirms appendChain records the producing backend on every case.
+func TestChainStampsBackend(t *testing.T) {
+	p := filepath.Join(t.TempDir(), "x.faithfulness.jsonl")
+	c := cfg{chainFile: p, backendName: "ollama"}
+	c.appendChain(chainRecord{Idx: 0, Total: 1, Mode: "faithfulness", Claim: "a", Verdict: "faithful"})
+	data, err := os.ReadFile(p)
+	if err != nil {
+		t.Fatalf("read chain: %v", err)
+	}
+	var rec chainRecord
+	if err := json.Unmarshal([]byte(strings.TrimSpace(string(data))), &rec); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if rec.Backend != "ollama" {
+		t.Errorf("backend not stamped: %q", rec.Backend)
+	}
+}
+
+// TestFromReplayBackendAgnostic is the refuter for "-from replays the chain identically on either
+// backend": two chains with identical claims/verdicts but different producing backends reconstruct
+// to the same ordered record sequence, and each keeps its own recorded backend.
+func TestFromReplayBackendAgnostic(t *testing.T) {
+	dir := t.TempDir()
+	mk := func(be string) string {
+		p := filepath.Join(dir, be+".faithfulness.jsonl")
+		os.WriteFile(p, []byte(
+			`{"idx":0,"total":2,"mode":"faithfulness","backend":"`+be+`","claim":"a","verdict":"faithful","detail":{}}`+"\n"+
+				`{"idx":1,"total":2,"mode":"faithfulness","backend":"`+be+`","claim":"b","verdict":"overstated","detail":{}}`+"\n"), 0o644)
+		return p
+	}
+	aRecs, aMode, aErr := readChain(mk("anthropic"))
+	oRecs, oMode, oErr := readChain(mk("ollama"))
+	if aErr != nil || oErr != nil {
+		t.Fatalf("readChain errors: anthropic=%v ollama=%v", aErr, oErr)
+	}
+	if aMode != oMode || aMode != "faithfulness" {
+		t.Errorf("modes differ: %q vs %q", aMode, oMode)
+	}
+	if len(aRecs) != len(oRecs) {
+		t.Fatalf("record counts differ: %d vs %d", len(aRecs), len(oRecs))
+	}
+	for i := range aRecs {
+		if aRecs[i].Claim != oRecs[i].Claim || aRecs[i].Verdict != oRecs[i].Verdict {
+			t.Errorf("row %d differs across backends: %+v vs %+v", i, aRecs[i], oRecs[i])
+		}
+	}
+	if aRecs[0].Backend != "anthropic" || oRecs[0].Backend != "ollama" {
+		t.Errorf("producing backend not preserved: %q / %q", aRecs[0].Backend, oRecs[0].Backend)
 	}
 }

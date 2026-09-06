@@ -12,37 +12,31 @@ package main
 // (always markdown for -audit).
 
 import (
-	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
-	"math/rand"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
 
+	"assay/internal/backend"
+	"assay/internal/backend/anthropic"
+	"assay/internal/backend/ollama"
 	"assay/internal/brief"
 	"assay/internal/tree"
 )
 
-const (
-	defaultModel     = "claude-sonnet-4-6"
-	apiURL           = "https://api.anthropic.com/v1/messages"
-	maxTokens        = 1500
-	retryMaxAttempts = 4 // 1 initial + 3 retries on 429/503/529
-)
+const defaultModel = "claude-sonnet-4-6"
 
-var (
-	httpClient = &http.Client{Timeout: 150 * time.Second}
-	retryBase  = time.Second // overridden to 0 in tests for instant retry
-)
+// retrievedSource is a URL actually fetched during a web_search_tool_result round trip — distinct
+// from source, which is what the model claims it used in its JSON response. Aliased to backend.Source
+// so the chain schema and the backend seam name one type.
+type retrievedSource = backend.Source
 
 // ── config ────────────────────────────────────────────────────────────────────
 
@@ -65,19 +59,20 @@ type cfg struct {
 	treeHTMLPath string // eval/<stamp>/tree.html sink, written alongside audit.md
 	usage        *usageCounters
 	tally        *runTally
-	// cachedSource is the stable prefix (e.g. the source transcript) that callClaude places in its
-	// own content block with cache_control ephemeral, ahead of the variable prompt. Set per-call by
-	// callJSON/callJSONSourced from their `cached` argument; "" sends a single prompt block. The
-	// stub (`call`) ignores it — caching is only meaningful against the real API.
+	// cachedSource is the stable prefix (e.g. the source transcript) placed in a Request's Cached
+	// field, which the Anthropic backend turns into an ephemeral cache block ahead of the variable
+	// prompt and the Ollama backend folds into the prompt. Set per-call by callJSON/callJSONSourced
+	// from their `cached` argument; "" sends no prefix.
 	cachedSource string
-	// call is the API dispatch function. When nil, callClaude is used (production).
-	// Returns the response text, any retrieved sources (from web_search_tool_result blocks), and an
-	// error.
-	// Tests set this to a stub to avoid network calls.
+	// backend is the LLM provider dispatch uses when `call` is nil (production). Set in main from
+	// -backend; nil under -from, where no model call is made.
+	backend backend.Backend
+	// backendName is the provider id stamped into the chain and header ("anthropic"|"ollama").
+	backendName string
+	// call is the low-level test seam. When non-nil, dispatch uses it instead of `backend`, so the
+	// behaviour tests drive the real mode runners with canned JSON and no network. Returns the
+	// response text, any retrieved sources, and an error.
 	call func(system, prompt string, withTools bool) (string, []retrievedSource, error)
-	// httpClient overrides the package-level httpClient. Tests inject a custom RoundTripper here to
-	// exercise the transport-retry path without network calls.
-	httpClient *http.Client
 }
 
 // runTally tracks verified/errored counts across a single assay run for the SUMMARY block.
@@ -120,7 +115,12 @@ func main() {
 	var src, text, chainDir, fromChain string
 	var ev, audit, full bool
 	var treeF treeFlag
+	var backendName, ollamaURL string
+	var think bool
 	flag.StringVar(&c.model, "model", envOr("ANTHROPIC_MODEL", defaultModel), "model id")
+	flag.StringVar(&backendName, "backend", "anthropic", "LLM backend: anthropic|ollama")
+	flag.StringVar(&ollamaURL, "ollama-url", envOr("OLLAMA_HOST", ollama.DefaultBaseURL), "ollama server base URL")
+	flag.BoolVar(&think, "think", false, "ollama: emit the model's reasoning block (default off; on needs a higher token cap)")
 	flag.StringVar(&src, "source", "", "transcript file → faithfulness mode")
 	flag.BoolVar(&ev, "evidence", false, "evidence-grounding mode (web search)")
 	flag.BoolVar(&audit, "audit", false, "run all three modes and emit a cross-tab (needs -source)")
@@ -163,10 +163,21 @@ func main() {
 		return
 	}
 
-	c.apiKey = os.Getenv("ANTHROPIC_API_KEY")
-	if c.apiKey == "" {
-		fatal("set ANTHROPIC_API_KEY in your environment first.")
+	// Wire the backend before any model call. Only Anthropic needs a key; Ollama talks to a local
+	// server, so requiring ANTHROPIC_API_KEY there would be a false gate.
+	switch backendName {
+	case "anthropic":
+		c.apiKey = os.Getenv("ANTHROPIC_API_KEY")
+		if c.apiKey == "" {
+			fatal("set ANTHROPIC_API_KEY in your environment first (or pass -backend ollama).")
+		}
+		c.backend = anthropic.New(c.model, c.apiKey, nil)
+	case "ollama":
+		c.backend = ollama.New(c.model, ollamaURL, think, nil)
+	default:
+		fatal("unknown -backend " + backendName + ": use anthropic or ollama")
 	}
+	c.backendName = backendName
 	c.usage = newUsageCounters()
 	input := readInput(text)
 
@@ -809,15 +820,11 @@ func (c cfg) callJSON(system, cached, prompt string, withTools bool, v any) erro
 
 // callJSONSourced is callJSON with retrieved sources threaded through. Used by evidenceClaim,
 // which is the only caller that needs to cross-check model-claimed URLs against actual retrieval.
-// `cached` is the stable prefix (source corpus) callClaude puts in its own cache_control block,
-// ahead of `prompt`; pass "" when the call has no reusable prefix.
+// `cached` is the stable prefix (source corpus) the backend reuses ahead of `prompt`; pass "" when
+// the call has no reusable prefix.
 func (c cfg) callJSONSourced(system, cached, prompt string, withTools bool, v any) ([]retrievedSource, error) {
-	c.cachedSource = cached // value copy; only callClaude reads it, the stub ignores it
-	dispatch := c.call
-	if dispatch == nil {
-		dispatch = c.callClaude
-	}
-	out, rs, err := dispatch(system, prompt, withTools)
+	c.cachedSource = cached // value copy; read by dispatch when building the backend Request
+	out, rs, err := c.dispatch(system, prompt, withTools)
 	if err != nil {
 		return nil, err
 	}
@@ -827,234 +834,50 @@ func (c cfg) callJSONSourced(system, cached, prompt string, withTools bool, v an
 	strict := system +
 		"\n\nReturn ONLY raw JSON. No prose, no markdown, no backticks. " +
 		"First character must be { or [."
-	out2, rs2, err := dispatch(strict, prompt, withTools)
+	out2, rs2, err := c.dispatch(strict, prompt, withTools)
 	if err != nil {
 		return nil, err
 	}
 	return rs2, unmarshalLoose(out2, v)
 }
 
-// callClaude makes a raw API call to Claude and returns the full text response.
-// `system` and `prompt` are passed directly to the API. The caller is responsible for any prompt
-// engineering,
-// `withTools`==true enables tool use (e.g. web search) when available for the model.
-func (c cfg) callClaude(system, prompt string, withTools bool) (string, []retrievedSource, error) {
-	// Build the user message. A non-empty cachedSource becomes its own block, marked ephemeral and
-	// placed ahead of the claim so it forms the cacheable prefix reused across every claim in a run.
-	content := make([]textBlock, 0, 2)
-	if c.cachedSource != "" {
-		content = append(content, textBlock{Type: "text", Text: c.cachedSource, CacheControl: ephemeral})
+// dispatch runs one model call. When the test seam `call` is set it is used directly (canned JSON,
+// no network); otherwise the configured backend's Complete is invoked, its usage accumulated, and —
+// under -v — the request and response are traced. Usage is added even on an error return, because a
+// truncated (max_tokens / length) response was still billed.
+func (c cfg) dispatch(system, prompt string, withTools bool) (string, []retrievedSource, error) {
+	if c.call != nil {
+		return c.call(system, prompt, withTools)
 	}
-	content = append(content, textBlock{Type: "text", Text: prompt})
-	req := apiReq{Model: c.model, MaxTokens: maxTokens,
-		Messages: []apiMsg{{Role: "user", Content: content}}}
-	if system != "" {
-		// The system prompt is stable per mode, so cache it too — one breakpoint, reused every call.
-		req.System = []textBlock{{Type: "text", Text: system, CacheControl: ephemeral}}
-	}
-	if withTools {
-		req.Tools = []apiTool{{Type: "web_search_20250305", Name: "web_search", MaxUses: 5}}
-	}
-	body, _ := json.Marshal(req)
-
 	if c.verbose {
-		fmt.Println(c.cyan("┌─ call · " + c.model + tern(withTools, " (web search)", "")))
+		fmt.Println(c.cyan("┌─ call · " + c.backendName + " · " + c.model + tern(withTools, " (web search)", "")))
 		fmt.Println(c.grey("│ system:\n│   " + strings.ReplaceAll(system, "\n", "\n│   ")))
 		if c.cachedSource != "" {
 			fmt.Printf(c.grey("│ cached prefix: %d bytes\n"), len(c.cachedSource))
 		}
 		fmt.Println(c.grey("│ user:\n│   " + strings.ReplaceAll(prompt, "\n", "\n│   ")))
 	}
-
-	client := httpClient
-	if c.httpClient != nil {
-		client = c.httpClient
-	}
-
-	var raw []byte
-	for attempt := 0; ; attempt++ {
-		httpReq, _ := http.NewRequest("POST", apiURL, bytes.NewReader(body))
-		httpReq.Header.Set("content-type", "application/json")
-		httpReq.Header.Set("x-api-key", c.apiKey)
-		httpReq.Header.Set("anthropic-version", "2023-06-01")
-
-		resp, err := client.Do(httpReq)
-		if err != nil {
-			return "", nil, err
-		}
-		raw, _ = io.ReadAll(resp.Body)
-		resp.Body.Close() // explicit close before any retry; do not defer across iterations
-
-		if !retryable(resp.StatusCode) || attempt >= retryMaxAttempts-1 {
-			break
-		}
-		time.Sleep(retryDelay(resp.Header.Get("Retry-After"), attempt))
-	}
-
-	var ar apiResp
-	if err := json.Unmarshal(raw, &ar); err != nil {
-		return "", nil, fmt.Errorf("unreadable response: %.200s", string(raw))
-	}
-	if ar.Error != nil {
-		return "", nil, fmt.Errorf("api error: %s", ar.Error.Message)
-	}
-
-	// Accumulate usage before checking stop_reason — a truncated response was still billed.
-	if c.usage != nil && ar.Usage != nil {
-		webSearches := 0
-		if ar.Usage.ServerToolUse != nil {
-			webSearches = ar.Usage.ServerToolUse.WebSearchRequests
-		}
-		// Fall back to counting web_search tool_use blocks if server_tool_use absent.
-		if webSearches == 0 {
-			for _, b := range ar.Content {
-				if b.Type == "server_tool_use" || b.Type == "tool_use" {
-					var name struct {
-						Name string `json:"name"`
-					}
-					if json.Unmarshal(b.Input, &name) == nil && name.Name == "web_search" {
-						webSearches++
-					}
-				}
-			}
-		}
-		c.usage.add(ar.Usage.InputTokens, ar.Usage.OutputTokens,
-			ar.Usage.CacheReadInputTokens, ar.Usage.CacheCreationInputTokens, webSearches)
+	resp, err := c.backend.Complete(backend.Request{
+		System: system, Prompt: prompt, Cached: c.cachedSource, WithTools: withTools,
+	})
+	if c.usage != nil {
+		u := resp.Usage
+		c.usage.add(u.InputTokens, u.OutputTokens, u.CacheRead, u.CacheCreate, u.WebSearches)
 		if c.verbose {
 			fmt.Fprintf(os.Stderr, "[call] in=%d out=%d cache_read=%d cache_create=%d\n",
-				ar.Usage.InputTokens, ar.Usage.OutputTokens,
-				ar.Usage.CacheReadInputTokens, ar.Usage.CacheCreationInputTokens)
-		}
-	}
-
-	if ar.StopReason == "max_tokens" {
-		return "", nil, fmt.Errorf(
-			"response truncated: stop_reason=max_tokens (limit=%d tokens); raise maxTokens constant",
-			maxTokens)
-	}
-
-	var (
-		sb        strings.Builder
-		retrieved []retrievedSource
-	)
-	for _, b := range ar.Content {
-		switch b.Type {
-		case "text":
-			sb.WriteString(b.Text)
-		case "server_tool_use":
-			if c.verbose {
-				var in struct {
-					Query string `json:"query"`
-				}
-				_ = json.Unmarshal(b.Input, &in)
-				fmt.Println(c.grey("│   searched: " + in.Query))
-			}
-		case "web_search_tool_result":
-			// b.Content is the raw JSON value of the "content" field: either a []web_search_result
-			// array or a web_search_tool_result_error object.
-			// Unmarshal directly into a slice; an error object (not an array) fails silently and
-			// lands in the "no sources retrieved" downgrade path.
-			var results []struct {
-				Type  string `json:"type"`
-				URL   string `json:"url"`
-				Title string `json:"title"`
-			}
-			if json.Unmarshal(b.Content, &results) == nil {
-				for _, r := range results {
-					if r.Type == "web_search_result" {
-						retrieved = append(retrieved, retrievedSource{Title: r.Title, URL: r.URL})
-					}
-				}
-			}
+				u.InputTokens, u.OutputTokens, u.CacheRead, u.CacheCreate)
 		}
 	}
 	if c.verbose {
 		fmt.Println(c.cyan("├─ response:"))
-		fmt.Println(c.grey("│ " + strings.ReplaceAll(sb.String(), "\n", "\n│ ")))
-		if len(retrieved) > 0 {
-			fmt.Printf(c.grey("│ retrieved %d source(s)\n"), len(retrieved))
+		fmt.Println(c.grey("│ " + strings.ReplaceAll(resp.Text, "\n", "\n│ ")))
+		if len(resp.Sources) > 0 {
+			fmt.Printf(c.grey("│ retrieved %d source(s)\n"), len(resp.Sources))
 		}
 		fmt.Println(c.cyan("└─"))
 	}
-	return sb.String(), retrieved, nil
+	return resp.Text, resp.Sources, err
 }
-
-// retryable reports whether an HTTP status code warrants a retry.
-func retryable(code int) bool { return code == 429 || code == 503 || code == 529 }
-
-// retryDelay returns how long to wait before the next attempt. It honours the Retry-After header
-// (integer seconds) when present; otherwise uses full-jitter exponential backoff capped at 30 s.
-// retryBase==0 (tests) always returns 0.
-func retryDelay(retryAfter string, attempt int) time.Duration {
-	if s, err := strconv.Atoi(strings.TrimSpace(retryAfter)); err == nil && s > 0 {
-		return time.Duration(s) * time.Second
-	}
-	d := retryBase << uint(attempt) // 1 s, 2 s, 4 s, …
-	if d > 30*time.Second {
-		d = 30 * time.Second
-	}
-	// rand.Int63n(n+1) with n==0 returns 0, so retryBase==0 sleeps for 0.
-	return time.Duration(rand.Int63n(int64(d) + 1)) // full jitter: [0, d]
-}
-
-type apiReq struct {
-	Model     string      `json:"model"`
-	MaxTokens int         `json:"max_tokens"`
-	System    []textBlock `json:"system,omitempty"`
-	Messages  []apiMsg    `json:"messages"`
-	Tools     []apiTool   `json:"tools,omitempty"`
-}
-type apiMsg struct {
-	Role    string      `json:"role"`
-	Content []textBlock `json:"content"`
-}
-
-// textBlock is one content block. A non-nil CacheControl marks the prefix up to and including this
-// block as cacheable, so a repeated source corpus is billed once at cache-write rates and then read.
-type textBlock struct {
-	Type         string        `json:"type"` // always "text"
-	Text         string        `json:"text"`
-	CacheControl *cacheControl `json:"cache_control,omitempty"`
-}
-type cacheControl struct {
-	Type string `json:"type"` // "ephemeral"
-}
-
-// ephemeral is the shared marker for every cache breakpoint; the API caps a request at four.
-var ephemeral = &cacheControl{Type: "ephemeral"}
-
-type apiTool struct {
-	Type    string `json:"type"`
-	Name    string `json:"name"`
-	MaxUses int    `json:"max_uses,omitempty"`
-}
-type apiUsage struct {
-	InputTokens              int `json:"input_tokens"`
-	OutputTokens             int `json:"output_tokens"`
-	CacheReadInputTokens     int `json:"cache_read_input_tokens"`
-	CacheCreationInputTokens int `json:"cache_creation_input_tokens"`
-	ServerToolUse            *struct {
-		WebSearchRequests int `json:"web_search_requests"`
-	} `json:"server_tool_use"`
-}
-type apiResp struct {
-	Content    []apiBlock `json:"content"`
-	StopReason string     `json:"stop_reason"`
-	Usage      *apiUsage  `json:"usage"`
-	Error      *struct {
-		Message string `json:"message"`
-	} `json:"error"`
-}
-type apiBlock struct {
-	Type    string          `json:"type"`
-	Text    string          `json:"text"`
-	Input   json.RawMessage `json:"input"`
-	Content json.RawMessage `json:"content"` // populated for web_search_tool_result blocks
-}
-
-// retrievedSource is a URL actually fetched during a web_search_tool_result round trip — distinct
-// from source, which is what the model claims it used in its JSON response.
-type retrievedSource struct{ Title, URL string }
 
 // ── JSON extraction ──────────────────────────────────────────────────────────
 
@@ -1508,8 +1331,12 @@ func (c *cfg) present(rows []brief.Row, counts, mdTable string, termTable func()
 func (c cfg) headerLine() string {
 	calls, in, out, cr, cc, ws, _, elapsed := c.usage.snapshot()
 	cost, _ := estimateCost(c.model, in, out, cr, cc, ws)
-	return fmt.Sprintf("model %s · calls %d · %s · wall %s",
-		c.model, calls, cost, elapsed.Round(time.Second))
+	be := c.backendName
+	if be == "" {
+		be = "—" // -from: rendered from a saved chain, no backend was wired
+	}
+	return fmt.Sprintf("model %s · backend %s · calls %d · %s · wall %s",
+		c.model, be, calls, cost, elapsed.Round(time.Second))
 }
 
 func readInput(text string) string {
@@ -1536,6 +1363,7 @@ type chainRecord struct {
 	Idx      int             `json:"idx"`
 	Total    int             `json:"total"`
 	Mode     string          `json:"mode"`
+	Backend  string          `json:"backend,omitempty"` // provider that produced this verdict
 	Claim    string          `json:"claim"`
 	Verdict  string          `json:"verdict"`
 	Spread   string          `json:"spread,omitempty"` // "k/N" agreement when -n>1, else ""
@@ -1549,6 +1377,7 @@ func (c *cfg) appendChain(rec chainRecord) {
 	if c.chainFile == "" {
 		return
 	}
+	rec.Backend = c.backendName // stamp the producing backend on every record
 	if c.verbose {
 		fmt.Fprintf(os.Stderr, "[chain] %s idx=%d verdict=%s\n", c.chainFile, rec.Idx, rec.Verdict)
 	}
@@ -1916,7 +1745,7 @@ var priceTable = map[string]priceEntry{
 // priceTableDate is stamped alongside any dollar figure in output.
 const priceTableDate = "2026-06-01"
 
-// usageCounters accumulates API usage across all callClaude invocations.
+// usageCounters accumulates model usage across every backend call in a run.
 type usageCounters struct {
 	mu                sync.Mutex
 	calls             int
