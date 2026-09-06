@@ -21,6 +21,7 @@ type Row struct {
 	ID, Path, Text                             string
 	Faith, Substance, Grounding                string
 	FaithReason, SubstanceReason, GroundReason string
+	Spread                                     string // "k/N" verdict agreement under -n>1, else ""
 }
 
 // Sel is a selected row plus the tier that selected it (0 = highest priority).

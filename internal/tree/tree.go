@@ -122,7 +122,7 @@ func renderHTML(b *strings.Builder, n *node, details map[string]Leaf) {
 		r := *n.row
 		fmt.Fprintf(b, "<details open><summary>%s  %s  %s</summary>\n",
 			html.EscapeString(r.ID), html.EscapeString(truncate(r.Text, 60)),
-			html.EscapeString(verdictOf(r)))
+			html.EscapeString(leafVerdict(r)))
 		b.WriteString(`<div class="d">`)
 		fmt.Fprintf(b, "claim: %s\n", html.EscapeString(r.Text))
 		d := details[r.ID]
@@ -237,7 +237,7 @@ func regroupWide(n *node) {
 func render(b *strings.Builder, n *node, depth int, needs map[string]bool, expandAll bool) {
 	indent := strings.Repeat("  ", depth)
 	if n.leaf() {
-		fmt.Fprintf(b, "%s%s  %s  %s\n", indent, n.key, truncate(n.row.Text, 60), verdictOf(*n.row))
+		fmt.Fprintf(b, "%s%s  %s  %s\n", indent, n.key, truncate(n.row.Text, 60), leafVerdict(*n.row))
 		return
 	}
 	fmt.Fprintf(b, "%s%s  %s  [%d]\n", indent, n.key, label12(n.label), directCount(n))
@@ -285,6 +285,17 @@ func verdictOf(r brief.Row) string {
 	default:
 		return r.Substance
 	}
+}
+
+// leafVerdict is what a leaf line ends in: the verdict, plus the "k/N" agreement when a repeat run
+// (-n>1) recorded a spread — e.g. "partial 2/3". Both the text and HTML renderers use it so the two
+// agree on what a split verdict looks like.
+func leafVerdict(r brief.Row) string {
+	v := verdictOf(r)
+	if r.Spread != "" {
+		return v + " " + r.Spread
+	}
+	return v
 }
 
 // ── complexity metrics ──────────────────────────────────────────────────────

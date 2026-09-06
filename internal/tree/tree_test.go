@@ -152,3 +152,15 @@ func TestRenderHTML(t *testing.T) {
 		}
 	}
 }
+
+// TestSpreadInLeaf pins the -n spread rendering: a leaf with a "k/N" spread ends in "verdict k/N" in
+// both the text and HTML trees.
+func TestSpreadInLeaf(t *testing.T) {
+	rows := []brief.Row{{ID: "F1", Text: "x", Faith: "partial", Spread: "2/3"}}
+	if txt := Render(rows, true, ""); !strings.Contains(txt, "partial 2/3") {
+		t.Errorf("text tree missing spread:\n%s", txt)
+	}
+	if h := RenderHTML(rows, map[string]Leaf{}, ""); !strings.Contains(h, "partial 2/3") {
+		t.Errorf("html tree missing spread:\n%s", h)
+	}
+}

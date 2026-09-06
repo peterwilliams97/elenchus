@@ -53,6 +53,7 @@ faithfulness pass returns `partial`/`overstated`.
 | `-no-color`    | `false`                     | Disable ANSI colour.                                          |
 | `-max-rounds`  | `2`                         | Producer–critic rounds per claim (substance only).           |
 | `-max-claims`  | `0`                         | Cap claims graded, `0` = unlimited (bounds grounding cost).   |
+| `-n`           | `1`                         | Repeat each claim N times; show modal verdict + agreement (faithfulness). |
 | `-progress`    | `true`                      | Per-case stderr lines + 60s heartbeat.                        |
 | `-quiet`       | `false`                     | Suppress per-case lines + heartbeat; keeps SUMMARY and chain. |
 | `-usage-out`   | `""`                        | Append one JSON usage record per run to this file.            |
@@ -183,6 +184,11 @@ One node per line:
 
 - **Internal node** — trailing field is `[child count]` (e.g. `[7]`).
 - **Leaf** (a claim) — trailing field is the verdict, or the tuple of verdicts for the mode(s) run.
+  Under `-n N` (faithfulness) the verdict is the **modal** verdict over N runs, followed by the
+  agreement fraction — `partial 2/3` means partial won 2 of 3 runs. A tie breaks to the worst
+  verdict (`contradicted` > `absent` > `overstated` > `partial` > `faithful`), so a split surfaces
+  the reading a human is likelier to need to check. The fraction rides in the chain (`spread`) and
+  appears in the same place in `tree.html`.
 - **Label** — for an internal node, the document's heading text truncated to 12 words. Where no
   heading exists, and only there, a model is asked with the prompt *"one line, ≤ 12 words, using
   only nouns that appear in the children"*; a model-written label is flagged in the JSONL chain.

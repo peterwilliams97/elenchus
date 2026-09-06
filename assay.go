@@ -51,6 +51,7 @@ type cfg struct {
 	apiKey       string
 	maxRounds    int
 	maxClaims    int
+	repeat       int // -n: run each claim this many times and report the modal verdict + agreement
 	verbose      bool
 	noColor      bool
 	asMarkdown   bool
@@ -130,6 +131,7 @@ func main() {
 	flag.BoolVar(&c.noColor, "no-color", false, "disable ANSI colour")
 	flag.IntVar(&c.maxRounds, "max-rounds", 2, "producer-critic rounds per claim (substance)")
 	flag.IntVar(&c.maxClaims, "max-claims", 0, "bound evidence grounding (0 = unlimited)")
+	flag.IntVar(&c.repeat, "n", 1, "repeat each claim N times, show modal verdict + agreement (faithfulness)")
 	flag.BoolVar(&c.showProgress, "progress", true, "show per-claim progress on stderr (default on)")
 	flag.BoolVar(&c.quiet, "quiet", false, "suppress per-case lines + heartbeat; keeps SUMMARY and writes Tier-2")
 	flag.StringVar(&c.usageOut, "usage-out", "", "append one JSON record per run to this file")
@@ -353,13 +355,16 @@ func (c *cfg) runFaithfulness(input, src string) {
 			id = fmt.Sprintf("c%d", i+1)
 		}
 		t := c.progressStart(i, len(raw), "faithfulness")
-		results[i] = c.faithClaim(text, src)
-		c.appendChain(faithChainRecord(i, len(raw), text, results[i], t))
-		c.progressDone(i, len(raw), results[i].Verdict, text, t)
+		chosen, spread := c.faithRepeat(text, src)
+		results[i] = chosen
+		rec := faithChainRecord(i, len(raw), text, chosen, t)
+		rec.Spread = spread
+		c.appendChain(rec)
+		c.progressDone(i, len(raw), chosen.Verdict, text, t)
 		rows[i] = brief.Row{ID: id, Path: path, Text: text,
-			Faith: results[i].Verdict, FaithReason: results[i].Evidence}
-		details[id] = tree.Leaf{Reason: results[i].Evidence, Quotes: results[i].Quotes}
-		vs[i] = results[i].Verdict
+			Faith: chosen.Verdict, FaithReason: chosen.Evidence, Spread: spread}
+		details[id] = tree.Leaf{Reason: chosen.Evidence, Quotes: chosen.Quotes}
+		vs[i] = chosen.Verdict
 	}
 	c.present(rows, tally(vs), mdFaith(results), func() { c.termFaith(results) }, details)
 }
@@ -545,6 +550,56 @@ func (c cfg) faithClaim(claim, src string) faith {
 	}
 	return faith{Claim: claim, Verdict: fj.Verdict, Evidence: fj.Evidence,
 		SourceSays: fj.SourceSays, Quotes: d.Quotes}
+}
+
+// faithRepeat runs faithClaim c.repeat times (once when repeat ≤ 1) and returns the modal result
+// plus a "k/N" agreement string, "" when N=1. Repeat sampling measures how stable the critic's
+// verdict is on one claim — a claim that comes back "partial 2/3" is one the human should not read
+// as settled. The returned faith is a run that actually produced the modal verdict, so its reason
+// and quotes match the verdict shown.
+func (c cfg) faithRepeat(claim, src string) (faith, string) {
+	n := c.repeat
+	if n < 1 {
+		n = 1
+	}
+	if n == 1 {
+		return c.faithClaim(claim, src), ""
+	}
+	counts := make(map[string]int, n)
+	rep := make(map[string]faith, n)
+	for k := 0; k < n; k++ {
+		r := c.faithClaim(claim, src)
+		counts[r.Verdict]++
+		if _, seen := rep[r.Verdict]; !seen {
+			rep[r.Verdict] = r
+		}
+	}
+	modal := modalVerdict(counts)
+	return rep[modal], fmt.Sprintf("%d/%d", counts[modal], n)
+}
+
+// faithVerdictOrder ranks faithfulness verdicts worst-first; modalVerdict breaks a count tie by it,
+// so a split surfaces the verdict a human is likelier to need to look at rather than a random one.
+var faithVerdictOrder = []string{"contradicted", "absent", "overstated", "partial", "faithful", "error"}
+
+// modalVerdict returns the most frequent verdict in `counts`, breaking ties by faithVerdictOrder
+// (worst first). It is total over any non-empty map.
+func modalVerdict(counts map[string]int) string {
+	rank := make(map[string]int, len(faithVerdictOrder))
+	for i, v := range faithVerdictOrder {
+		rank[v] = i
+	}
+	best, bestN, bestRank := "", -1, 1<<31
+	for v, n := range counts {
+		r, ok := rank[v]
+		if !ok {
+			r = len(faithVerdictOrder) // unknown verdicts sort last
+		}
+		if n > bestN || (n == bestN && r < bestRank) {
+			best, bestN, bestRank = v, n, r
+		}
+	}
+	return best
 }
 
 // evidenceClaim is the grounding pass: check the claim against current evidence via web search. If
@@ -1457,6 +1512,7 @@ type chainRecord struct {
 	Mode     string          `json:"mode"`
 	Claim    string          `json:"claim"`
 	Verdict  string          `json:"verdict"`
+	Spread   string          `json:"spread,omitempty"` // "k/N" agreement when -n>1, else ""
 	ElapsedS float64         `json:"elapsed_s"`
 	Detail   json.RawMessage `json:"detail"`
 }
@@ -1720,7 +1776,7 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 			fr[i] = faith{Claim: r.Claim, Verdict: r.Verdict, Evidence: det.CriticFinding,
 				SourceSays: det.SourceSays, Quotes: det.Quotes}
 			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
-				Faith: r.Verdict, FaithReason: det.CriticFinding}
+				Faith: r.Verdict, FaithReason: det.CriticFinding, Spread: r.Spread}
 			details[ids[i]] = tree.Leaf{Reason: det.CriticFinding, Quotes: det.Quotes}
 			vs[i] = r.Verdict
 		}

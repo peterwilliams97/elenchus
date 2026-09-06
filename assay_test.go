@@ -1322,3 +1322,47 @@ func TestHeartbeatErroredIsFailuresNotRemainder(t *testing.T) {
 		}
 	}
 }
+
+// TestModalVerdict pins the count winner and the worst-first tie-break used when a repeat run splits.
+func TestModalVerdict(t *testing.T) {
+	if v := modalVerdict(map[string]int{"faithful": 1, "partial": 1}); v != "partial" {
+		t.Errorf("a tie should break to the worse verdict (partial), got %q", v)
+	}
+	if v := modalVerdict(map[string]int{"faithful": 2, "partial": 1}); v != "faithful" {
+		t.Errorf("majority faithful, got %q", v)
+	}
+}
+
+// TestFaithRepeatSpread drives faithRepeat with a critic that returns partial, faithful, partial
+// across three runs; the modal verdict must be partial with agreement 2/3, and the returned faith
+// must be a run that produced partial (so its reason matches).
+func TestFaithRepeatSpread(t *testing.T) {
+	critics := []string{
+		`{"findings":[],"verdict":"partial","evidence":"first-partial","what_source_actually_says":"x"}`,
+		`{"findings":[],"verdict":"faithful","evidence":"the-faithful","what_source_actually_says":null}`,
+		`{"findings":[],"verdict":"partial","evidence":"second-partial","what_source_actually_says":"y"}`,
+	}
+	ci := 0
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
+		switch {
+		case strings.Contains(system, "You are the Defender"):
+			return `{"found":true,"quotes":["q"]}`, nil, nil
+		case strings.Contains(system, "You are the Faithfulness Critic"):
+			r := critics[ci%len(critics)]
+			ci++
+			return r, nil, nil
+		}
+		return "{}", nil, nil
+	}
+	c := cfg{repeat: 3, call: stub}
+	got, spread := c.faithRepeat("claim", "src")
+	if got.Verdict != "partial" {
+		t.Errorf("modal verdict: want partial, got %q", got.Verdict)
+	}
+	if spread != "2/3" {
+		t.Errorf("spread: want 2/3, got %q", spread)
+	}
+	if got.Evidence != "first-partial" {
+		t.Errorf("returned run should be the first partial, got reason %q", got.Evidence)
+	}
+}
