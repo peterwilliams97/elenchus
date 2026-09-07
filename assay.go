@@ -265,7 +265,7 @@ func main() {
 		c.oracle = m
 	}
 	if c.retrieveMode != "none" && src != "" {
-		ix, err := retrieve.Load(src)
+		ix, err := loadCorpusIndex(src)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "warning: retrieval disabled (%v); using full corpus\n", err)
 			c.retrieveMode = "none"
@@ -640,10 +640,27 @@ func namedWitness(text string) string {
 	return fields[len(fields)-1] // surname
 }
 
+// loadCorpusIndex builds the retrieval index from -source, which may be a comma-separated list of
+// roots (e.g. the hearings dir and the submissions dir) merged into one index. A single root keeps the
+// existing single-Load path.
+func loadCorpusIndex(src string) (*retrieve.Index, error) {
+	if strings.Contains(src, ",") {
+		var paths []string
+		for _, p := range strings.Split(src, ",") {
+			if p = strings.TrimSpace(p); p != "" {
+				paths = append(paths, p)
+			}
+		}
+		return retrieve.LoadMany(paths)
+	}
+	return retrieve.Load(src)
+}
+
 // embedCacheDir is where a corpus's embedding caches live: a .embcache directory beside the corpus,
-// so the committed vectors travel with the transcripts they were computed from. For a single file it
-// sits in that file's directory.
+// so the committed vectors travel with the transcripts they were computed from. For a comma-separated
+// -source it keys off the first root; the corpus hash keeps a combined corpus's cache distinct.
 func embedCacheDir(src string) string {
+	src = strings.TrimSpace(strings.SplitN(src, ",", 2)[0])
 	if info, err := os.Stat(src); err == nil && info.IsDir() {
 		return filepath.Join(src, ".embcache")
 	}
@@ -906,12 +923,13 @@ func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64
 	for _, p := range passages {
 		byID[p.ID] = p
 	}
-	var verified []string
+	var verified, sources []string
 	rejects := 0
 	for _, e := range j.Evidence {
 		p, ok := byID[e.PassageID]
 		if ok && quoteInPassage(e.Quote, p) {
 			verified = append(verified, e.Quote)
+			sources = append(sources, p.Source) // "hearing" | "submission", for the evidence-origin table
 		} else {
 			rejects++ // a paraphrase presented as verbatim, or an id the judge invented
 		}
@@ -921,7 +939,7 @@ func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64
 	}
 	verdict := c.groundVerdict(j.Verdict, verified)
 	return faith{Claim: claim, Verdict: verdict, Evidence: j.Reason,
-		SourceSays: j.SourceSays, Gap: j.Gap, SoWhat: j.SoWhat, Quotes: verified}
+		SourceSays: j.SourceSays, Gap: j.Gap, SoWhat: j.SoWhat, Quotes: verified, QuoteSources: sources}
 }
 
 // groundVerdict enforces that every verdict except "absent" is backed by at least one verified quote.
@@ -1523,6 +1541,7 @@ type faith struct {
 	Gap                                  string   // {none,scope,denominator,timerange,attribution,other}
 	SoWhat                               string   // ≤20 words: what a reader who believed the summary gets wrong
 	Quotes                               []string // defender's verbatim source spans, for the tree leaf
+	QuoteSources                         []string // parallel to Quotes: "hearing"|"submission" origin of each
 }
 type source struct{ Title, URL string }
 type evidence struct {
@@ -1950,7 +1969,8 @@ type substanceDetail struct {
 
 type faithDetail struct {
 	DefenderSupport string   `json:"defender_support,omitempty"`
-	Quotes          []string `json:"quotes,omitempty"` // verbatim source spans the defender cited
+	Quotes          []string `json:"quotes,omitempty"`        // verbatim source spans the judge cited
+	QuoteSources    []string `json:"quote_sources,omitempty"` // parallel: "hearing"|"submission" per quote
 	CriticFinding   string   `json:"critic_finding,omitempty"`
 	DistortionType  string   `json:"distortion_type,omitempty"`
 	SourceSays      string   `json:"source_says,omitempty"`
@@ -1994,6 +2014,7 @@ func substanceChainRecord(i, total int, claim string, s substance, start time.Ti
 func faithChainRecord(i, total int, claim string, f faith, start time.Time) chainRecord {
 	det := faithDetail{
 		Quotes:        f.Quotes,
+		QuoteSources:  f.QuoteSources,
 		CriticFinding: f.Evidence,
 		SourceSays:    f.SourceSays,
 		Gap:           f.Gap,

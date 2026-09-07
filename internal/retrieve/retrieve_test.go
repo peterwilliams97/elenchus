@@ -7,6 +7,7 @@ package retrieve
 // best rank, floats a named witness first, and floors on cosine.
 
 import (
+	"os"
 	"strings"
 	"testing"
 )
@@ -188,6 +189,51 @@ func TestByIDsOracle(t *testing.T) {
 		if p.ID != want[i] {
 			t.Errorf("order not preserved: pos %d want %s got %s", i, want[i], p.ID)
 		}
+	}
+}
+
+// TestLoadSubmissions pins the written-submission ingestion: paragraphs (not speaker turns), each
+// tagged Source=submission with a "submission-<n>#p<k>" id and the organisation from the filename.
+// Skips when the gitignored submissions are not present (a fresh clone without the fetched PDFs).
+func TestLoadSubmissions(t *testing.T) {
+	const subs = "../../examples/vic-lceic/sources/submissions"
+	if _, err := os.Stat(subs); err != nil {
+		t.Skip("no fetched submissions locally; run the Playwright harvest first")
+	}
+	ix, err := Load(subs)
+	if err != nil {
+		t.Fatalf("Load(%s): %v", subs, err)
+	}
+	if len(ix.Passages) < 100 {
+		t.Fatalf("want many submission paragraphs, got %d", len(ix.Passages))
+	}
+	for _, p := range ix.Passages {
+		if p.Source != SourceSubmission {
+			t.Fatalf("passage %s not tagged submission: %q", p.ID, p.Source)
+		}
+		if !strings.HasPrefix(p.ID, "submission-") || !strings.Contains(p.ID, "#p") {
+			t.Errorf("submission id malformed: %q", p.ID)
+		}
+		if p.Speaker == "" {
+			t.Errorf("submission %s has no organisation", p.ID)
+		}
+	}
+	// LoadMany merges hearings + submissions into one index carrying both sources.
+	both, err := LoadMany([]string{corpus, subs})
+	if err != nil {
+		t.Fatalf("LoadMany: %v", err)
+	}
+	var nH, nS int
+	for _, p := range both.Passages {
+		switch p.Source {
+		case SourceHearing:
+			nH++
+		case SourceSubmission:
+			nS++
+		}
+	}
+	if nH == 0 || nS == 0 {
+		t.Errorf("combined corpus missing a source: hearing=%d submission=%d", nH, nS)
 	}
 }
 

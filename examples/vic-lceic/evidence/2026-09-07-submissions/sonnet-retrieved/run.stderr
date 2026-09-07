@@ -1,0 +1,17 @@
+[  1/5] ✓ partial       "COVID-19 took away critical training opportunities from t…"  33.09s
+[heartbeat] elapsed=1m0s calls=4 in=193 out=1885 web=0 est=$0.1321 (rates 2026-06-01) verified=1 errored=0 seen=1/5 claim="faithfulness 2/5"
+[  2/5] ✓ partial       "COVID-19 led to worsening mental health in the industries…"  45.18s
+[  3/5] ✓ faithful      "Ticket prices are a key barrier for people wanting to eng…"  37.43s
+[heartbeat] elapsed=2m0s calls=9 in=435 out=4618 web=0 est=$0.2513 (rates 2026-06-01) verified=3 errored=0 seen=3/5 claim="faithfulness 4/5"
+[  4/5] ✓ partial       "Victoria receives its fair share of funding from Creative…"  39.79s
+[heartbeat] elapsed=3m0s calls=13 in=602 out=6797 web=0 est=$0.3654 (rates 2026-06-01) verified=4 errored=0 seen=4/5 claim="faithfulness 5/5"
+[  5/5] ✓ partial       "Regional Victoria does not receive its fair share of fund…"  44.57s
+tree (html): examples/vic-lceic/evidence/2026-09-07-submissions/sonnet-retrieved/tree.html
+
+SUMMARY claims-faith-5 faithfulness
+  cases 5 · verified 5 · errored 0
+  faithful 1 · partial 4
+  wall 3m20s · est_usd $0.3944 (rates 2026-06-01) · cache_hit 81% (read 235859 / created 53827)
+  schema_retries 0 · quote_rejects 2 · no_quote_downgrades 0
+  detail: examples/vic-lceic/evidence/2026-09-07-submissions/sonnet-retrieved/claims-faith-5.faithfulness.jsonl
+USAGE model=claude-sonnet-4-6 calls=15 in=690 out=7982 cache_read=235859 cache_create=53827 web_searches=0 wall=200s est_usd=$0.3944 (rates 2026-06-01)

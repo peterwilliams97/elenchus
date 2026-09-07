@@ -1,0 +1,22 @@
+model claude-sonnet-4-6 · backend anthropic · calls 15 · $0.3944 (rates 2026-06-01) · wall 3m20s
+changes 2 summary lines
+tree — depth 3, max width 3, score 6.0 (target ≤20) ok
+
+  2  Chapter 2 — Overview of Victoria's cultural and creative industries  [3]
+    2.2.1  Loss of audiences and income  [1]
+      F8  COVID-19 took away critical training opportunities from tho…  partial 3/3
+          ↳ so what: Passages describe loss of on-the-job/practical opportunities and workforce attrition, not a direct loss of formal training programs per se.
+    2.2.2  Negative mental health impacts  [1]
+      F12  COVID-19 led to worsening mental health in the industries, …  partial 3/3
+          ↳ so what: Reader would think the passages directly and broadly document worsening mental health across the industry; evidence is narrower and more scattered.
+    2.2.5  Broader cost of living crisis  [1]
+      F17  Ticket prices are a key barrier for people wanting to engag…  faithful 3/3
+  3  Chapter 3 — Government investment in Victoria's cultural and creative industries  [2]
+    3.3.5  Does Victoria get its fair share of federal funding?  [1]
+      F29  Victoria receives its fair share of funding from Creative A…  partial 3/3
+          ↳ so what: Reader would miss that fair-share finding applies only to Victoria overall; regional Victoria receives far less than its share.
+    3.3.6  Regional Victoria is not getting its fair share  [1]
+      F31  Regional Victoria does not receive its fair share of fundin…  partial 3/3
+          ↳ so what: Reader would think all of Victoria is underfunded by Creative Australia; in fact Victoria overall receives its exact per-capita share — the shortfall is specific to regional Victoria.
+
+Full table: examples/vic-lceic/evidence/2026-09-07-submissions/sonnet-retrieved/audit.md

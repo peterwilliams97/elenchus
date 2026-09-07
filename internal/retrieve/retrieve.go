@@ -48,7 +48,15 @@ type Passage struct {
 	Context        string // the immediately preceding questioner/chair turn, "" if none
 	ContextSpeaker string
 	ContextRole    string
+	Source         string // "hearing" (speaker turns) or "submission" (paragraphs); reports evidence origin
 }
+
+// Source values distinguish a hearing-transcript passage (speaker turns) from a written-submission
+// passage (paragraphs). The faithfulness table reports which kind a verified quote came from.
+const (
+	SourceHearing    = "hearing"
+	SourceSubmission = "submission"
+)
 
 // searchText is what ranking and embedding see: the question (when present) then the answer. Text
 // alone is what a quote is matched against, so keeping Context out of Text preserves precise quote
@@ -134,17 +142,85 @@ func Load(path string) (*Index, error) {
 
 	ix := &Index{df: map[string]int{}}
 	for _, f := range files {
-		ps, err := splitFile(f)
+		ps, err := passagesForFile(f)
 		if err != nil {
 			return nil, err
 		}
 		ix.Passages = append(ix.Passages, ps...)
 	}
 	if len(ix.Passages) == 0 {
-		return nil, fmt.Errorf("no passages parsed from %s (no speaker turns matched)", path)
+		return nil, fmt.Errorf("no passages parsed from %s (no speaker turns or paragraphs matched)", path)
 	}
 	ix.build()
 	return ix, nil
+}
+
+// LoadMany loads several corpus roots into one index — e.g. the hearing transcripts and the written
+// submissions — so a claim retrieves across both. Passage order is deterministic: roots in argument
+// order, files sorted within each.
+func LoadMany(paths []string) (*Index, error) {
+	ix := &Index{df: map[string]int{}}
+	for _, root := range paths {
+		part, err := Load(root)
+		if err != nil {
+			return nil, err
+		}
+		ix.Passages = append(ix.Passages, part.Passages...)
+	}
+	if len(ix.Passages) == 0 {
+		return nil, fmt.Errorf("no passages parsed from %v", paths)
+	}
+	ix.build()
+	return ix, nil
+}
+
+// passagesForFile routes a corpus file to its parser: a written submission (path under a
+// "submissions" directory) splits on paragraphs, everything else on Hansard speaker turns.
+func passagesForFile(path string) ([]Passage, error) {
+	if strings.Contains(path, "/submissions/") || strings.Contains(path, "submissions"+string(os.PathSeparator)) {
+		return submissionPassages(path)
+	}
+	return splitFile(path)
+}
+
+// subName pulls the submission number and organisation from a filename stem like
+// "09.-ana-a-new-approach-redacted" → ("09", "ana a new approach") or "01.1-...-redacted" → ("01.1", …).
+var subName = regexp.MustCompile(`^(\d+(?:\.\d+)?)[.\-]+(.+?)(?:[_-]redacted)?$`)
+
+// paraSplit separates paragraphs on a blank line (a form feed, from pdftotext page breaks, counts).
+var paraSplit = regexp.MustCompile(`\n\s*\n`)
+
+// submissionPassages splits a written-submission .txt into paragraph passages, each tagged with the
+// submission number and organisation from the filename. A submission has no speaker turns, so there is
+// no role or question context — the passage is a paragraph, and Source marks it a submission so the
+// judge and the table can tell it from hearing testimony. Paragraphs under 40 runes (page numbers,
+// stray headers from pdftotext) are dropped.
+func submissionPassages(path string) ([]Passage, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	stem := strings.TrimSuffix(filepath.Base(path), ".txt")
+	number, org := stem, ""
+	if m := subName.FindStringSubmatch(stem); m != nil {
+		number = m[1]
+		org = strings.ReplaceAll(m[2], "-", " ")
+	}
+	text := strings.ReplaceAll(string(data), "\f", "\n\n")
+	var out []Passage
+	turn := 0
+	for _, para := range paraSplit.Split(text, -1) {
+		p := strings.TrimSpace(para)
+		if len([]rune(p)) < 40 {
+			continue
+		}
+		out = append(out, Passage{
+			ID:      fmt.Sprintf("submission-%s#p%d", number, turn),
+			Session: stem, Speaker: org, Role: SourceSubmission, Source: SourceSubmission, Text: p,
+		})
+		turn++
+	}
+	return out, nil
 }
 
 // splitFile parses one transcript into passages: read the roster, then accumulate lines into the
@@ -176,6 +252,7 @@ func splitFile(path string) ([]Passage, error) {
 		out = append(out, Passage{
 			ID:   fmt.Sprintf("%s/%s#t%d", date, session, turn),
 			Date: date, Session: session, Speaker: speaker, Role: role, Text: text,
+			Source: SourceHearing,
 		})
 		turn++
 	}
@@ -382,6 +459,12 @@ func (ix *Index) Speakers() []SpeakerInfo {
 func Format(ps []Passage) string {
 	var b strings.Builder
 	for _, p := range ps {
+		if p.Source == SourceSubmission {
+			// A written submission: a paragraph, tagged with its number and organisation so the judge
+			// reads it as a submission, not hearing testimony.
+			fmt.Fprintf(&b, "[%s · written submission · %s]\n%s\n\n", p.ID, p.Speaker, p.Text)
+			continue
+		}
 		fmt.Fprintf(&b, "[%s · %s · %s (%s)]\n", p.ID, p.Date, p.Speaker, p.Role)
 		if p.Context != "" {
 			// The question is shown first, tagged as the questioner's, so the judge reads the witness

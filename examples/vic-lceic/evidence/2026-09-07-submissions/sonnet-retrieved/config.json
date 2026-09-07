@@ -1,0 +1,4 @@
+{"cell":"sonnet-retrieved-combined","backend":"anthropic","model":"claude-sonnet-4-6","retrieve":"bm25",
+ "n":3,"max_tokens":10000,"floor":0,"embed":true,"claims":"examples/vic-lceic/claims-faith-5.txt",
+ "corpus":"examples/vic-lceic/sources/hearings + examples/vic-lceic/sources/submissions",
+ "git_sha":"9d0aa74","date":"2026-09-07","note":"prompt-1 submissions rerun, 5 real claims F8 F12 F17 F29 F31"}
