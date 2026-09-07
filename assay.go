@@ -30,6 +30,7 @@ import (
 	"assay/internal/backend/ollama"
 	"assay/internal/brief"
 	"assay/internal/embed"
+	"assay/internal/manifest"
 	"assay/internal/retrieve"
 	"assay/internal/tree"
 )
@@ -64,6 +65,7 @@ type cfg struct {
 	floor        float64             // -floor: top-passage cosine below this ⇒ absent from code, no model call
 	embed        bool                // -embed: add the nomic-embed-text ranker, fused with BM25 by RRF
 	oracle       map[string][]string // -retrieve=oracle: claim-id → fixed gold passage ids
+	held         map[string]bool     // -manifest: doc ids the corpus holds; a claim citing a missing one is unverifiable
 	index        *retrieve.Index     // built once from the source corpus when retrieveMode != "none"
 	auditPath    string              // full-table sink; every run writes it, whichever renderer stdout gets
 	treeHTMLPath string              // eval/<stamp>/tree.html sink, written alongside audit.md
@@ -138,7 +140,9 @@ func main() {
 	flag.StringVar(&ollamaURL, "ollama-url", envOr("OLLAMA_HOST", ollama.DefaultBaseURL), "ollama server base URL")
 	flag.BoolVar(&think, "think", false, "ollama: emit the model's reasoning block (default off; on needs a higher token cap)")
 	var speakers bool
-	var embedModel, oracleFile string
+	var embedModel, oracleFile, manifestFile, makeManifest string
+	flag.StringVar(&manifestFile, "manifest", "", "MANIFEST.md of held documents; a claim citing a doc not in it is 'unverifiable' (no model call)")
+	flag.StringVar(&makeManifest, "make-manifest", "", "scan this sources root, write <root>/MANIFEST.md, and exit")
 	flag.StringVar(&c.retrieveMode, "retrieve", "bm25", "per-claim passage retrieval: bm25|none|oracle (none sends the full corpus; oracle reads -oracle)")
 	flag.StringVar(&oracleFile, "oracle", "", "oracle retrieval: JSON map of claim-id → [passage-id]; the judge sees exactly those passages")
 	flag.IntVar(&c.maxTokens, "max-tokens", retrieveTokenCap, "retrieval token budget per claim (fused bm25+embed ranking)")
@@ -189,6 +193,23 @@ func main() {
 		return
 	}
 
+	// -make-manifest scans a sources root and writes MANIFEST.md, then exits. No model, no key.
+	if makeManifest != "" {
+		docs, err := manifest.Scan(makeManifest)
+		if err != nil {
+			fatal("scan sources: " + err.Error())
+		}
+		if len(docs) == 0 {
+			fatal("no documents found under " + makeManifest)
+		}
+		out := filepath.Join(makeManifest, "MANIFEST.md")
+		if err := os.WriteFile(out, []byte(manifest.Render(docs)), 0o644); err != nil {
+			fatal("write manifest: " + err.Error())
+		}
+		fmt.Fprintf(os.Stderr, "wrote %s (%d documents)\n", out, len(docs))
+		return
+	}
+
 	// -speakers is a corpus inspection: split the source into passages and print the distinct speakers
 	// and the role each was tagged, then exit. No model call, so no key needed.
 	if speakers {
@@ -219,6 +240,17 @@ func main() {
 	}
 	c.backendName = backendName
 	c.usage = newUsageCounters()
+
+	// -manifest: load the held-document set. A claim citing a document not in it is judged
+	// "unverifiable" from code, no model call — distinct from "absent" (cited doc present, claim not
+	// found in it).
+	if manifestFile != "" {
+		held, err := manifest.LoadHeld(manifestFile)
+		if err != nil {
+			fatal("load manifest: " + err.Error())
+		}
+		c.held = held
+	}
 	input := readInput(text)
 
 	// Derive the fixture base name for Tier-2 JSONL naming.
@@ -434,8 +466,9 @@ func (c *cfg) runSubstance(input string) {
 	c.present(rows, tally(vs), mdSubstance(results), func() { c.termSubstance(results) }, details)
 }
 
-// claimLine is one parsed claim from a claims file: its id, its §-heading path, and its text.
-type claimLine struct{ id, path, text string }
+// claimLine is one parsed claim from a claims file: its id, its §-heading path, its text, and an
+// optional cites field (document ids the finding rests on, checked against the manifest).
+type claimLine struct{ id, path, text, cites string }
 
 func (c *cfg) runFaithfulness(input, srcPath string) {
 	raw := splitSummary(input)
@@ -453,12 +486,19 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 	below := make([]bool, len(raw))
 	var fullSrc []retrieve.Passage
 	var eligible []int
+	unverif := make([][]string, len(raw)) // per claim: cited doc ids not in the manifest, if any
 	for i, item := range raw {
-		id, path, text := parseClaimLine(item)
+		id, path, text, cites := parseClaimLine(item)
 		if id == "" {
 			id = fmt.Sprintf("c%d", i+1)
 		}
-		parsed[i] = claimLine{id: id, path: path, text: text}
+		parsed[i] = claimLine{id: id, path: path, text: text, cites: cites}
+		// A claim whose cited truth-maker is not held cannot be checked: mark it unverifiable and skip
+		// retrieval and the judge entirely.
+		if miss := c.missingCites(cites); len(miss) > 0 {
+			unverif[i] = miss
+			continue
+		}
 		claimPassages[i], below[i] = c.passagesForClaim(id, text, path, srcPath, &fullSrc)
 		if !below[i] {
 			eligible = append(eligible, i)
@@ -513,6 +553,16 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 				fmt.Fprintf(os.Stderr, "[resume] %d/%d claims already in %s; judging the rest\n",
 					len(done), len(raw), c.chainFile)
 			}
+		}
+	}
+
+	// Unverifiable claims: a cited document is not in the manifest, so-what = fetch it. No model call.
+	for i, miss := range unverif {
+		if len(miss) > 0 && !done[i] {
+			list := strings.Join(miss, ", ")
+			emit(i, faith{Verdict: "unverifiable",
+				Evidence: "cited document(s) not in corpus: " + list, SoWhat: "fetch " + list},
+				"manifest", nil, time.Now())
 		}
 	}
 
@@ -1111,7 +1161,7 @@ func (c cfg) faithRepeat(claim, src string) (faith, string) {
 
 // faithVerdictOrder ranks faithfulness verdicts worst-first; modalVerdict breaks a count tie by it,
 // so a split surfaces the verdict a human is likelier to need to look at rather than a random one.
-var faithVerdictOrder = []string{"unsupported", "contradicted", "absent", "overstated", "partial", "faithful", "error"}
+var faithVerdictOrder = []string{"unsupported", "contradicted", "absent", "unverifiable", "overstated", "partial", "faithful", "error"}
 
 // modalVerdict returns the most frequent verdict in `counts`, breaking ties by faithVerdictOrder
 // (worst first). It is total over any non-empty map.
@@ -1919,11 +1969,44 @@ func (f *treeFlag) Set(v string) error {
 // parseClaimLine pulls an optional "<id>\t<path>\t<text>" prefix off a claim line so the tree can
 // key claims to the source document's headings (path carries "/"-separated key=label segments).
 // A line with no tabs is a bare claim: no id, no path, the whole line is the text.
-func parseClaimLine(raw string) (id, path, text string) {
-	if parts := strings.SplitN(raw, "\t", 3); len(parts) == 3 {
-		return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), strings.TrimSpace(parts[2])
+// parseClaimLine splits a claims-file line: id, §-path, text, and an optional 4th tab field of cites
+// (space/comma-separated document ids checked against the manifest). A 3-field line has no cites.
+func parseClaimLine(raw string) (id, path, text, cites string) {
+	parts := strings.SplitN(raw, "\t", 4)
+	switch len(parts) {
+	case 4:
+		return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), strings.TrimSpace(parts[2]), strings.TrimSpace(parts[3])
+	case 3:
+		return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), strings.TrimSpace(parts[2]), ""
 	}
-	return "", "", raw
+	return "", "", raw, ""
+}
+
+// citedDocs splits a cites field into document ids (space- or comma-separated).
+func citedDocs(cites string) []string {
+	fields := strings.FieldsFunc(cites, func(r rune) bool { return r == ',' || r == ' ' || r == '\t' })
+	out := fields[:0]
+	for _, f := range fields {
+		if f = strings.TrimSpace(f); f != "" {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// missingCites returns the cited document ids not present in the held set, in order. Empty when every
+// cited doc is held (or the claim cites nothing, or no manifest was loaded).
+func (c cfg) missingCites(cites string) []string {
+	if c.held == nil || cites == "" {
+		return nil
+	}
+	var missing []string
+	for _, id := range citedDocs(cites) {
+		if !c.held[id] {
+			missing = append(missing, id)
+		}
+	}
+	return missing
 }
 
 // present routes one run's verdicts to the chosen stdout renderer and always writes the full table
@@ -2248,7 +2331,7 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 	paths := make([]string, len(items))
 	texts := make([]string, len(items))
 	for i, it := range items {
-		id, path, text := parseClaimLine(it)
+		id, path, text, _ := parseClaimLine(it)
 		if id == "" {
 			id = fmt.Sprintf("c%d", i+1)
 		}

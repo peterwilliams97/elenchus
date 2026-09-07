@@ -143,6 +143,26 @@ func TestGroundVerdictDowngrade(t *testing.T) {
 	}
 }
 
+// TestMissingCites pins the manifest pre-check: a claim citing a document not in the held set reports
+// exactly the missing ids; a claim whose cites are all held, or which cites nothing, reports none.
+func TestMissingCites(t *testing.T) {
+	c := cfg{held: map[string]bool{"submission:41": true, "hearing:2025-03-12/5_sbs": true}}
+	if got := c.missingCites("submission:41 hearing:2025-03-12/5_sbs"); len(got) != 0 {
+		t.Errorf("all-held should have no missing, got %v", got)
+	}
+	got := c.missingCites("submission:41, qon:abc/2025-03-21, submission:19/attachment-1")
+	if strings.Join(got, "|") != "qon:abc/2025-03-21|submission:19/attachment-1" {
+		t.Errorf("missing cites wrong: %v", got)
+	}
+	if got := c.missingCites(""); got != nil {
+		t.Errorf("no cites → nil, got %v", got)
+	}
+	// With no manifest loaded, the check is disabled entirely.
+	if got := (cfg{}).missingCites("qon:abc/2025-03-21"); got != nil {
+		t.Errorf("no manifest → no check, got %v", got)
+	}
+}
+
 func TestGroupBySharedPassages(t *testing.T) {
 	ps := func(ids ...string) []retrieve.Passage {
 		out := make([]retrieve.Passage, len(ids))

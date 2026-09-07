@@ -61,6 +61,11 @@ func Qualify(faith, substance, grounding, gap, text string) (tier int, ok bool) 
 		return 3, true
 	case grounding == "refuted":
 		return 4, true
+	case faith == "unverifiable":
+		// A cited truth-maker is not in the corpus: needs-you, but its own tier below the red ones —
+		// an infrastructure gap ("fetch X"), not a distortion. Ranked last so a confirmed problem is
+		// never buried beneath a can't-check.
+		return 5, true
 	}
 	return 0, false
 }
@@ -118,7 +123,7 @@ func topSegment(path string) string {
 // finding for the faithfulness tiers (a, c, e), the grounding finding for the grounding tiers (b, d).
 func reasonFor(s Sel) string {
 	switch s.Tier {
-	case 0, 2, 3:
+	case 0, 2, 3, 5:
 		return s.Row.FaithReason
 	default:
 		return s.Row.GroundReason

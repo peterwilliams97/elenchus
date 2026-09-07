@@ -112,6 +112,8 @@ var qualifyCases = []struct {
 	{"partial gap none → miss", "partial", "", "", "none", "x", 0, false},
 	{"partial gap empty → miss", "partial", "", "", "", "x", 0, false},
 	{"grounding refuted → d", "", "", "refuted", "none", "x", 4, true},
+	{"unverifiable → own tier", "unverifiable", "", "", "none", "x", 5, true}, // cited doc not held
+
 	{"clean faithful → miss", "faithful", "", "", "none", "x", 0, false},
 	{"substance only → miss", "", "hollow", "", "none", "x", 0, false},
 }
