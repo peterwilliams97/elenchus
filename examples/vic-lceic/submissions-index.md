@@ -4,9 +4,26 @@
 the Committee's own authoritative list. The live submissions page
 (`/inquiry-into-the-cultural-and-creative-industries-in-victoria/submissions`) is JS-rendered and
 did not return a machine-readable list on fetch; individual submission PDFs are hosted on
-parliament.vic.gov.au under per-submission `contentassets` hashes (three confirmed URLs below). A
-full URL-per-submission harvest was **not** performed (would need the SPA rendered) and no URLs are
-guessed here.
+parliament.vic.gov.au under per-submission `contentassets` hashes. A full URL-per-submission harvest
+was **not** performed (would need the SPA rendered) and no URLs are guessed here.
+
+## Fetch status — 2026-09-07 (verified this session, no URLs guessed)
+
+**The three PDF URLs previously listed below are all dead (HTTP 404).** Re-checked with a browser
+user-agent: submissions 9, 10, and 15 each return a 404 HTML error page, not a PDF. The site itself
+is up and `contentassets` still serves PDFs — the report PDF
+(`.../49eafb/contentassets/…/lceic-60-06-cultural-and-creative-industries-vic.pdf`) and the short
+landing page `parliament.vic.gov.au/culturalcreativeindustries` both return 200 — so it is the
+per-submission `…/submission-documents/NN.-name.pdf` paths specifically that were reorganised.
+
+The current submissions listing
+(`/get-involved/inquiries/inquiry-into-the-cultural-and-creative-industries-in-victoria/submissions/`)
+is an **EPiServer/Optimizely SPA** (`/Static/assets/index-CIDfNjQj.js`, `find.js`): its server HTML
+carries **zero** submission PDF links and no visible data/API endpoint. Harvesting the live URLs
+therefore requires rendering the SPA in a browser (e.g. `claude-in-chrome`) or reverse-engineering
+its EPiServer Find query — neither done here. **Until the URLs are re-harvested from the rendered
+page, the fetch cannot proceed and no submission PDFs are held locally.** The URL column below is
+retained only as a record of the dead paths; treat every entry as unverified.
 
 Non-public entries are marked: submitters who withheld their name, confidential submissions, and one
 placeholder row (`21 TEST PATTERN`) that appears verbatim in the source index.
