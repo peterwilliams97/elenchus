@@ -53,9 +53,10 @@ export ANTHROPIC_API_KEY=sk-ant-...
 ./assay -chain-dir eval/run1 memo.txt                  # write the Tier-2 JSONL chain here
 ```
 
-**`ANTHROPIC_API_KEY` is never available in this session and must never be requested, echoed, or
-placed in a command.** Runs that need it are done by the human via `source ./setkey.sh && <script>`
-in another terminal; ask them to run the script and read the output file afterwards.
+**`ANTHROPIC_API_KEY` lives in `./setkey.sh`.** Runs that need it use `source ./setkey.sh &&
+<command>` in one Bash call. Never cat, echo, grep or read setkey.sh; never print
+`$ANTHROPIC_API_KEY`; never write the key value into a command, file, or message. If a run fails for
+auth, report that and stop.
 
 `ANTHROPIC_MODEL` env var overrides the default model (`claude-sonnet-4-6`).
 
