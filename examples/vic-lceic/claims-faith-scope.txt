@@ -1,0 +1,11 @@
+F12	2=Chapter 2 — Overview of Victoria's cultural and creative industries/2.2.2=Negative mental health impacts	COVID-19 led to worsening mental health in the industries, particularly among children and young people.
+F17	2=Chapter 2 — Overview of Victoria's cultural and creative industries/2.2.5=Broader cost of living crisis	Ticket prices are a key barrier for people wanting to engage with the industries.
+F29	3=Chapter 3 — Government investment in Victoria's cultural and creative industries/3.3.5=Does Victoria get its fair share of federal funding?	Victoria receives its fair share of funding from Creative Australia.
+M1	3=Chapter 3 — Government investment in Victoria's cultural and creative industries/3.3.6=Regional Victoria is not getting its fair share	Regional Victoria receives its fair share of funding from Creative Australia.
+M2	2=Chapter 2 — Overview of Victoria's cultural and creative industries/2.2.5=Broader cost of living crisis	Witnesses said ticket prices have fallen since 2019.
+M3	2=Chapter 2 — Overview of Victoria's cultural and creative industries/2.2.2=Negative mental health impacts	According to Claire Febey of Creative Victoria, COVID-19 led to worsening mental health in the industries, particularly among children and young people.
+F2a	2=Chapter 2 — Overview of Victoria's cultural and creative industries/2.1.1=Economic and employment contribution	The industries employ more than 320,000 Victorians.
+F4	2=Chapter 2 — Overview of Victoria's cultural and creative industries/2.1.1=Cultural participation	Victoria rated higher for cultural participation than all other jurisdictions surveyed, including New York, Sweden and the UK.
+F10	2=Chapter 2 — Overview of Victoria's cultural and creative industries/2.2.1=Loss of audiences and income	Children's and young people's creative participation and attendance declined significantly between 2017–18 and 2021–22.
+F33	4=Chapter 4 — National broadcasters/4.3.1=ABC presence in Victoria	No state or territory has an ABC headcount that accurately reflects its population; over- or under-representation exists to varying degrees in all.
+F54b	4=Chapter 4 — National broadcasters/4.5.2=SBS investment in Victoria	SBS reaches 3.42 million Victorian viewers monthly, about 49% of the Victorian population.

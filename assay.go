@@ -54,6 +54,7 @@ type cfg struct {
 	asMarkdown   bool
 	showProgress bool
 	quiet        bool
+	fresh        bool // -fresh: re-judge every claim instead of resuming from an existing chain
 	usageOut     string
 	chainFile    string              // Tier-2 JSONL destination; set by runners before case loop
 	renderMode   string              // stdout renderer: "brief" (default), "full", or "tree"
@@ -158,6 +159,7 @@ func main() {
 	flag.IntVar(&c.repeat, "n", 1, "repeat each claim N times, show modal verdict + agreement (faithfulness)")
 	flag.BoolVar(&c.showProgress, "progress", true, "show per-claim progress on stderr (default on)")
 	flag.BoolVar(&c.quiet, "quiet", false, "suppress per-case lines + heartbeat; keeps SUMMARY and writes Tier-2")
+	flag.BoolVar(&c.fresh, "fresh", false, "faithfulness: ignore any existing chain and re-judge every claim (default resumes)")
 	flag.StringVar(&c.usageOut, "usage-out", "", "append one JSON record per run to this file")
 	flag.StringVar(&chainDir, "chain-dir", "", "directory for Tier-2 JSONL verification chain (default: eval/<stamp>/)")
 	flag.BoolVar(&full, "full", false, "print the full table to stdout instead of the brief report")
@@ -477,9 +479,46 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 		vs[i] = chosen.Verdict
 	}
 
+	// reuse reconstructs a claim's result from an existing chain record — no model call, no re-append —
+	// so a resumed run keeps the work an interrupted one already did.
+	reuse := func(i int, rec chainRecord) {
+		var fd faithDetail
+		_ = json.Unmarshal(rec.Detail, &fd)
+		results[i] = faith{Claim: rec.Claim, Verdict: rec.Verdict, Evidence: fd.CriticFinding,
+			SourceSays: fd.SourceSays, Gap: fd.Gap, SoWhat: fd.SoWhat, Quotes: fd.Quotes, QuoteSources: fd.QuoteSources}
+		if c.tally != nil {
+			c.tally.record(rec.Verdict)
+		}
+		rows[i] = brief.Row{ID: parsed[i].id, Path: parsed[i].path, Text: parsed[i].text,
+			Faith: rec.Verdict, FaithReason: fd.CriticFinding, Spread: rec.Spread, Gap: fd.Gap, SoWhat: fd.SoWhat}
+		details[parsed[i].id] = tree.Leaf{Reason: fd.CriticFinding, Quotes: fd.Quotes}
+		vs[i] = rec.Verdict
+	}
+
+	// Resume: unless -fresh, reuse any claim already judged in the chain so an interrupted run (an OOM
+	// kill mid-group) continues instead of re-paying. Grouping completes claims out of idx order, so
+	// the chain may have gaps — read whatever records are present.
+	done := map[int]bool{}
+	if c.chainFile != "" {
+		if c.fresh {
+			_ = os.Truncate(c.chainFile, 0)
+		} else {
+			for idx, rec := range readChainSparse(c.chainFile) {
+				if 0 <= idx && idx < len(raw) {
+					reuse(idx, rec)
+					done[idx] = true
+				}
+			}
+			if len(done) > 0 {
+				fmt.Fprintf(os.Stderr, "[resume] %d/%d claims already in %s; judging the rest\n",
+					len(done), len(raw), c.chainFile)
+			}
+		}
+	}
+
 	// Floor-suppressed claims: "absent" from code, no model call.
 	for i, isBelow := range below {
-		if isBelow {
+		if isBelow && !done[i] {
 			emit(i, faith{Verdict: "absent", Evidence: "no passage cleared the retrieval floor (retrieved=0)"},
 				"floor", nil, time.Now())
 		}
@@ -491,12 +530,36 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 		shared := unionPassages(claimPassages, group)
 		pids := retrieve.IDs(shared)
 		for _, i := range group {
+			if done[i] {
+				continue
+			}
 			t := c.progressStart(i, len(raw), "faithfulness")
 			chosen, spread := c.faithJudgeRepeat(parsed[i].text, shared)
 			emit(i, chosen, spread, pids, t)
 		}
 	}
 	c.present(rows, tally(vs), mdFaith(results), func() { c.termFaith(results) }, details)
+}
+
+// readChainSparse reads whatever records a chain file holds, keyed by idx, tolerating gaps (a resumed
+// faithfulness run completes claims out of idx order, so the partial chain need not be contiguous). A
+// missing or unreadable file yields an empty map — a fresh start.
+func readChainSparse(path string) map[int]chainRecord {
+	out := map[int]chainRecord{}
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return out
+	}
+	for _, ln := range strings.Split(strings.TrimSpace(string(b)), "\n") {
+		if ln = strings.TrimSpace(ln); ln == "" {
+			continue
+		}
+		var r chainRecord
+		if json.Unmarshal([]byte(ln), &r) == nil && r.Mode == "faithfulness" {
+			out[r.Idx] = r
+		}
+	}
+	return out
 }
 
 // groupBySharedPassages partitions eligible claim indices into groups whose passage sets overlap by
@@ -1297,13 +1360,26 @@ paraphrase, never edit, never merge across passages. If nothing supports the cla
 evidence array and verdict "absent".
 
 VERDICT:
-- "faithful": the summary reports the claim as the speaker stated it, including register and force.
-- "partial": the source supports a weaker/narrower version.
+- "faithful": the source states the claim's SUBJECT, SCOPE, and DIRECTION — the same thing, about the
+  same population / place / quantity, moving the same way — including the register and force with which
+  the speaker stated it. A statement that is only ADJACENT (a related but different proposition) or
+  BROADER (true of a larger population, place, or category than the claim names) is "partial" at best,
+  with gap="scope"; it is NOT "faithful".
+- "partial": the source supports a weaker/narrower version, or only an adjacent/broader one (gap=scope).
 - "overstated": same in kind but the summary strengthened it — or literalized a rhetorical claim.
 - "absent": not in the passages.
 - "contradicted": the source says the opposite.
 For "partial"/"overstated", give what_source_actually_says (the faithful version, correct register);
 otherwise set it to "".
+
+SCOPE DISCIPLINE — two worked negatives, so subject/scope/direction is checked, not waved through:
+- "COVID-19 took away critical training opportunities from those looking to enter the industries" is
+  NOT faithful to a source saying graduates who trained online during COVID came out under-skilled:
+  that is an adjacent proposition (the training still happened, it was degraded), not the removal of
+  training opportunities. Verdict: partial, gap=scope.
+- A claim about "regional Victoria's" share of funding is NOT established by a source about regional
+  AUSTRALIA, or about the nation as a whole: regional Australia is a broader place than regional
+  Victoria. Same subject (funding share), wrong scope (place). Verdict: partial, gap=scope.
 
 GAP — the single field that most changes what a reader would do, err toward naming one over "none":
 "scope" (narrower population/place/category), "denominator" (a fraction/share whose base is dropped),

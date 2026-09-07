@@ -119,6 +119,16 @@ and a `reason` (≤40 words), constrained to that JSON shape on both backends �
 strict tool call, Ollama via `format`. A schema-invalid answer is retried once (counted as
 `schema_retries`).
 
+- **Scope discipline.** `faithful` requires the source to state the claim's *subject, scope and
+  direction* — the same thing, about the same population/place/quantity, moving the same way. A source
+  statement that is only *adjacent* (a related but different proposition) or *broader* (true of a
+  larger population, place, or category) is `partial` at best, `gap=scope`. The prompt carries two
+  worked negatives (a claim about lost training opportunities vs. degraded online training; a claim
+  about regional Victoria vs. a source about regional Australia).
+- **Resume.** A faithfulness run reuses any claim already in the chain, so an interrupted run (e.g. an
+  OOM kill mid-group) continues rather than re-paying; `-fresh` re-judges everything. Grouping
+  completes claims out of order, so the partial chain may have gaps — the reader tolerates them.
+
 - **Quote by reference.** Each evidence item is `{passage_id, quote}`. Code verifies the quote is a
   verbatim substring of the passage it names (whitespace/curly-punctuation normalised only) and drops
   any that fails, counting it as a `quote_reject`. This is the grounding check — no model call — and
@@ -164,6 +174,7 @@ strict tool call, Ollama via `format`. A schema-invalid answer is retried once (
 | `-n`           | `1`                         | Repeat each claim N times; show modal verdict + agreement (faithfulness). |
 | `-progress`    | `true`                      | Per-case stderr lines + 60s heartbeat.                        |
 | `-quiet`       | `false`                     | Suppress per-case lines + heartbeat; keeps SUMMARY and chain. |
+| `-fresh`       | `false`                     | Faithfulness: re-judge every claim; default resumes from an existing chain. |
 | `-usage-out`   | `""`                        | Append one JSON usage record per run to this file.            |
 | `-chain-dir`   | `eval/<stamp>-<model>/`     | Directory for the Tier-2 JSONL verification chain.            |
 | `-full`        | `false`                     | Print the full table to stdout instead of the brief report.   |

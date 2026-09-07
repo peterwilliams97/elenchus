@@ -1,0 +1,29 @@
+model qwen3.6:27b-q4_K_M · backend ollama · calls 33 · n/a(model not in price table) in=745140 out=8115 cache_read=0 cache_create=0 · wall 17m40s
+changes 3 summary lines
+tree — depth 3, max width 4, score 9.0 (target ≤20) ok
+
+  2  Chapter 2 — Overview of Victoria's cultural and creative industries  [4]
+    2.1.1  Economic and employment contribution  [2]
+    2.2.1  Loss of audiences and income  [1]
+      F10  Children's and young people's creative participation and at…  absent 2/3
+          ↳ so what: The summary falsely attributes a decline in children's attendance to the provided texts, which only discuss overall or adult attendance trends.
+    2.2.2  Negative mental health impacts  [2]
+      F12  COVID-19 led to worsening mental health in the industries, …  faithful 3/3
+      M3  According to Claire Febey of Creative Victoria, COVID-19 le…  absent 3/3
+          ↳ so what: The summary attributes a specific claim about mental health impacts on youth to Claire Febey, which she never made.
+    2.2.5  Broader cost of living crisis  [2]
+      F17  Ticket prices are a key barrier for people wanting to engag…  faithful 3/3
+      M2  Witnesses said ticket prices have fallen since 2019.  contradicted 3/3
+          ↳ so what: Readers would falsely believe ticket prices have dropped, ignoring witness testimony that rising costs and stagnant funding have forced prices up, reducing attendance.
+  3  Chapter 3 — Government investment in Victoria's cultural and creative industries  [2]
+    3.3.5  Does Victoria get its fair share of federal funding?  [1]
+    3.3.6  Regional Victoria is not getting its fair share  [1]
+      M1  Regional Victoria receives its fair share of funding from C…  contradicted 2/3
+          ↳ so what: Readers would falsely believe regional Victoria is adequately funded, ignoring testimony that it receives significantly less per capita than other regions.
+  4  Chapter 4 — National broadcasters  [2]
+    4.3.1  ABC presence in Victoria  [1]
+      F33  No state or territory has an ABC headcount that accurately …  absent 3/3
+    4.5.2  SBS investment in Victoria  [1]
+      F54b  SBS reaches 3.42 million Victorian viewers monthly, about 4…  absent 3/3
+
+Full table: examples/vic-lceic/evidence/2026-09-07-scope/after-qwen/audit.md

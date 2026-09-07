@@ -1,0 +1,37 @@
+[heartbeat] elapsed=1m0s calls=0 in=0 out=0 web=0 est=n/a(model not in price table) in=0 out=0 cache_read=0 cache_create=0 verified=0 errored=0 seen=0/11 claim="faithfulness 1/11"
+[heartbeat] elapsed=2m0s calls=1 in=23003 out=400 web=0 est=n/a(model not in price table) in=23003 out=400 cache_read=0 cache_create=0 verified=0 errored=0 seen=0/11 claim="faithfulness 1/11"
+[  1/11] ✓ faithful      "COVID-19 led to worsening mental health in the industries…"  2m59.01s
+[heartbeat] elapsed=3m0s calls=3 in=69009 out=1294 web=0 est=n/a(model not in price table) in=69009 out=1294 cache_read=0 cache_create=0 verified=1 errored=0 seen=1/11 claim="faithfulness 6/11"
+[  6/11] ✓ absent        "According to Claire Febey of Creative Victoria, COVID-19 …"  33.25s
+[heartbeat] elapsed=4m0s calls=6 in=138045 out=1648 web=0 est=n/a(model not in price table) in=138045 out=1648 cache_read=0 cache_create=0 verified=2 errored=0 seen=2/11 claim="faithfulness 2/11"
+[heartbeat] elapsed=5m0s calls=6 in=138045 out=1648 web=0 est=n/a(model not in price table) in=138045 out=1648 cache_read=0 cache_create=0 verified=2 errored=0 seen=2/11 claim="faithfulness 2/11"
+[heartbeat] elapsed=6m0s calls=8 in=189123 out=2133 web=0 est=n/a(model not in price table) in=189123 out=2133 cache_read=0 cache_create=0 verified=2 errored=0 seen=2/11 claim="faithfulness 2/11"
+[  2/11] ✓ faithful      "Ticket prices are a key barrier for people wanting to eng…"  2m36.32s
+[heartbeat] elapsed=7m0s calls=10 in=240200 out=2980 web=0 est=n/a(model not in price table) in=240200 out=2980 cache_read=0 cache_create=0 verified=3 errored=0 seen=3/11 claim="faithfulness 5/11"
+[  5/11] ✓ contradicted  "Witnesses said ticket prices have fallen since 2019."  1m46.86s
+[heartbeat] elapsed=8m0s calls=12 in=291276 out=3806 web=0 est=n/a(model not in price table) in=291276 out=3806 cache_read=0 cache_create=0 verified=4 errored=0 seen=4/11 claim="faithfulness 9/11"
+[  9/11] ✓ absent        "Children's and young people's creative participation and …"  44.93s
+[heartbeat] elapsed=9m0s calls=15 in=367941 out=4330 web=0 est=n/a(model not in price table) in=367941 out=4330 cache_read=0 cache_create=0 verified=5 errored=0 seen=5/11 claim="faithfulness 3/11"
+[heartbeat] elapsed=10m0s calls=16 in=385808 out=4525 web=0 est=n/a(model not in price table) in=385808 out=4525 cache_read=0 cache_create=0 verified=5 errored=0 seen=5/11 claim="faithfulness 3/11"
+[  3/11] ✓ faithful      "Victoria receives its fair share of funding from Creative…"  2m7.69s
+[heartbeat] elapsed=11m0s calls=18 in=421542 out=5188 web=0 est=n/a(model not in price table) in=421542 out=5188 cache_read=0 cache_create=0 verified=6 errored=0 seen=6/11 claim="faithfulness 4/11"
+[heartbeat] elapsed=12m0s calls=20 in=457278 out=6042 web=0 est=n/a(model not in price table) in=457278 out=6042 cache_read=0 cache_create=0 verified=6 errored=0 seen=6/11 claim="faithfulness 4/11"
+[  4/11] ✓ contradicted  "Regional Victoria receives its fair share of funding from…"  1m43.11s
+[heartbeat] elapsed=13m0s calls=21 in=475146 out=6531 web=0 est=n/a(model not in price table) in=475146 out=6531 cache_read=0 cache_create=0 verified=7 errored=0 seen=7/11 claim="faithfulness 7/11"
+[heartbeat] elapsed=14m0s calls=21 in=475146 out=6531 web=0 est=n/a(model not in price table) in=475146 out=6531 cache_read=0 cache_create=0 verified=7 errored=0 seen=7/11 claim="faithfulness 7/11"
+[  7/11] ✓ faithful      "The industries employ more than 320,000 Victorians."  1m54.43s
+[heartbeat] elapsed=15m0s calls=26 in=581026 out=7301 web=0 est=n/a(model not in price table) in=581026 out=7301 cache_read=0 cache_create=0 verified=8 errored=0 seen=8/11 claim="faithfulness 8/11"
+[  8/11] ✓ faithful      "Victoria rated higher for cultural participation than all…"  42.57s
+[heartbeat] elapsed=16m0s calls=27 in=602205 out=7475 web=0 est=n/a(model not in price table) in=602205 out=7475 cache_read=0 cache_create=0 verified=9 errored=0 seen=9/11 claim="faithfulness 10/11"
+[heartbeat] elapsed=17m0s calls=29 in=649855 out=7681 web=0 est=n/a(model not in price table) in=649855 out=7681 cache_read=0 cache_create=0 verified=9 errored=0 seen=9/11 claim="faithfulness 10/11"
+[ 10/11] ✓ absent        "No state or territory has an ABC headcount that accuratel…"  2m0.32s
+[ 11/11] ✓ absent        "SBS reaches 3.42 million Victorian viewers monthly, about…"  30.87s
+tree (html): examples/vic-lceic/evidence/2026-09-07-scope/after-qwen/tree.html
+
+SUMMARY claims-faith-scope faithfulness
+  cases 11 · verified 11 · errored 0
+  faithful 5 · absent 4 · contradicted 2
+  wall 17m40s · est_usd n/a(model not in price table) in=745140 out=8115 cache_read=0 cache_create=0 · cache_hit 0% (read 0 / created 0)
+  schema_retries 0 · quote_rejects 14 · no_quote_downgrades 1
+  detail: examples/vic-lceic/evidence/2026-09-07-scope/after-qwen/claims-faith-scope.faithfulness.jsonl
+USAGE model=qwen3.6:27b-q4_K_M calls=33 in=745140 out=8115 cache_read=0 cache_create=0 web_searches=0 wall=1059s est_usd=n/a(model not in price table) in=745140 out=8115 cache_read=0 cache_create=0

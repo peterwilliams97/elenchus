@@ -1,0 +1,32 @@
+model qwen3.6:27b-q4_K_M · backend ollama · calls 33 · n/a(model not in price table) in=736098 out=9108 cache_read=0 cache_create=0 · wall 18m42s
+changes 3 summary lines
+tree — depth 3, max width 4, score 9.0 (target ≤20) ok
+
+  2  Chapter 2 — Overview of Victoria's cultural and creative industries  [4]
+    2.1.1  Economic and employment contribution  [2]
+    2.2.1  Loss of audiences and income  [1]
+      F10  Children's and young people's creative participation and at…  absent 3/3
+          ↳ so what: The claim specifically targets children and young people, but the provided text only cites data for the general population or adult Victorians.
+    2.2.2  Negative mental health impacts  [2]
+      F12  COVID-19 led to worsening mental health in the industries, …  faithful 3/3
+      M3  According to Claire Febey of Creative Victoria, COVID-19 le…  absent 3/3
+          ↳ so what: The claim falsely attributes a specific view on youth mental health impacts to Claire Febey, who did not mention this topic.
+    2.2.5  Broader cost of living crisis  [2]
+      F17  Ticket prices are a key barrier for people wanting to engag…  faithful 3/3
+      M2  Witnesses said ticket prices have fallen since 2019.  contradicted 3/3
+          ↳ so what: Readers would falsely believe ticket prices have decreased, ignoring evidence that rising costs are forcing price hikes and deterring attendance.
+  3  Chapter 3 — Government investment in Victoria's cultural and creative industries  [2]
+    3.3.5  Does Victoria get its fair share of federal funding?  [1]
+      F29  Victoria receives its fair share of funding from Creative A…  partial 2/3
+          ↳ so what: The claim implies overall fairness, but witnesses note regional Victoria receives significantly less than its fair share.
+    3.3.6  Regional Victoria is not getting its fair share  [1]
+      M1  Regional Victoria receives its fair share of funding from C…  contradicted 3/3
+          ↳ so what: Readers would falsely believe regional Victoria is adequately funded, ignoring evidence of severe underfunding and per capita deficits.
+  4  Chapter 4 — National broadcasters  [2]
+    4.3.1  ABC presence in Victoria  [1]
+      F33  No state or territory has an ABC headcount that accurately …  absent 3/3
+    4.5.2  SBS investment in Victoria  [1]
+      F54b  SBS reaches 3.42 million Victorian viewers monthly, about 4…  absent 3/3
+          ↳ so what: The claim cites specific viewership statistics not present in the transcript, creating a false impression of documented audience size.
+
+Full table: examples/vic-lceic/evidence/2026-09-07-scope/before-qwen/audit.md

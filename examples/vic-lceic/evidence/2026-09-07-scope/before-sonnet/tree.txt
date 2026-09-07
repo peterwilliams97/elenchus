@@ -1,0 +1,34 @@
+model claude-sonnet-4-6 · backend anthropic · calls 33 · $0.7897 (rates 2026-06-01) · wall 5m3s
+changes 3 summary lines
+tree — depth 3, max width 4, score 9.0 (target ≤20) ok
+
+  2  Chapter 2 — Overview of Victoria's cultural and creative industries  [4]
+    2.1.1  Economic and employment contribution  [2]
+    2.2.1  Loss of audiences and income  [1]
+      F10  Children's and young people's creative participation and at…  absent 3/3
+          ↳ so what: Readers would believe the passages contain evidence about children's/young people's arts participation decline, but they do not.
+    2.2.2  Negative mental health impacts  [2]
+      F12  COVID-19 led to worsening mental health in the industries, …  partial 3/3
+          ↳ so what: Reader would think COVID caused direct, documented mental health deterioration broadly across the industry; evidence is narrower and more anecdotal, focused on specific groups.
+      M3  According to Claire Febey of Creative Victoria, COVID-19 le…  absent 3/3
+          ↳ so what: Readers would wrongly attribute a mental health claim to Claire Febey; she never made it.
+    2.2.5  Broader cost of living crisis  [2]
+      F17  Ticket prices are a key barrier for people wanting to engag…  faithful 3/3
+      M2  Witnesses said ticket prices have fallen since 2019.  contradicted 3/3
+          ↳ so what: Readers would believe ticket prices dropped, when witnesses consistently described rising or unaffordably high ticket prices as a key barrier.
+  3  Chapter 3 — Government investment in Victoria's cultural and creative industries  [2]
+    3.3.5  Does Victoria get its fair share of federal funding?  [1]
+      F29  Victoria receives its fair share of funding from Creative A…  partial 3/3
+          ↳ so what: Reader would miss that this is true only for metro Victoria overall; regional Victoria is severely underfunded on a per-capita basis.
+    3.3.6  Regional Victoria is not getting its fair share  [1]
+      M1  Regional Victoria receives its fair share of funding from C…  contradicted 3/3
+          ↳ so what: Readers would believe regional Victoria is fairly funded by Creative Australia, when witnesses and submissions consistently say it is severely underfunded.
+  4  Chapter 4 — National broadcasters  [2]
+    4.3.1  ABC presence in Victoria  [1]
+      F33  No state or territory has an ABC headcount that accurately …  absent 3/3
+          ↳ so what: Reader would believe a comparative multi-state ABC staffing analysis was presented; no such analysis appears in the passages.
+    4.5.2  SBS investment in Victoria  [1]
+      F54b  SBS reaches 3.42 million Victorian viewers monthly, about 4…  absent 3/3
+          ↳ so what: Readers would believe SBS reported a specific Victorian viewership figure (3.42 million / 49%) that does not appear anywhere in the passages.
+
+Full table: examples/vic-lceic/evidence/2026-09-07-scope/before-sonnet/audit.md

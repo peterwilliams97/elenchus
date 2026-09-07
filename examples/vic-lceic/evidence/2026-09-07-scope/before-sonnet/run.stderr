@@ -1,0 +1,25 @@
+[  1/11] ✓ partial       "COVID-19 led to worsening mental health in the industries…"  48.59s
+[heartbeat] elapsed=1m0s calls=5 in=280 out=2249 web=0 est=$0.1475 (rates 2026-06-01) verified=1 errored=0 seen=1/11 claim="faithfulness 6/11"
+[  6/11] ✓ absent        "According to Claire Febey of Creative Victoria, COVID-19 …"  15.68s
+[  2/11] ✓ faithful      "Ticket prices are a key barrier for people wanting to eng…"  38.19s
+[heartbeat] elapsed=2m0s calls=10 in=522 out=4385 web=0 est=$0.3057 (rates 2026-06-01) verified=3 errored=0 seen=3/11 claim="faithfulness 5/11"
+[  5/11] ✓ contradicted  "Witnesses said ticket prices have fallen since 2019."  35.53s
+[  9/11] ✓ absent        "Children's and young people's creative participation and …"  14.82s
+[heartbeat] elapsed=3m0s calls=16 in=815 out=6537 web=0 est=$0.4433 (rates 2026-06-01) verified=5 errored=0 seen=5/11 claim="faithfulness 3/11"
+[  3/11] ✓ partial       "Victoria receives its fair share of funding from Creative…"  42.83s
+[  4/11] ✓ contradicted  "Regional Victoria receives its fair share of funding from…"  36.22s
+[heartbeat] elapsed=4m0s calls=22 in=1067 out=9486 web=0 est=$0.5938 (rates 2026-06-01) verified=7 errored=0 seen=7/11 claim="faithfulness 7/11"
+[  7/11] ✓ faithful      "The industries employ more than 320,000 Victorians."  18.65s
+[  8/11] ✓ faithful      "Victoria rated higher for cultural participation than all…"  20.48s
+[ 10/11] ✓ absent        "No state or territory has an ABC headcount that accuratel…"  15.76s
+[heartbeat] elapsed=5m0s calls=32 in=1592 out=11806 web=0 est=$0.7793 (rates 2026-06-01) verified=10 errored=0 seen=10/11 claim="faithfulness 11/11"
+[ 11/11] ✓ absent        "SBS reaches 3.42 million Victorian viewers monthly, about…"  16.09s
+tree (html): examples/vic-lceic/evidence/2026-09-07-scope/before-sonnet/tree.html
+
+SUMMARY claims-faith-scope faithfulness
+  cases 11 · verified 11 · errored 0
+  faithful 3 · partial 2 · absent 4 · contradicted 2
+  wall 5m3s · est_usd $0.7897 (rates 2026-06-01) · cache_hit 86% (read 656680 / created 108719)
+  schema_retries 0 · quote_rejects 4 · no_quote_downgrades 0
+  detail: examples/vic-lceic/evidence/2026-09-07-scope/before-sonnet/claims-faith-scope.faithfulness.jsonl
+USAGE model=claude-sonnet-4-6 calls=33 in=1644 out=12003 cache_read=656680 cache_create=108719 web_searches=0 wall=303s est_usd=$0.7897 (rates 2026-06-01)

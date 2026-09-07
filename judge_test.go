@@ -7,6 +7,8 @@ package main
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -38,6 +40,17 @@ func TestFaithJudgeSysKeepsLiteralizationAndVerbatim(t *testing.T) {
 	for _, want := range []string{"Literalization", "VERBATIM", "passage_id"} {
 		if !strings.Contains(faithJudgeSys, want) {
 			t.Errorf("faithJudgeSys missing %q", want)
+		}
+	}
+}
+
+// TestFaithJudgeSysScopeDiscipline pins the scope rule and its two worked negatives (the training
+// -opportunities claim and the regional-Victoria-vs-regional-Australia claim) are in the judge prompt.
+func TestFaithJudgeSysScopeDiscipline(t *testing.T) {
+	for _, want := range []string{"SUBJECT, SCOPE, and DIRECTION", "SCOPE DISCIPLINE", "gap=scope",
+		"training opportunities", "wrong scope (place)"} {
+		if !strings.Contains(faithJudgeSys, want) {
+			t.Errorf("faithJudgeSys missing scope-discipline text %q", want)
 		}
 	}
 }
@@ -158,6 +171,37 @@ func TestGroupBySharedPassages(t *testing.T) {
 	union := unionPassages(claimPassages, groups[0])
 	if got := retrieve.IDs(union); strings.Join(got, ",") != "a,b,c,z" {
 		t.Errorf("union order wrong: %v", got)
+	}
+}
+
+// TestReadChainSparseToleratesGaps pins that the resume reader returns whatever faithfulness records
+// are present, keyed by idx, even when they are non-contiguous (grouping completes claims out of
+// order) — and ignores blank lines, non-faithfulness records, and a missing file.
+func TestReadChainSparseToleratesGaps(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "c.faithfulness.jsonl")
+	// idx 0 and 2 present (idx 1 missing — a gap); one substance record that must be ignored.
+	lines := []string{
+		`{"idx":0,"mode":"faithfulness","claim":"a","verdict":"partial","spread":"3/3","detail":{"quotes":["q"],"critic_finding":"r"}}`,
+		``,
+		`{"idx":2,"mode":"faithfulness","claim":"c","verdict":"absent","detail":{}}`,
+		`{"idx":9,"mode":"substance","claim":"x","verdict":"hollow","detail":{}}`,
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got := readChainSparse(path)
+	if len(got) != 2 {
+		t.Fatalf("want 2 faithfulness records (gap at idx1, substance ignored), got %d", len(got))
+	}
+	if got[0].Verdict != "partial" || got[2].Verdict != "absent" {
+		t.Errorf("records not keyed by idx: %+v", got)
+	}
+	if _, ok := got[1]; ok {
+		t.Error("idx 1 should be absent (the gap)")
+	}
+	if r := readChainSparse(filepath.Join(dir, "nope.jsonl")); len(r) != 0 {
+		t.Errorf("missing file should yield empty map, got %d", len(r))
 	}
 }
 

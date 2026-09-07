@@ -1,0 +1,3 @@
+{"cell":"after-sonnet","backend":"anthropic","model":"claude-sonnet-4-6","retrieve":"bm25","n":3,
+ "max_tokens":10000,"floor":0,"embed":true,"prompt":"new-judgeprompt-scope","claims":"examples/vic-lceic/claims-faith-scope.txt",
+ "corpus":"hearings+submissions","git_sha":"052d630","date":"2026-09-07"}
