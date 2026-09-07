@@ -1,0 +1,22 @@
+model qwen3.6:27b-q4_K_M · backend ollama · calls 24 · n/a(model not in price table) in=82761 out=6562 cache_read=0 cache_create=0 · wall 8m39s
+changes 2 summary lines
+tree — depth 3, max width 3, score 7.0 (target ≤20) ok
+
+  2  Chapter 2 — Overview of Victoria's cultural and creative industries  [3]
+    2.2.1  Loss of audiences and income  [1]
+    2.2.2  Negative mental health impacts  [2]
+      F12  COVID-19 led to worsening mental health in the industries, …  faithful 3/3
+      M3  According to Claire Febey of Creative Victoria, COVID-19 le…  absent 2/3
+          ↳ so what: The claim attributes a view to a witness who did not testify; the actual evidence comes from different witnesses.
+    2.2.5  Broader cost of living crisis  [2]
+      F17  Ticket prices are a key barrier for people wanting to engag…  faithful 3/3
+      M2  Witnesses said ticket prices have fallen since 2019.  contradicted 3/3
+          ↳ so what: Readers would wrongly believe ticket costs are decreasing, missing the core argument that high prices are deterring attendance.
+  3  Chapter 3 — Government investment in Victoria's cultural and creative industries  [2]
+    3.3.5  Does Victoria get its fair share of federal funding?  [1]
+    3.3.6  Regional Victoria is not getting its fair share  [2]
+      F31  Regional Victoria does not receive its fair share of fundin…  faithful 3/3
+      M1  Regional Victoria receives its fair share of funding from C…  contradicted 3/3
+          ↳ so what: Readers would incorrectly believe regional funding is equitable, ignoring witness testimony that it is severely inadequate and below demographic share.
+
+Full table: examples/vic-lceic/evidence/2026-09-07-compare/qwen-oracle/audit.md

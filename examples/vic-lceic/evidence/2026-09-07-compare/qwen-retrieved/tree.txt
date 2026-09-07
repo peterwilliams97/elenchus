@@ -1,0 +1,24 @@
+model qwen3.6:27b-q4_K_M · backend ollama · calls 24 · n/a(model not in price table) in=507753 out=9596 cache_read=0 cache_create=0 · wall 15m33s
+changes 2 summary lines
+tree — depth 3, max width 3, score 7.0 (target ≤20) ok
+
+  2  Chapter 2 — Overview of Victoria's cultural and creative industries  [3]
+    2.2.1  Loss of audiences and income  [1]
+    2.2.2  Negative mental health impacts  [2]
+      F12  COVID-19 led to worsening mental health in the industries, …  faithful 3/3
+      M3  According to Claire Febey of Creative Victoria, COVID-19 le…  contradicted 2/3
+          ↳ so what: The claim misattributes views on youth mental health and financial precarity to Claire Febey, who did not make these specific points in the provided text.
+    2.2.5  Broader cost of living crisis  [2]
+      F17  Ticket prices are a key barrier for people wanting to engag…  faithful 3/3
+      M2  Witnesses said ticket prices have fallen since 2019.  contradicted 3/3
+          ↳ so what: Readers would incorrectly believe prices dropped, ignoring evidence of rising costs and stagnant/high prices driving attendance down.
+  3  Chapter 3 — Government investment in Victoria's cultural and creative industries  [2]
+    3.3.5  Does Victoria get its fair share of federal funding?  [1]
+      F29  Victoria receives its fair share of funding from Creative A…  partial 2/3
+          ↳ so what: The claim ignores that regional Victoria receives significantly less than its fair share and that state funding is inadequate.
+    3.3.6  Regional Victoria is not getting its fair share  [2]
+      F31  Regional Victoria does not receive its fair share of fundin…  faithful 3/3
+      M1  Regional Victoria receives its fair share of funding from C…  contradicted 3/3
+          ↳ so what: Readers would falsely believe regional funding is equitable, ignoring evidence it is significantly underfunded.
+
+Full table: examples/vic-lceic/evidence/2026-09-07-compare/qwen-retrieved/audit.md

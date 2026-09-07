@@ -1,0 +1,27 @@
+model claude-sonnet-4-6 · backend anthropic · calls 24 · $1.8517 (rates 2026-06-01) · wall 5m42s
+changes 2 summary lines
+tree — depth 3, max width 3, score 7.0 (target ≤20) ok
+
+  2  Chapter 2 — Overview of Victoria's cultural and creative industries  [3]
+    2.2.1  Loss of audiences and income  [1]
+      F8  COVID-19 took away critical training opportunities from tho…  partial 3/3
+          ↳ so what: Reader would think COVID blocked entry to training entirely; source says it degraded quality of practical training for those who did train.
+    2.2.2  Negative mental health impacts  [2]
+      F12  COVID-19 led to worsening mental health in the industries, …  faithful 2/3
+      M3  According to Claire Febey of Creative Victoria, COVID-19 le…  absent 3/3
+          ↳ so what: Reader would think Creative Victoria's CEO made this claim; she did not — other witnesses did.
+    2.2.5  Broader cost of living crisis  [2]
+      F17  Ticket prices are a key barrier for people wanting to engag…  faithful 3/3
+      M2  Witnesses said ticket prices have fallen since 2019.  contradicted 3/3
+          ↳ so what: Readers would think ticket prices dropped, when witnesses said they are stagnant or unaffordably high, driving people away.
+  3  Chapter 3 — Government investment in Victoria's cultural and creative industries  [2]
+    3.3.5  Does Victoria get its fair share of federal funding?  [1]
+      F29  Victoria receives its fair share of funding from Creative A…  partial 3/3
+          ↳ so what: Reader would miss that "fair share" applies only to Creative Australia grants, not total federal cultural spending, where Victoria's share is unknown and likely lower.
+    3.3.6  Regional Victoria is not getting its fair share  [2]
+      F31  Regional Victoria does not receive its fair share of fundin…  partial 3/3
+          ↳ so what: Reader would think Victoria overall is underfunded by Creative Australia; actually only regional Victoria (not Victoria as a whole) is shortchanged, and the regional shortfall is a national pattern, not Victoria-specific.
+      M1  Regional Victoria receives its fair share of funding from C…  contradicted 3/3
+          ↳ so what: A reader would think regional Victoria is equitably funded by Creative Australia, when witnesses consistently said it receives far less than its population share.
+
+Full table: examples/vic-lceic/evidence/2026-09-07-compare/sonnet-full/audit.md

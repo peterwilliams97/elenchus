@@ -1,0 +1,27 @@
+model claude-sonnet-4-6 · backend anthropic · calls 24 · $0.5255 (rates 2026-06-01) · wall 4m54s
+changes 2 summary lines
+tree — depth 3, max width 3, score 7.0 (target ≤20) ok
+
+  2  Chapter 2 — Overview of Victoria's cultural and creative industries  [3]
+    2.2.1  Loss of audiences and income  [1]
+      F8  COVID-19 took away critical training opportunities from tho…  partial 3/3
+          ↳ so what: Reader would miss that the claim is specifically about theatre/arts trainees whose practical skills were degraded by online-only training, not a broad cross-industry training loss.
+    2.2.2  Negative mental health impacts  [2]
+      F12  COVID-19 led to worsening mental health in the industries, …  faithful 3/3
+      M3  According to Claire Febey of Creative Victoria, COVID-19 le…  absent 3/3
+          ↳ so what: Reader would think Claire Febey testified about COVID's mental health impact on youth, but she never did.
+    2.2.5  Broader cost of living crisis  [2]
+      F17  Ticket prices are a key barrier for people wanting to engag…  faithful 3/3
+      M2  Witnesses said ticket prices have fallen since 2019.  contradicted 3/3
+          ↳ so what: Readers would believe ticket prices dropped, when witnesses said they are stagnant or rising, limiting income.
+  3  Chapter 3 — Government investment in Victoria's cultural and creative industries  [2]
+    3.3.5  Does Victoria get its fair share of federal funding?  [1]
+      F29  Victoria receives its fair share of funding from Creative A…  partial 3/3
+          ↳ so what: Reader would miss that "fair share" applies only to Victoria overall, not to regional Victoria, which is severely underfunded.
+    3.3.6  Regional Victoria is not getting its fair share  [2]
+      F31  Regional Victoria does not receive its fair share of fundin…  partial 3/3
+          ↳ so what: Victoria overall gets its exact per-capita share from Creative Australia; the shortfall is specific to regional areas within Victoria, not Victoria as a whole.
+      M1  Regional Victoria receives its fair share of funding from C…  contradicted 3/3
+          ↳ so what: Readers would think regional Victoria gets its fair share; in fact witnesses say it is significantly underfunded relative to population.
+
+Full table: examples/vic-lceic/evidence/2026-09-07-compare/sonnet-retrieved/audit.md

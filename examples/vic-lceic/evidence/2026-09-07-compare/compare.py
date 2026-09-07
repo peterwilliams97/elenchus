@@ -112,8 +112,19 @@ def main():
         if not e:
             return "$0"
         try:
-            return f"${float(str(e).lstrip('$'))/len(ids):.4f}"
-        except ValueError:
+            # est_usd is like "$1.8517 (rates 2026-06-01)" — take the number before the space.
+            n = float(str(e).lstrip("$").split()[0])
+            return f"${n/len(ids):.4f}"
+        except (ValueError, IndexError):
+            return str(e)
+
+    def total_usd(cell):
+        e = cell["usage"].get("est_usd")
+        if not e:
+            return "$0"
+        try:
+            return f"${float(str(e).lstrip('$').split()[0]):.4f}"
+        except (ValueError, IndexError):
             return str(e)
 
     def quote_rejects(cell):
@@ -130,6 +141,7 @@ def main():
 
     out.append(rowfmt("mutant catch rate (of 3)", mutant_catch))
     out.append(rowfmt("secs / claim", per_claim_secs))
+    out.append(rowfmt("$ total (24 calls)", total_usd))
     out.append(rowfmt("$ / claim", per_claim_usd))
     out.append(rowfmt("quote-verification rejects", quote_rejects))
     out.append(rowfmt("cache hit", cache_hit))

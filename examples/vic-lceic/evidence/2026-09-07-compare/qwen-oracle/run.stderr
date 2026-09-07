@@ -1,0 +1,9 @@
+tree (html): examples/vic-lceic/evidence/2026-09-07-compare/qwen-oracle/tree.html
+
+SUMMARY claims-faith-refuter faithfulness
+  cases 8 · verified 8 · errored 0
+  faithful 5 · absent 1 · contradicted 2
+  wall 8m39s · est_usd n/a(model not in price table) in=82761 out=6562 cache_read=0 cache_create=0 · cache_hit 0% (read 0 / created 0)
+  schema_retries 0 · quote_rejects 16
+  detail: examples/vic-lceic/evidence/2026-09-07-compare/qwen-oracle/claims-faith-refuter.faithfulness.jsonl
+USAGE model=qwen3.6:27b-q4_K_M calls=24 in=82761 out=6562 cache_read=0 cache_create=0 web_searches=0 wall=519s est_usd=n/a(model not in price table) in=82761 out=6562 cache_read=0 cache_create=0
