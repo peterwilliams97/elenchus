@@ -114,3 +114,21 @@ Order suggested by cost and signal (cheap/red-today first):
 ## Roads not taken
 
 - (none recorded this session)
+
+## Deferred — root-block session (2026-09-07)
+
+- **Needs-you tier order refinement not applied.** The root-block spec draft called for the finer
+  needs-you order `contradicted > unsupported > overstated+number > absent > partial+number >
+  partial-other`. It interleaves across `brief.Qualify`'s current tiers (`absent` is tier 0 there,
+  but the refinement ranks it *below* overstated+number at tier 2), so honouring it means renumbering
+  `Qualify` — which breaks `TestQualifyTiers` and the tier table in `spec/TREE.md`. Deferred: the root
+  block itself does not print the needs-you list (only class counts + the value line), so its output is
+  unaffected. Opinion-exclusion from needs-you *was* applied (`brief.IsOpinion` in `Selected`). Pick
+  up as its own branch with the test + spec-table update together.
+- **`claims-machine-full.txt` carries no `# title:` header.** Route is in it (5th column) as required,
+  but not the title/date header — a live `assay -tree claims-machine-full.txt` run feeds the file
+  through `splitSummary`, which counts `#` lines as claims (only `-from`'s `loadClaimsFile` strips
+  them). So a live full-run's block line 1 shows "N findings checked against M source documents" with
+  no title; the titled block comes from `current/claims.txt` under `-from`. To title live runs, route
+  the live claims read through `loadClaimsFile` too (watch the faithfulness-on-prose-summary case,
+  where `#` lines are real content, before touching `splitSummary`).

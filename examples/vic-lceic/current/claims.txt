@@ -1,3 +1,5 @@
+# title: Inquiry into the cultural and creative industries in Victoria
+# date: June 2025
 F1	2=Chapter 2 — Overview of Victoria's cultural and creative industries/2.1.1=§2.1.1	Victorian cultural & creative industries contributed $40.5 billion to the Victorian economy in 2022–23.	hearing:2025-03-12/1_creative-victoria-and-vicscreen
 F2a	2=Chapter 2 — Overview of Victoria's cultural and creative industries/2.1.1=§2.1.1	The industries employ more than 320,000 Victorians.	hearing:2025-03-12/1_creative-victoria-and-vicscreen
 F2b	2=Chapter 2 — Overview of Victoria's cultural and creative industries/2.1.1=§2.1.1	That is almost 9% of total employment in the state.	hearing:2025-03-12/1_creative-victoria-and-vicscreen

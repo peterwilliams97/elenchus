@@ -8,10 +8,28 @@ import json, os, glob
 HERE = os.path.dirname(os.path.abspath(__file__))
 EVID = os.path.join(HERE, "..", "evidence")
 CLAIMS_FILES = [os.path.join(HERE, "..", f) for f in ("claims-faith-refuter.txt", "claims-faith-scope.txt")]
+MACHINE = os.path.join(HERE, "..", "claims-machine.txt")
+
+# Root-block header carried at the top of claims.txt; assay reads "# title:" / "# date:" for line 1.
+TITLE = "Inquiry into the cultural and creative industries in Victoria"
+DATE = "June 2025"
 
 
 def norm(s):
     return " ".join(s.split())
+
+
+def load_routes():
+    """claim-id → route from claims-machine.txt (the human file that declares route=)."""
+    import re
+    routes = {}
+    for ln in open(MACHINE):
+        if ln.startswith("#") or "|" not in ln:
+            continue
+        m = re.search(r"route=(\S+)", ln)
+        if m:
+            routes[ln.split("|")[0].strip()] = m.group(1)
+    return routes
 
 
 def load_claim_meta():
@@ -27,6 +45,7 @@ def load_claim_meta():
 
 def main():
     meta = load_claim_meta()
+    routes = load_routes()
     # Sonnet chains only, tagged by source dir + mtime.
     chains = []
     for f in glob.glob(os.path.join(EVID, "*", "*", "*.faithfulness.jsonl")):
@@ -55,12 +74,14 @@ def main():
         r, path, rel = latest[cid]
         r = dict(r)
         r["idx"], r["total"], r["backend"] = i, len(order), "anthropic"
+        r["route"] = routes.get(cid, "")  # propagate route into the chain so the root block can partition
         chain_out.append(json.dumps(r))
         claims_out.append(f"{cid}\t{path}\t{r['claim']}")
         prov.append(f"| {cid} | {r['verdict']} {r.get('spread','')} | {rel} |")
 
     open(os.path.join(HERE, "current.faithfulness.jsonl"), "w").write("\n".join(chain_out) + "\n")
-    open(os.path.join(HERE, "claims.txt"), "w").write("\n".join(claims_out) + "\n")
+    header = f"# title: {TITLE}\n# date: {DATE}\n"
+    open(os.path.join(HERE, "claims.txt"), "w").write(header + "\n".join(claims_out) + "\n")
     with open(os.path.join(HERE, "PROVENANCE.md"), "w") as f:
         f.write("# current/ — provenance (which run each claim's verdict came from)\n\n")
         f.write("Merged from the Sonnet evidence cells, newest run per claim (by chain mtime). This is a\n")

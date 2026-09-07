@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Convert claims-machine.txt (pipe-delimited findings) → assay claims format (id \t path \t text \t
-cites). cites are the corpus-class documents (hearing/submission/attachment/qon) the report's src=
-field names; external datasets (ABS, Creative Australia report, Audience Atlas, OzTAM, Throsby) are
-NOT corpus-class and are excluded — they are the evidence-grounding mode's concern."""
+cites \t route). cites are the corpus-class documents (hearing/submission/attachment/qon) the report's
+src= field names; external datasets (ABS, Creative Australia report, Audience Atlas, OzTAM, Throsby)
+are NOT corpus-class and are excluded — they are the evidence-grounding mode's concern. route is
+carried through verbatim from the source line's route= field (spec/TREE.md § Root node rendering)."""
 import re, sys
 
 SRC = "examples/vic-lceic/claims-machine.txt"
@@ -89,6 +90,7 @@ def main():
         if len(parts) < 5:
             continue
         cid = parts[0]
+        route = parts[1][6:] if parts[1].startswith("route=") else parts[1]
         ref = parts[2]
         text = parts[3]
         src = parts[4][4:] if parts[4].startswith("src=") else parts[4]
@@ -100,7 +102,7 @@ def main():
         else:
             path = "unplaced"
         cites = " ".join(cites_for(src))
-        sys.stdout.write(f"{cid}\t{path}\t{text}\t{cites}\n")
+        sys.stdout.write(f"{cid}\t{path}\t{text}\t{cites}\t{route}\n")
 
 
 if __name__ == "__main__":
