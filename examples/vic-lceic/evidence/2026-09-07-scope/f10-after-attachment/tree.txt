@@ -1,0 +1,9 @@
+model claude-sonnet-4-6 · backend anthropic · calls 3 · $0.0859 (rates 2026-06-01) · wall 36s
+changes 0 summary lines
+tree — depth 3, max width 1, score 3.0 (target ≤20) ok
+
+  2  Chapter 2 — Overview of Victoria's cultural and creative industries  [1]
+    2.2.1  Loss of audiences and income  [1]
+      F10  Children's and young people's creative participation and at…  faithful 3/3
+
+Full table: examples/vic-lceic/evidence/2026-09-07-scope/f10-after-attachment/audit.md

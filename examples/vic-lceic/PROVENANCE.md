@@ -124,3 +124,12 @@ date so the manifest id (`qon:<org>/<date>`) matches the claims' cites.
 **Not fetched:** Theatre Network Australia Submission 19 **Attachment 1** (the ABS series behind F10)
 — no link for it appears on either the submissions or hearings page (only attachments 01.1, 09.1,
 33.1 are published there). F10 therefore stays `unverifiable` until that attachment is located.
+
+### Update 2026-09-07 — Submission 19 Attachment 1 located on the author's site
+
+TNA Submission 19 **Attachment 1** (the ABS participation/attendance series behind F10) is not
+published on the parliament pages, but the same document is available from TNA's own site
+(tna.org.au — `theatrenetwork.org.au` is NXDOMAIN). Verified by its content: "Between 2017–18 and
+2021–22 attendance at performing arts events by children dropped …". Fetched to
+`sources/submissions/19.1-theatre-network-australia.pdf` (gitignored).
+- https://tna.org.au/wp-content/uploads/2024/12/TNA-Summary-Reports-on-Australias-Cultural-and-Creative-Sector.pdf

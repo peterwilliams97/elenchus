@@ -1,0 +1,10 @@
+[  1/1] ✓ faithful      "Children's and young people's creative participation and …"  19.11s
+tree (html): examples/vic-lceic/evidence/2026-09-07-scope/f10-after-attachment/tree.html
+
+SUMMARY claims-f10 faithfulness
+  cases 1 · verified 1 · errored 0
+  faithful 1
+  wall 36s · est_usd $0.0859 (rates 2026-06-01) · cache_hit 67% (read 33084 / created 16542)
+  schema_retries 0 · quote_rejects 0 · no_quote_downgrades 0
+  detail: examples/vic-lceic/evidence/2026-09-07-scope/f10-after-attachment/claims-f10.faithfulness.jsonl
+USAGE model=claude-sonnet-4-6 calls=3 in=168 out=899 cache_read=33084 cache_create=16542 web_searches=0 wall=35s est_usd=$0.0859 (rates 2026-06-01)
