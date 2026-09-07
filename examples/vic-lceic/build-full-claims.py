@@ -4,12 +4,28 @@ cites \t route). cites are the corpus-class documents (hearing/submission/attach
 src= field names; external datasets (ABS, Creative Australia report, Audience Atlas, OzTAM, Throsby)
 are NOT corpus-class and are excluded — they are the evidence-grounding mode's concern. route is
 carried through verbatim from the source line's route= field (spec/TREE.md § Root node rendering)."""
-import re, sys
+import os, re, sys
 
+HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = "examples/vic-lceic/claims-machine.txt"
 CH = {"2": "2=Chapter 2 — Overview of Victoria's cultural and creative industries",
       "3": "3=Chapter 3 — Government investment in Victoria's cultural and creative industries",
       "4": "4=Chapter 4 — National broadcasters"}
+
+
+def load_headings():
+    """§-section number → heading title from section-headings.txt (source: report-summary.md). A
+    section with no heading there falls back to "§<sec>" so the path label is never invented."""
+    heads = {}
+    for ln in open(os.path.join(HERE, "section-headings.txt")):
+        if ln.startswith("#") or "\t" not in ln:
+            continue
+        sec, title = ln.rstrip("\n").split("\t", 1)
+        heads[sec.strip()] = title.strip()
+    return heads
+
+
+HEADINGS = load_headings()
 
 # witness surname / org keyword → hearing id (from the file's authoritative Appendix A.2 map).
 HEAR = {
@@ -98,7 +114,8 @@ def main():
         if m:
             ch = m.group(1)
             sec = ".".join(x for x in m.groups() if x)
-            path = f"{CH.get(ch, ch + '=Chapter ' + ch)}/{sec}=§{sec}"
+            label = HEADINGS.get(sec, "§" + sec)  # the report's own heading, else the bare § number
+            path = f"{CH.get(ch, ch + '=Chapter ' + ch)}/{sec}={label}"
         else:
             path = "unplaced"
         cites = " ".join(cites_for(src))

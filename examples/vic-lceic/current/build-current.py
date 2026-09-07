@@ -19,6 +19,26 @@ def norm(s):
     return " ".join(s.split())
 
 
+def load_headings():
+    """§-section number → heading title from ../section-headings.txt (source: report-summary.md). A
+    section with no heading there keeps its existing label, so a path label is never invented."""
+    heads = {}
+    for ln in open(os.path.join(HERE, "..", "section-headings.txt")):
+        if ln.startswith("#") or "\t" not in ln:
+            continue
+        sec, title = ln.rstrip("\n").split("\t", 1)
+        heads[sec.strip()] = title.strip()
+    return heads
+
+
+def apply_headings(path, heads):
+    """Rewrite the last path segment's label to the report's section heading (else leave it)."""
+    segs = path.split("/")
+    key, _, label = segs[-1].partition("=")
+    segs[-1] = f"{key}={heads.get(key, label)}"
+    return "/".join(segs)
+
+
 def load_routes():
     """claim-id → route from claims-machine.txt (the human file that declares route=)."""
     import re
@@ -46,6 +66,7 @@ def load_claim_meta():
 def main():
     meta = load_claim_meta()
     routes = load_routes()
+    heads = load_headings()
     # Sonnet chains only, tagged by source dir + mtime.
     chains = []
     for f in glob.glob(os.path.join(EVID, "*", "*", "*.faithfulness.jsonl")):
@@ -76,7 +97,7 @@ def main():
         r["idx"], r["total"], r["backend"] = i, len(order), "anthropic"
         r["route"] = routes.get(cid, "")  # propagate route into the chain so the root block can partition
         chain_out.append(json.dumps(r))
-        claims_out.append(f"{cid}\t{path}\t{r['claim']}")
+        claims_out.append(f"{cid}\t{apply_headings(path, heads)}\t{r['claim']}")
         prov.append(f"| {cid} | {r['verdict']} {r.get('spread','')} | {rel} |")
 
     open(os.path.join(HERE, "current.faithfulness.jsonl"), "w").write("\n".join(chain_out) + "\n")

@@ -1,0 +1,30 @@
+# section-headings.txt — §-section number → heading title, for the tree path labels.
+# Source: report-summary.md FINDING lines (the report body's own section headings).
+# Regenerate when report-summary.md changes. Sections with no heading here (e.g. 4.4.2,
+# which report-summary.md does not title) fall back to "§<sec>" in the converters.
+# Format: <sec>\t<heading>
+2.1.1	Economic significance
+2.1.2	Social significance
+2.2.1	Loss of audiences and income
+2.2.2	Negative mental health impacts
+2.2.3	Significant cost increases
+2.2.4	Harder to make a living
+2.2.5	Broader cost of living crisis
+2.2.6	Exacerbation of long-term issues
+3.2.1	Funding has not been indexed
+3.2.2	Grant and reporting requirements are onerous
+3.2.3	Grant programs are unpredictable
+3.2.4	Grant opportunities are limited
+3.2.5	Grant caps are too low
+3.2.6	Focus on infrastructure rather than artists
+3.2.7	Grants programs don't cover the ideation process
+3.2.8	Confusion around what level of government funds what
+3.2.9	Lack of focus on creative investment in regional Victoria
+3.3.5	Does Victoria get its fair share of federal funding?
+3.3.6	Regional Victoria is not getting its fair share
+4.3.1	ABC headcount in Victoria
+4.3.2	ABC spending on content production in Victoria
+4.4.1	SBS headcount in Victoria
+4.5	Cultural representation
+4.5.1	How ABC represents Victorian stories and talent
+4.5.2	How SBS represents Victorian stories and talent
