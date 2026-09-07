@@ -97,7 +97,7 @@ F41  | route=source     | ref=§4.4.1 p76   | SBS staff distribution doesn't ref
 F42  | route=source     | ref=§4.4.1 p77   | SBS's decision to relocate to Western Sydney was determined by funding requirements set by the Federal Government. | src=Clare O'Neil (SBS) 2025-03-12 tx pp44,50 [fn82,84-87]
 F43  | route=evaluative | ref=§4.4.1 p78   | It is unclear why Victoria was not considered in the Federal Government's SBS relocation feasibility study. | src=Clare O'Neil (SBS) — study 'narrowly scoped to western Sydney only', 2025-03-12 tx pp44,50 [fn82-83]; Committee
 F44  | route=source     | ref=§4.4.2 p78   | SBS provides significant financial and creative investment to Victoria. | src=Clare O'Neil (SBS) — $55.8m combined project budget Jul-2021–Feb-2025; 34% of avg annual drama budget to Vic (2021–24), 2025-03-12 tx p41 [fn91-92]; SBS, Submission 42
-F45  | route=source     | ref=§4.5 p79     | SBS content remains nationally accessible regardless of production location. | src=Clare O'Neil (SBS) 2025-03-12 tx p51 [fn103-104]
+F45  | route=source     | ref=§4.4.2 p79   | SBS content remains nationally accessible regardless of production location. | src=Clare O'Neil (SBS) 2025-03-12 tx p51 [fn103-104]
 F46a | route=evidence   | ref=§4.5.1 p80   | Between 2020–21 and Jan 2025, the ABC commissioned 75 external projects with the majority of production in Victoria. | src=ABC, Submission 41 p2 [fn108]
 F46b | route=evidence   | ref=§4.5.1 p80   | ...and produced 52 internal projects with the majority of production in Victoria. | src=ABC, Submission 41 p2 [fn109]
 F46c | route=evaluative | ref=§4.5.1 p80   | ...demonstrating the ABC's vital role in supporting the state's screen industry. | src=Mark Tapley (ABC) 2025-02-27 tx p29 [fn110]

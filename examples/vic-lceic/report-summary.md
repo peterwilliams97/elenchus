@@ -255,11 +255,11 @@ Submission 14, Parliamentary Budget Office). This narrowing is itself an assayab
 > to establish a physical presence in an appropriately culturally diverse location in Victoria, such
 > as Broadmeadows or Dandenong.
 
-> **FINDING 44** (p80, §4.5 Cultural representation): SBS provides significant financial and creative
-> investment to Victoria.
+> **FINDING 44** (p80, §4.4.2 SBS spending on content production in Victoria): SBS provides
+> significant financial and creative investment to Victoria.
 
-> **FINDING 45** (p80, §4.5): SBS's content remains nationally accessible regardless of the production
-> location.
+> **FINDING 45** (p80, §4.4.2): SBS's content remains nationally accessible regardless of the
+> production location.
 
 > **FINDING 46** (p82, §4.5.1 How ABC represents Victorian stories and talent): Between 2020 and 2025,
 > the ABC commissioned 75 external and 52 internal projects where the majority of production took

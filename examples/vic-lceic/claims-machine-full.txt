@@ -49,7 +49,7 @@ F41	4=Chapter 4 — National broadcasters/4.4.1=SBS headcount in Victoria	SBS st
 F42	4=Chapter 4 — National broadcasters/4.4.1=SBS headcount in Victoria	SBS's decision to relocate to Western Sydney was determined by funding requirements set by the Federal Government.	hearing:2025-03-12/5_sbs	source
 F43	4=Chapter 4 — National broadcasters/4.4.1=SBS headcount in Victoria	It is unclear why Victoria was not considered in the Federal Government's SBS relocation feasibility study.	hearing:2025-03-12/5_sbs	evaluative
 F44	4=Chapter 4 — National broadcasters/4.4.2=§4.4.2	SBS provides significant financial and creative investment to Victoria.	hearing:2025-03-12/5_sbs submission:42	source
-F45	4=Chapter 4 — National broadcasters/4.5=Cultural representation	SBS content remains nationally accessible regardless of production location.	hearing:2025-03-12/5_sbs	source
+F45	4=Chapter 4 — National broadcasters/4.4.2=§4.4.2	SBS content remains nationally accessible regardless of production location.	hearing:2025-03-12/5_sbs	source
 F46a	4=Chapter 4 — National broadcasters/4.5.1=How ABC represents Victorian stories and talent	Between 2020–21 and Jan 2025, the ABC commissioned 75 external projects with the majority of production in Victoria.	submission:41	evidence
 F46b	4=Chapter 4 — National broadcasters/4.5.1=How ABC represents Victorian stories and talent	...and produced 52 internal projects with the majority of production in Victoria.	submission:41	evidence
 F46c	4=Chapter 4 — National broadcasters/4.5.1=How ABC represents Victorian stories and talent	...demonstrating the ABC's vital role in supporting the state's screen industry.	hearing:2025-02-27/4_abc	evaluative
