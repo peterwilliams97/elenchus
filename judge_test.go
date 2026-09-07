@@ -92,7 +92,7 @@ func TestFaithJudgeRejectsNonVerbatimQuotes(t *testing.T) {
 		`{"passage_id":"p1","quote":"regional Victorians receive $1.06 per capita in federal arts funding."},` +
 		`{"passage_id":"p1","quote":"regional Victorians receive $2.00 per capita"},` +
 		`{"passage_id":"p9","quote":"Creative Australia's annual report shows the shortfall."}],` +
-		`"report_says":"regional Victoria gets its fair share","source_says":"regional Victorians get $1.06 per capita","reason":"narrower than claimed"}`
+		`"report_says":"the country parts are funded fairly","source_says":"the country parts get about a dollar each","reason":"narrower than claimed"}`
 	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
 		return judge, nil, nil
 	}
@@ -109,17 +109,20 @@ func TestFaithJudgeRejectsNonVerbatimQuotes(t *testing.T) {
 	if _, rejects, _ := c.usage.extras(); rejects != 2 {
 		t.Errorf("want 2 quote rejects (paraphrase + invented id), got %d", rejects)
 	}
-	if got.SourceSays != "regional Victorians get $1.06 per capita" {
+	if got.SourceSays != "the country parts get about a dollar each" {
 		t.Errorf("source_says not carried: %q", got.SourceSays)
 	}
-	if got.ReportSays != "regional Victoria gets its fair share" {
+	if got.ReportSays != "the country parts are funded fairly" {
 		t.Errorf("report_says not carried: %q", got.ReportSays)
 	}
 	// partial + a verified quote → the two-clause stakes line.
-	wantSoWhat := "The report says regional Victoria gets its fair share. " +
-		"The source only says regional Victorians get $1.06 per capita."
+	wantSoWhat := "The report says the country parts are funded fairly. " +
+		"The source only says the country parts get about a dollar each."
 	if got.SoWhat != wantSoWhat {
 		t.Errorf("stakes line not assembled:\n got %q\nwant %q", got.SoWhat, wantSoWhat)
+	}
+	if r := c.usage.plainRetriesN(); r != 0 {
+		t.Errorf("paraphrased restatements should trigger no plain retry, got %d", r)
 	}
 }
 
@@ -136,9 +139,9 @@ func TestFaithJudgeChainRecordF46b(t *testing.T) {
 	const judge = `{"verdict":"contradicted","gap":"scope","evidence":[` +
 		`{"passage_id":"submission-41#p2","quote":"In addition to these external projects, over the same period the ABC spent $80 million on 52 internal projects."},` +
 		`{"passage_id":"2025-02-27/4_abc#t14","quote":"Additionally, over the same period the ABC invested over $80 million in 52 internal productions based in Victoria, delivering a further 507 hours."}],` +
-		`"report_says":"most of the work on those 52 projects was done in Victoria",` +
-		`"source_says":"the projects were based in Victoria",` +
-		`"reason":"The sources describe the 52 projects as based in Victoria, never as a majority of production."}`
+		`"report_says":"most of those 52 shows were mainly made in Victoria",` +
+		`"source_says":"those shows were only located in Victoria",` +
+		`"reason":"The sources describe the 52 shows as headquartered in the state, never as a majority of production."}`
 	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
 		return judge, nil, nil
 	}
@@ -154,17 +157,19 @@ func TestFaithJudgeChainRecordF46b(t *testing.T) {
 	if rec.Verdict != "contradicted" {
 		t.Errorf("verdict = %q, want contradicted", rec.Verdict)
 	}
-	if fd.ReportSays != "most of the work on those 52 projects was done in Victoria" {
+	if fd.ReportSays != "most of those 52 shows were mainly made in Victoria" {
 		t.Errorf("report_says = %q", fd.ReportSays)
 	}
-	if fd.SourceSays != "the projects were based in Victoria" {
+	if fd.SourceSays != "those shows were only located in Victoria" {
 		t.Errorf("source_says = %q", fd.SourceSays)
 	}
-	wantSoWhat := "The report says most of the work on those 52 projects was done in Victoria. " +
-		"The source only says the projects were based in Victoria."
+	wantSoWhat := "The report says most of those 52 shows were mainly made in Victoria. " +
+		"The source only says those shows were only located in Victoria."
 	if fd.SoWhat != wantSoWhat {
 		t.Errorf("so_what:\n got %q\nwant %q", fd.SoWhat, wantSoWhat)
 	}
+	// The restatements paraphrase — no banned word, no ≥4-syllable import, no copied 3-word run — so
+	// the judge is called once, no plain retry.
 	if r := c.usage.plainRetriesN(); r != 0 {
 		t.Errorf("clean restatement should trigger no plain retry, got %d", r)
 	}
@@ -225,7 +230,7 @@ func TestFaithJudgePlainRestatementRetry(t *testing.T) {
 	bad := `{"verdict":"partial","gap":"scope","evidence":[` + q + `],` +
 		`"report_says":"the reader would infer a majority","source_says":"projects based in Victoria","reason":"x"}`
 	good := `{"verdict":"partial","gap":"scope","evidence":[` + q + `],` +
-		`"report_says":"most work was done in Victoria","source_says":"projects based in Victoria","reason":"x"}`
+		`"report_says":"most work was done in Victoria","source_says":"the shows only sat in the state","reason":"x"}`
 	n := 0
 	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
 		n++
@@ -244,6 +249,61 @@ func TestFaithJudgePlainRestatementRetry(t *testing.T) {
 	}
 	if got.ReportSays != "most work was done in Victoria" {
 		t.Errorf("retry result not kept: %q", got.ReportSays)
+	}
+}
+
+// TestVerbatimRun pins the no-copy check: a 3+-word run lifted from the claim or a quote is caught
+// (numbers count as words), a 2-word overlap is allowed, and a genuine paraphrase passes.
+func TestVerbatimRun(t *testing.T) {
+	claim := "the ABC produced 52 internal projects with the majority of production in Victoria"
+	quotes := []string{"52 internal productions based in Victoria"}
+	if verbatimRun("it had the majority of production locally", claim, quotes) == "" {
+		t.Error(`3-word run "majority of production" copied from the claim not caught`)
+	}
+	if verbatimRun("the shows were based in Victoria", claim, quotes) == "" {
+		t.Error(`3-word run "based in Victoria" copied from a quote not caught`)
+	}
+	if verbatimRun("those 52 internal projects were local", claim, quotes) == "" {
+		t.Error(`numeric 3-word run "52 internal projects" not caught`)
+	}
+	if w := verbatimRun("most shows were made in Victoria", claim, quotes); w != "" {
+		t.Errorf("a 2-word overlap should be allowed, flagged %q", w)
+	}
+	if w := verbatimRun("the country was funded fairly", claim, quotes); w != "" {
+		t.Errorf("a genuine paraphrase should pass, flagged %q", w)
+	}
+}
+
+// TestFaithJudgeVerbatimCopyRetry drives faithJudge with a stub whose first restatement lifts a
+// 3-word run from a verified quote (no banned or long word — only the copy is wrong) and paraphrases
+// on the retry, asserting the copied run alone triggers exactly one plain retry and the paraphrase is
+// kept.
+func TestFaithJudgeVerbatimCopyRetry(t *testing.T) {
+	passages := []retrieve.Passage{{ID: "p1", Source: "submission",
+		Text: "52 internal productions based in Victoria, delivering a further 507 hours."}}
+	const q = `{"passage_id":"p1","quote":"52 internal productions based in Victoria, delivering a further 507 hours."}`
+	copyJSON := `{"verdict":"partial","gap":"scope","evidence":[` + q + `],` +
+		`"report_says":"the shows were based in Victoria","source_says":"the shows sat in the state","reason":"x"}`
+	clean := `{"verdict":"partial","gap":"scope","evidence":[` + q + `],` +
+		`"report_says":"the shows were mostly made locally","source_says":"the shows only sat in the state","reason":"x"}`
+	n := 0
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
+		n++
+		if n == 1 {
+			return copyJSON, nil, nil
+		}
+		return clean, nil, nil
+	}
+	c := cfg{call: stub, usage: newUsageCounters()}
+	got := c.faithJudge("a claim about the shows", passages, nil)
+	if n != 2 {
+		t.Errorf("want 2 dispatches (copy + steered retry), got %d", n)
+	}
+	if c.usage.plainRetriesN() != 1 {
+		t.Errorf("want 1 plain retry for the copied run, got %d", c.usage.plainRetriesN())
+	}
+	if got.ReportSays != "the shows were mostly made locally" {
+		t.Errorf("retry paraphrase not kept: %q", got.ReportSays)
 	}
 }
 

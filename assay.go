@@ -1037,39 +1037,45 @@ const judgeSampleTemp = 0.7
 // claims sharing passages reuses it. temp is nil for a deterministic call, non-nil for repeat sampling.
 func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64) faith {
 	cached := "PASSAGES:\n" + retrieve.Format(passages)
-	var j judgeJSON
-	if err := c.callSchema(faithJudgeSys, cached, "SUMMARY CLAIM:\n"+claim, json.RawMessage(judgeSchema), "faith_verdict", temp, &j); err != nil {
-		return faith{Claim: claim, Verdict: "error", Evidence: err.Error()}
-	}
-	// report_says/source_says must be plain restatements — no "reader"/"would", no ≥4-syllable word
-	// the claim and its cited quotes never used. A violation gets one retry (counted); whatever the
-	// retry returns is kept.
-	citedQuotes := make([]string, len(j.Evidence))
-	for i, e := range j.Evidence {
-		citedQuotes[i] = e.Quote
-	}
-	if plainBadWord(j.ReportSays, claim, citedQuotes) != "" || plainBadWord(j.SourceSays, claim, citedQuotes) != "" {
-		if c.usage != nil {
-			c.usage.addPlainRetry()
-		}
-		var j2 judgeJSON
-		if err := c.callSchema(faithJudgeSys, cached, "SUMMARY CLAIM:\n"+claim, json.RawMessage(judgeSchema), "faith_verdict", temp, &j2); err == nil {
-			j = j2
-		}
-	}
+	user := "SUMMARY CLAIM:\n" + claim
 	byID := make(map[string]retrieve.Passage, len(passages))
 	for _, p := range passages {
 		byID[p.ID] = p
 	}
-	var verified, sources []string
-	rejects := 0
-	for _, e := range j.Evidence {
-		p, ok := byID[e.PassageID]
-		if ok && quoteInPassage(e.Quote, p) {
-			verified = append(verified, e.Quote)
-			sources = append(sources, p.Source) // "hearing" | "submission", for the evidence-origin table
-		} else {
-			rejects++ // a paraphrase presented as verbatim, or an id the judge invented
+	// ground verifies each cited quote is a verbatim substring of the passage it names — the grounding
+	// check, no model call — returning the surviving quotes, their sources, and the reject count.
+	ground := func(jj judgeJSON) (verified, sources []string, rejects int) {
+		for _, e := range jj.Evidence {
+			if p, ok := byID[e.PassageID]; ok && quoteInPassage(e.Quote, p) {
+				verified = append(verified, e.Quote)
+				sources = append(sources, p.Source) // "hearing" | "submission", for the evidence-origin table
+			} else {
+				rejects++ // a paraphrase presented as verbatim, or an id the judge invented
+			}
+		}
+		return
+	}
+
+	var j judgeJSON
+	if err := c.callSchema(faithJudgeSys, cached, user, json.RawMessage(judgeSchema), "faith_verdict", temp, &j); err != nil {
+		return faith{Claim: claim, Verdict: "error", Evidence: err.Error()}
+	}
+	verified, sources, rejects := ground(j)
+
+	// report_says/source_says must be a plain restatement the reader can act on: no "reader"/"would",
+	// no ≥4-syllable word the source never used, and no 3+-word run lifted verbatim from the claim or a
+	// verified quote (the check reads the grounded quotes, so it runs after grounding). A violation gets
+	// one retry (counted), steered to rephrase in everyday words; whatever the retry returns is kept.
+	if restatementBad(j.ReportSays, claim, verified) || restatementBad(j.SourceSays, claim, verified) {
+		if c.usage != nil {
+			c.usage.addPlainRetry()
+		}
+		steer := user + "\n\nYour report_says and source_says must not copy the report's or a quote's " +
+			"wording: rephrase in everyday words, as if to someone who hasn't read the report."
+		var j2 judgeJSON
+		if err := c.callSchema(faithJudgeSys, cached, steer, json.RawMessage(judgeSchema), "faith_verdict", temp, &j2); err == nil {
+			j = j2
+			verified, sources, rejects = ground(j)
 		}
 	}
 	if rejects > 0 && c.usage != nil {
@@ -1104,6 +1110,54 @@ func renderStakes(verdict, reportSays, sourceSays string) string {
 	default: // faithful, error, and any unknown verdict
 		return ""
 	}
+}
+
+// restatementBad reports whether s fails the plain-restatement discipline: it uses a banned or
+// imported word (plainBadWord), or it lifts a run of three or more words verbatim from the claim or a
+// verified quote (verbatimRun). The two together force a genuine paraphrase in the reader's own words
+// rather than a lightly-edited copy of the report.
+func restatementBad(s, claim string, quotes []string) bool {
+	return plainBadWord(s, claim, quotes) != "" || verbatimRun(s, claim, quotes) != ""
+}
+
+// verbatimRun returns the first run of three consecutive words in s that also appears, as a contiguous
+// word sequence, in the claim or any quote (case-insensitive, numbers kept as words) — or "" when s
+// copies no such run. Three is the shortest run that signals lifted phrasing rather than the
+// unavoidable overlap of a shared noun; a longer copied run necessarily contains a three-word one, so
+// checking trigrams suffices.
+func verbatimRun(s, claim string, quotes []string) string {
+	refs := [][]string{runTokens(claim)}
+	for _, q := range quotes {
+		refs = append(refs, runTokens(q))
+	}
+	words := runTokens(s)
+	for i := 0; i+3 <= len(words); i++ {
+		tri := words[i : i+3]
+		for _, ref := range refs {
+			for j := 0; j+3 <= len(ref); j++ {
+				if ref[j] == tri[0] && ref[j+1] == tri[1] && ref[j+2] == tri[2] {
+					return strings.Join(tri, " ")
+				}
+			}
+		}
+	}
+	return ""
+}
+
+// runTokens lowercases text and splits it into alphanumeric words (digits kept, so "52 internal
+// projects" is three words), keeping internal apostrophes. The verbatim-run check needs numbers as
+// words — a copied "$80 million on 52" is exactly the lifted phrasing it looks for — where the
+// syllable allowlist (splitWords) drops them.
+func runTokens(text string) []string {
+	var out []string
+	for _, tok := range strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
+		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '\''
+	}) {
+		if w := strings.Trim(tok, "'"); w != "" {
+			out = append(out, w)
+		}
+	}
+	return out
 }
 
 // plainBadWord returns the first word in s that disqualifies it as a plain restatement — "reader" or
@@ -1552,13 +1606,15 @@ body), "other", or "none" (benign narrowing; use for "faithful").
 
 REPORT_SAYS and SOURCE_SAYS — two plain restatements the reader compares side by side, each <=12
 words, in ordinary words. report_says is the impression the SUMMARY CLAIM gives; source_says is what
-the PASSAGES actually support. Restate, do not editorialise: no "reader", no "would", and no word
-longer than three syllables unless it already appears in the claim or a cited quote. Leave both ""
-only when the verdict is "faithful"; for "absent" give report_says and leave source_says "".
+the PASSAGES actually support. Rephrase them in everyday words,
+as if to someone who hasn't read the report. Three rules: no "reader", no "would"; no word longer
+than three syllables unless it already appears in the claim or a quote; and
+NEVER copy a run of three or more words straight from the claim or a quote — say it your own way.
+Leave both "" only when the verdict is "faithful"; for "absent" give report_says, source_says "".
 Worked example — claim "...52 internal projects with the majority of production in Victoria",
 quote "52 internal productions based in Victoria":
-  report_says: most of the work on those 52 projects was done in Victoria
-  source_says: the projects were based in Victoria
+  report_says: most of those 52 shows were mainly made in Victoria
+  source_says: those shows were only located in Victoria
 REASON: <=40 words, why this verdict.`
 
 const evidenceSys = `You are the Evidence Grounder. Decide whether the CLAIM is TRUE, using web

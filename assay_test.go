@@ -1163,14 +1163,17 @@ func TestFaithCriticSysGapAndSoWhat(t *testing.T) {
 }
 
 // TestFaithJudgeSysRestatementForm confirms the judge prompt pins report_says/source_says to two
-// ≤12-word plain restatements, bans "reader"/"would" and long imported words, and carries the F46b
-// worked example the code assembles into the stakes line (renderStakes).
+// ≤12-word plain restatements, bans "reader"/"would", long imported words, and copied 3+-word runs,
+// carries the "rephrase in everyday words" steer, and shows the compliant F46b worked example the
+// code assembles into the stakes line (renderStakes).
 func TestFaithJudgeSysRestatementForm(t *testing.T) {
 	for _, needle := range []string{
 		"REPORT_SAYS and SOURCE_SAYS", "<=12", "three syllables",
 		`no "reader", no "would"`,
-		"most of the work on those 52 projects was done in Victoria",
-		"the projects were based in Victoria",
+		"NEVER copy a run of three or more words",
+		"as if to someone who hasn't read the report",
+		"most of those 52 shows were mainly made in Victoria",
+		"those shows were only located in Victoria",
 	} {
 		if !strings.Contains(faithJudgeSys, needle) {
 			t.Errorf("faithJudgeSys missing %q", needle)
