@@ -1,0 +1,9 @@
+tree (html): examples/vic-lceic/eval-f46b/tree.html
+
+SUMMARY claims-f46b faithfulness
+  cases 1 · verified 1 · errored 0
+  partial 1
+  wall 46s · est_usd $0.0651 (rates 2026-06-01) · cache_hit 0% (read 0 / created 16154)
+  schema_retries 0 · quote_rejects 0 · no_quote_downgrades 0 · plain_retries 0
+  detail: examples/vic-lceic/eval-f46b/claims-f46b.faithfulness.jsonl
+USAGE model=claude-sonnet-4-6 calls=1 in=46 out=292 cache_read=0 cache_create=16154 web_searches=0 wall=45s est_usd=$0.0651 (rates 2026-06-01)
