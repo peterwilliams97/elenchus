@@ -3,7 +3,7 @@ tree (html): examples/vic-lceic/eval-f46b/tree.html
 SUMMARY claims-f46b faithfulness
   cases 1 · verified 1 · errored 0
   partial 1
-  wall 24s · est_usd $0.0744 (rates 2026-06-01) · cache_hit 50% (read 16190 / created 16190)
+  wall 14s · est_usd $0.0748 (rates 2026-06-01) · cache_hit 50% (read 16268 / created 16268)
   schema_retries 0 · quote_rejects 0 · no_quote_downgrades 0 · plain_retries 1
   detail: examples/vic-lceic/eval-f46b/claims-f46b.faithfulness.jsonl
-USAGE model=claude-sonnet-4-6 calls=2 in=132 out=561 cache_read=16190 cache_create=16190 web_searches=0 wall=23s est_usd=$0.0744 (rates 2026-06-01)
+USAGE model=claude-sonnet-4-6 calls=2 in=143 out=567 cache_read=16268 cache_create=16268 web_searches=0 wall=14s est_usd=$0.0748 (rates 2026-06-01)
