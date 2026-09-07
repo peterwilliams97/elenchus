@@ -23,7 +23,7 @@ type Row struct {
 	FaithReason, SubstanceReason, GroundReason string
 	Spread                                     string // "k/N" verdict agreement under -n>1, else ""
 	Gap                                        string // judge's gap class; a non-"none" gap on a partial opens the branch
-	SoWhat                                     string // ≤20-word stakes line for a needs-you leaf
+	SoWhat                                     string // assembled stakes line for a needs-you leaf ("The report says X. …")
 	Route                                      string // what can settle the claim: evidence|source|evaluative|data-gap
 }
 

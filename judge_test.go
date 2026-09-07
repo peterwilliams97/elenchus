@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"assay/internal/retrieve"
 )
@@ -26,7 +27,7 @@ func TestJudgeSchemaValid(t *testing.T) {
 	if err := json.Unmarshal([]byte(judgeSchema), &s); err != nil {
 		t.Fatalf("judgeSchema decode: %v", err)
 	}
-	for _, f := range []string{"verdict", "gap", "evidence", "so_what", "reason"} {
+	for _, f := range []string{"verdict", "gap", "evidence", "report_says", "source_says", "reason"} {
 		if _, ok := s.Properties[f]; !ok {
 			t.Errorf("judgeSchema missing property %q", f)
 		}
@@ -91,7 +92,7 @@ func TestFaithJudgeRejectsNonVerbatimQuotes(t *testing.T) {
 		`{"passage_id":"p1","quote":"regional Victorians receive $1.06 per capita in federal arts funding."},` +
 		`{"passage_id":"p1","quote":"regional Victorians receive $2.00 per capita"},` +
 		`{"passage_id":"p9","quote":"Creative Australia's annual report shows the shortfall."}],` +
-		`"so_what":"reader overstates the share","reason":"narrower than claimed","what_source_actually_says":"regional gets $1.06 per capita"}`
+		`"report_says":"regional Victoria gets its fair share","source_says":"regional Victorians get $1.06 per capita","reason":"narrower than claimed"}`
 	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
 		return judge, nil, nil
 	}
@@ -108,8 +109,141 @@ func TestFaithJudgeRejectsNonVerbatimQuotes(t *testing.T) {
 	if _, rejects, _ := c.usage.extras(); rejects != 2 {
 		t.Errorf("want 2 quote rejects (paraphrase + invented id), got %d", rejects)
 	}
-	if got.SourceSays != "regional gets $1.06 per capita" {
-		t.Errorf("what_source_actually_says not carried: %q", got.SourceSays)
+	if got.SourceSays != "regional Victorians get $1.06 per capita" {
+		t.Errorf("source_says not carried: %q", got.SourceSays)
+	}
+	if got.ReportSays != "regional Victoria gets its fair share" {
+		t.Errorf("report_says not carried: %q", got.ReportSays)
+	}
+	// partial + a verified quote → the two-clause stakes line.
+	wantSoWhat := "The report says regional Victoria gets its fair share. " +
+		"The source only says regional Victorians get $1.06 per capita."
+	if got.SoWhat != wantSoWhat {
+		t.Errorf("stakes line not assembled:\n got %q\nwant %q", got.SoWhat, wantSoWhat)
+	}
+}
+
+// TestFaithJudgeChainRecordF46b is the golden test on F46b's chain record: the judge's contradicted
+// verdict, its two verbatim quotes, and its report_says/source_says restatements produce the exact
+// leaf a rerun writes — the two ≤12-word halves and the stakes line renderStakes assembles from them.
+func TestFaithJudgeChainRecordF46b(t *testing.T) {
+	passages := []retrieve.Passage{
+		{ID: "submission-41#p2", Source: "submission",
+			Text: "In addition to these external projects, over the same period the ABC spent $80 million on 52 internal projects."},
+		{ID: "2025-02-27/4_abc#t14", Source: "hearing",
+			Text: "Additionally, over the same period the ABC invested over $80 million in 52 internal productions based in Victoria, delivering a further 507 hours."},
+	}
+	const judge = `{"verdict":"contradicted","gap":"scope","evidence":[` +
+		`{"passage_id":"submission-41#p2","quote":"In addition to these external projects, over the same period the ABC spent $80 million on 52 internal projects."},` +
+		`{"passage_id":"2025-02-27/4_abc#t14","quote":"Additionally, over the same period the ABC invested over $80 million in 52 internal productions based in Victoria, delivering a further 507 hours."}],` +
+		`"report_says":"most of the work on those 52 projects was done in Victoria",` +
+		`"source_says":"the projects were based in Victoria",` +
+		`"reason":"The sources describe the 52 projects as based in Victoria, never as a majority of production."}`
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
+		return judge, nil, nil
+	}
+	c := cfg{call: stub, usage: newUsageCounters()}
+	const claim = "...and produced 52 internal projects with the majority of production in Victoria."
+	got := c.faithJudge(claim, passages, nil)
+
+	rec := faithChainRecord(53, 69, claim, got, time.Now())
+	var fd faithDetail
+	if err := json.Unmarshal(rec.Detail, &fd); err != nil {
+		t.Fatalf("detail decode: %v", err)
+	}
+	if rec.Verdict != "contradicted" {
+		t.Errorf("verdict = %q, want contradicted", rec.Verdict)
+	}
+	if fd.ReportSays != "most of the work on those 52 projects was done in Victoria" {
+		t.Errorf("report_says = %q", fd.ReportSays)
+	}
+	if fd.SourceSays != "the projects were based in Victoria" {
+		t.Errorf("source_says = %q", fd.SourceSays)
+	}
+	wantSoWhat := "The report says most of the work on those 52 projects was done in Victoria. " +
+		"The source only says the projects were based in Victoria."
+	if fd.SoWhat != wantSoWhat {
+		t.Errorf("so_what:\n got %q\nwant %q", fd.SoWhat, wantSoWhat)
+	}
+	if r := c.usage.plainRetriesN(); r != 0 {
+		t.Errorf("clean restatement should trigger no plain retry, got %d", r)
+	}
+}
+
+// TestRenderStakes pins the three templates: partial/overstated/contradicted contrast the two halves,
+// absent/unsupported say no held source carries it, faithful (and any non-verdict) render nothing, and
+// a missing half yields "" — there is nothing to contrast.
+func TestRenderStakes(t *testing.T) {
+	for _, tc := range []struct{ verdict, want string }{
+		{"partial", "The report says R. The source only says S."},
+		{"overstated", "The report says R. The source only says S."},
+		{"contradicted", "The report says R. The source only says S."},
+		{"absent", "The report says R. No held source says this."},
+		{"unsupported", "The report says R. No held source says this."},
+		{"faithful", ""},
+		{"error", ""},
+	} {
+		if got := renderStakes(tc.verdict, "R", "S"); got != tc.want {
+			t.Errorf("renderStakes(%q) = %q, want %q", tc.verdict, got, tc.want)
+		}
+	}
+	if got := renderStakes("partial", "", "S"); got != "" {
+		t.Errorf("empty report_says should yield \"\", got %q", got)
+	}
+	if got := renderStakes("partial", "R", ""); got != "" {
+		t.Errorf("partial with empty source_says should yield \"\", got %q", got)
+	}
+}
+
+// TestPlainBadWord pins the restatement check: a restatement built from the claim's and quotes'
+// vocabulary passes; "reader" and "would" are caught outright; a ≥4-syllable word the source never
+// used is caught.
+func TestPlainBadWord(t *testing.T) {
+	claim := "regional Victoria gets its fair share of production funding"
+	quotes := []string{"52 internal productions based in Victoria"}
+	if w := plainBadWord("productions based in Victoria", claim, quotes); w != "" {
+		t.Errorf("clean restatement flagged %q", w)
+	}
+	if plainBadWord("the reader misreads it", claim, quotes) != "reader" {
+		t.Error(`"reader" not caught`)
+	}
+	if plainBadWord("a summary would imply more", claim, quotes) != "would" {
+		t.Error(`"would" not caught`)
+	}
+	if plainBadWord("disproportionate concentration in Victoria", claim, quotes) == "" {
+		t.Error("imported ≥4-syllable word not caught")
+	}
+}
+
+// TestFaithJudgePlainRestatementRetry drives faithJudge with a stub that returns a "reader"/"would"
+// restatement first and a plain one on the retry, asserting exactly one plain retry is counted and
+// the retry's restatement is the one kept.
+func TestFaithJudgePlainRestatementRetry(t *testing.T) {
+	passages := []retrieve.Passage{{ID: "p1", Source: "submission",
+		Text: "The ABC spent $80 million on 52 internal projects based in Victoria."}}
+	const q = `{"passage_id":"p1","quote":"The ABC spent $80 million on 52 internal projects based in Victoria."}`
+	bad := `{"verdict":"partial","gap":"scope","evidence":[` + q + `],` +
+		`"report_says":"the reader would infer a majority","source_says":"projects based in Victoria","reason":"x"}`
+	good := `{"verdict":"partial","gap":"scope","evidence":[` + q + `],` +
+		`"report_says":"most work was done in Victoria","source_says":"projects based in Victoria","reason":"x"}`
+	n := 0
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
+		n++
+		if n == 1 {
+			return bad, nil, nil
+		}
+		return good, nil, nil
+	}
+	c := cfg{call: stub, usage: newUsageCounters()}
+	got := c.faithJudge("claim about Victoria projects", passages, nil)
+	if n != 2 {
+		t.Errorf("want 2 dispatches (1 + plain retry), got %d", n)
+	}
+	if c.usage.plainRetriesN() != 1 {
+		t.Errorf("want 1 plain retry, got %d", c.usage.plainRetriesN())
+	}
+	if got.ReportSays != "most work was done in Victoria" {
+		t.Errorf("retry result not kept: %q", got.ReportSays)
 	}
 }
 
@@ -234,7 +368,7 @@ func TestSchemaRetryCountedOnce(t *testing.T) {
 		if n == 1 {
 			return "not json at all", nil, nil
 		}
-		return `{"verdict":"absent","gap":"none","evidence":[],"so_what":"","reason":"nope","what_source_actually_says":""}`, nil, nil
+		return `{"verdict":"absent","gap":"none","evidence":[],"report_says":"","source_says":"","reason":"nope"}`, nil, nil
 	}
 	c := cfg{call: stub, usage: newUsageCounters()}
 	var j judgeJSON

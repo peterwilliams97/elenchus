@@ -35,7 +35,7 @@ const (
 
 const (
 	rootIDCap   = 3  // ids shown per id-listing class before "and N more"
-	rootWordCap = 20 // words of so_what shown on a detail line
+	rootWordCap = 34 // words of the stakes line shown on a detail line — fits both ≤12-word halves whole
 )
 
 // classify places a row in exactly one class. Opinion resolution runs first, so an opinion's

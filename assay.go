@@ -24,6 +24,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"assay/internal/backend"
 	"assay/internal/backend/anthropic"
@@ -431,8 +432,8 @@ func printSummary(fixture, mode, model string, rt *runTally, u *usageCounters, c
 	fmt.Fprintf(os.Stderr, "  %s\n", strings.Join(parts, " · "))
 	fmt.Fprintf(os.Stderr, "  wall %s · est_usd %s · cache_hit %.0f%% (read %d / created %d)\n",
 		elapsed.Round(time.Second), cost, 100*u.cacheHitRate(), cr, cc)
-	fmt.Fprintf(os.Stderr, "  schema_retries %d · quote_rejects %d · no_quote_downgrades %d\n",
-		schemaRetries, quoteRejects, noQuoteDowngrades)
+	fmt.Fprintf(os.Stderr, "  schema_retries %d · quote_rejects %d · no_quote_downgrades %d · plain_retries %d\n",
+		schemaRetries, quoteRejects, noQuoteDowngrades, u.plainRetriesN())
 	if chainFile != "" {
 		fmt.Fprintf(os.Stderr, "  detail: %s\n", chainFile)
 	}
@@ -531,7 +532,8 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 		var fd faithDetail
 		_ = json.Unmarshal(rec.Detail, &fd)
 		results[i] = faith{Claim: rec.Claim, Verdict: rec.Verdict, Evidence: fd.CriticFinding,
-			SourceSays: fd.SourceSays, Gap: fd.Gap, SoWhat: fd.SoWhat, Quotes: fd.Quotes, QuoteSources: fd.QuoteSources}
+			ReportSays: fd.ReportSays, SourceSays: fd.SourceSays, Gap: fd.Gap, SoWhat: fd.SoWhat,
+			Quotes: fd.Quotes, QuoteSources: fd.QuoteSources}
 		if c.tally != nil {
 			c.tally.record(rec.Verdict)
 		}
@@ -1039,6 +1041,22 @@ func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64
 	if err := c.callSchema(faithJudgeSys, cached, "SUMMARY CLAIM:\n"+claim, json.RawMessage(judgeSchema), "faith_verdict", temp, &j); err != nil {
 		return faith{Claim: claim, Verdict: "error", Evidence: err.Error()}
 	}
+	// report_says/source_says must be plain restatements — no "reader"/"would", no ≥4-syllable word
+	// the claim and its cited quotes never used. A violation gets one retry (counted); whatever the
+	// retry returns is kept.
+	citedQuotes := make([]string, len(j.Evidence))
+	for i, e := range j.Evidence {
+		citedQuotes[i] = e.Quote
+	}
+	if plainBadWord(j.ReportSays, claim, citedQuotes) != "" || plainBadWord(j.SourceSays, claim, citedQuotes) != "" {
+		if c.usage != nil {
+			c.usage.addPlainRetry()
+		}
+		var j2 judgeJSON
+		if err := c.callSchema(faithJudgeSys, cached, "SUMMARY CLAIM:\n"+claim, json.RawMessage(judgeSchema), "faith_verdict", temp, &j2); err == nil {
+			j = j2
+		}
+	}
 	byID := make(map[string]retrieve.Passage, len(passages))
 	for _, p := range passages {
 		byID[p.ID] = p
@@ -1058,8 +1076,96 @@ func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64
 		c.usage.addQuoteReject(rejects)
 	}
 	verdict := c.groundVerdict(j.Verdict, verified)
-	return faith{Claim: claim, Verdict: verdict, Evidence: j.Reason,
-		SourceSays: j.SourceSays, Gap: j.Gap, SoWhat: j.SoWhat, Quotes: verified, QuoteSources: sources}
+	// Assemble the stakes line from the FINAL verdict, so a grounding downgrade (contradicted→absent,
+	// faithful/partial/overstated→unsupported) selects the matching template.
+	soWhat := renderStakes(verdict, j.ReportSays, j.SourceSays)
+	return faith{Claim: claim, Verdict: verdict, Evidence: j.Reason, ReportSays: j.ReportSays,
+		SourceSays: j.SourceSays, Gap: j.Gap, SoWhat: soWhat, Quotes: verified, QuoteSources: sources}
+}
+
+// renderStakes assembles the stakes line the tree leaf and root block show, from the judge's two
+// plain restatements and the FINAL (post-grounding) verdict. partial/overstated/contradicted put the
+// two halves side by side; absent/unsupported say no held source carries it; "faithful" (and any
+// non-verdict) render nothing. An empty report_says yields "" — there is nothing to contrast.
+func renderStakes(verdict, reportSays, sourceSays string) string {
+	rs := strings.TrimSpace(reportSays)
+	if rs == "" {
+		return ""
+	}
+	switch verdict {
+	case "partial", "overstated", "contradicted":
+		ss := strings.TrimSpace(sourceSays)
+		if ss == "" {
+			return ""
+		}
+		return "The report says " + rs + ". The source only says " + ss + "."
+	case "absent", "unsupported":
+		return "The report says " + rs + ". No held source says this."
+	default: // faithful, error, and any unknown verdict
+		return ""
+	}
+}
+
+// plainBadWord returns the first word in s that disqualifies it as a plain restatement — "reader" or
+// "would" outright, or any word of four or more syllables that appears in neither the claim nor a
+// cited quote — or "" when s is clean. The allowlist is the vocabulary the source itself used, so a
+// long domain word ("Victoria", "production") passes while imported jargon ("unrepresentative",
+// "criterion") does not.
+func plainBadWord(s, claim string, quotes []string) string {
+	allow := map[string]bool{}
+	addWords := func(text string) {
+		for _, w := range splitWords(text) {
+			allow[w] = true
+		}
+	}
+	addWords(claim)
+	for _, q := range quotes {
+		addWords(q)
+	}
+	for _, w := range splitWords(s) {
+		if w == "reader" || w == "would" {
+			return w
+		}
+		if syllables(w) >= 4 && !allow[w] {
+			return w
+		}
+	}
+	return ""
+}
+
+// splitWords lowercases text and splits it into letter-only words, keeping internal apostrophes so
+// "creative's" is one word. It is the tokeniser both the restatement check and its allowlist share.
+func splitWords(text string) []string {
+	var out []string
+	for _, tok := range strings.FieldsFunc(strings.ToLower(text), func(r rune) bool {
+		return !unicode.IsLetter(r) && r != '\''
+	}) {
+		if w := strings.Trim(tok, "'"); w != "" {
+			out = append(out, w)
+		}
+	}
+	return out
+}
+
+// syllables estimates an English word's syllable count by counting vowel groups and dropping a silent
+// trailing "e", floored at 1. It is a heuristic — the restatement check only needs the ≥4 boundary,
+// where over-counting a rare word costs one retry, never a wrong verdict.
+func syllables(word string) int {
+	n, prevVowel := 0, false
+	for _, r := range word {
+		v := strings.ContainsRune("aeiouy", r)
+		if v && !prevVowel {
+			n++
+		}
+		prevVowel = v
+	}
+	if strings.HasSuffix(word, "e") && n > 1 {
+		n--
+	}
+	if n == 0 {
+		return 1
+	}
+	return n
 }
 
 // groundVerdict enforces that every verdict except "absent" is backed by at least one verified quote.
@@ -1371,20 +1477,22 @@ Return ONLY JSON:
 {"findings":[{"mode":string,"finding":string}],"verdict":"faithful"|"partial"|"overstated"|"absent"|"contradicted","evidence":string,"what_source_actually_says":string|null,"gap":"none"|"scope"|"denominator"|"timerange"|"attribution"|"other","so_what":string}`
 
 // judgeSchema constrains the faithfulness judge's answer. Field order matches the prompt: verdict,
-// gap, evidence[], so_what, reason, then what_source_actually_says. All are required (Anthropic strict
-// tools and the Ollama format both accept "" for the free-text fields), and evidence cites the source
-// by passage id and a verbatim quote, so code can verify the quote without a second model call.
+// gap, evidence[], report_says, source_says, then reason. All are required (Anthropic strict tools
+// and the Ollama format both accept "" for the free-text fields), and evidence cites the source by
+// passage id and a verbatim quote, so code can verify the quote without a second model call.
+// report_says/source_says are the two ≤12-word plain restatements code assembles into the stakes
+// line (renderStakes), replacing the old free-form so_what.
 const judgeSchema = `{
   "type":"object",
   "properties":{
     "verdict":{"type":"string","enum":["faithful","partial","overstated","absent","contradicted"]},
     "gap":{"type":"string","enum":["none","scope","denominator","timerange","attribution","other"]},
     "evidence":{"type":"array","items":{"type":"object","properties":{"passage_id":{"type":"string"},"quote":{"type":"string"}},"required":["passage_id","quote"],"additionalProperties":false}},
-    "so_what":{"type":"string"},
-    "reason":{"type":"string"},
-    "what_source_actually_says":{"type":"string"}
+    "report_says":{"type":"string"},
+    "source_says":{"type":"string"},
+    "reason":{"type":"string"}
   },
-  "required":["verdict","gap","evidence","so_what","reason","what_source_actually_says"],
+  "required":["verdict","gap","evidence","report_says","source_says","reason"],
   "additionalProperties":false
 }`
 
@@ -1409,7 +1517,7 @@ Watch for the ways a summary distorts a source:
 - Literalization: the summary states as a sincere literal assertion something the speaker meant as
   provocation, hyperbole, or irony. The words may appear in the source but the asserted proposition
   does not — the speaker's force or register was rhetorical, not declarative. When this occurs the
-  verdict is NOT "faithful"; use "overstated", and ALWAYS populate what_source_actually_says.
+  verdict is NOT "faithful"; use "overstated", and give source_says (below).
 
 EVIDENCE: cite the passages that decide the verdict. Each evidence item is {passage_id, quote} where
 passage_id is the id from a header line and quote is copied VERBATIM from that passage — never
@@ -1426,8 +1534,7 @@ VERDICT:
 - "overstated": same in kind but the summary strengthened it — or literalized a rhetorical claim.
 - "absent": not in the passages.
 - "contradicted": the source says the opposite.
-For "partial"/"overstated", give what_source_actually_says (the faithful version, correct register);
-otherwise set it to "".
+For every verdict but "faithful", give report_says and source_says (below).
 
 SCOPE DISCIPLINE — two worked negatives, so subject/scope/direction is checked, not waved through:
 - "COVID-19 took away critical training opportunities from those looking to enter the industries" is
@@ -1443,9 +1550,16 @@ GAP — the single field that most changes what a reader would do, err toward na
 "timerange" (a limited period dropped), "attribution" (support is about a different actor/programme/
 body), "other", or "none" (benign narrowing; use for "faithful").
 
-SO_WHAT: when a reader who believed the summary would act on a false impression, state it in <=20
-words in the form "Report says X; source says Y." — X the impression the summary gives, Y what the
-passages actually support; "" when faithful or the gap is benign. REASON: <=40 words, why this verdict.`
+REPORT_SAYS and SOURCE_SAYS — two plain restatements the reader compares side by side, each <=12
+words, in ordinary words. report_says is the impression the SUMMARY CLAIM gives; source_says is what
+the PASSAGES actually support. Restate, do not editorialise: no "reader", no "would", and no word
+longer than three syllables unless it already appears in the claim or a cited quote. Leave both ""
+only when the verdict is "faithful"; for "absent" give report_says and leave source_says "".
+Worked example — claim "...52 internal projects with the majority of production in Victoria",
+quote "52 internal productions based in Victoria":
+  report_says: most of the work on those 52 projects was done in Victoria
+  source_says: the projects were based in Victoria
+REASON: <=40 words, why this verdict.`
 
 const evidenceSys = `You are the Evidence Grounder. Decide whether the CLAIM is TRUE, using web
 search to find real, current evidence — the actual truth-makers, not anyone's assertion that it is
@@ -1673,7 +1787,8 @@ type substance struct {
 type faith struct {
 	Claim, Verdict, Evidence, SourceSays string
 	Gap                                  string   // {none,scope,denominator,timerange,attribution,other}
-	SoWhat                               string   // ≤20 words: what a reader who believed the summary gets wrong
+	ReportSays                           string   // ≤12-word plain restatement of the summary's impression (judge)
+	SoWhat                               string   // stakes line assembled by renderStakes from report/source_says
 	Quotes                               []string // defender's verbatim source spans, for the tree leaf
 	QuoteSources                         []string // parallel to Quotes: "hearing"|"submission" origin of each
 }
@@ -1740,9 +1855,9 @@ type judgeJSON struct {
 		PassageID string `json:"passage_id"`
 		Quote     string `json:"quote"`
 	} `json:"evidence"`
-	SoWhat     string `json:"so_what"`
+	ReportSays string `json:"report_says"` // ≤12-word plain restatement of the summary's impression
+	SourceSays string `json:"source_says"` // ≤12-word plain restatement of what the passages support
 	Reason     string `json:"reason"`
-	SourceSays string `json:"what_source_actually_says"`
 }
 
 // ── markdown rendering ───────────────────────────────────────────────────────
@@ -2185,9 +2300,10 @@ type faithDetail struct {
 	QuoteSources    []string `json:"quote_sources,omitempty"` // parallel: "hearing"|"submission" per quote
 	CriticFinding   string   `json:"critic_finding,omitempty"`
 	DistortionType  string   `json:"distortion_type,omitempty"`
-	SourceSays      string   `json:"source_says,omitempty"`
-	Gap             string   `json:"gap,omitempty"`     // the judge's gap classification
-	SoWhat          string   `json:"so_what,omitempty"` // the stakes line for a needs-you leaf
+	ReportSays      string   `json:"report_says,omitempty"` // judge's ≤12-word plain restatement of the summary
+	SourceSays      string   `json:"source_says,omitempty"` // judge's ≤12-word plain restatement of the source
+	Gap             string   `json:"gap,omitempty"`         // the judge's gap classification
+	SoWhat          string   `json:"so_what,omitempty"`     // stakes line assembled by renderStakes
 }
 
 type evidenceDetail struct {
@@ -2228,6 +2344,7 @@ func faithChainRecord(i, total int, claim string, f faith, start time.Time) chai
 		Quotes:        f.Quotes,
 		QuoteSources:  f.QuoteSources,
 		CriticFinding: f.Evidence,
+		ReportSays:    f.ReportSays,
 		SourceSays:    f.SourceSays,
 		Gap:           f.Gap,
 		SoWhat:        f.SoWhat,
@@ -2536,6 +2653,7 @@ type usageCounters struct {
 	schemaRetries     int // judge calls that came back schema-invalid and were retried once
 	quoteRejects      int // evidence quotes rejected as non-verbatim by the grounding check
 	noQuoteDowngrades int // verdicts downgraded because no quote survived the grounding check
+	plainRetries      int // judge calls retried because report_says/source_says was not a plain restatement
 	start             time.Time
 	currentClaim      string // label of the in-flight claim for heartbeat display
 }
@@ -2562,6 +2680,12 @@ func (u *usageCounters) setLabel(label string) {
 }
 
 func (u *usageCounters) addSchemaRetry() { u.mu.Lock(); u.schemaRetries++; u.mu.Unlock() }
+func (u *usageCounters) addPlainRetry()  { u.mu.Lock(); u.plainRetries++; u.mu.Unlock() }
+func (u *usageCounters) plainRetriesN() int {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.plainRetries
+}
 func (u *usageCounters) addNoQuoteDowngrade() {
 	u.mu.Lock()
 	u.noQuoteDowngrades++

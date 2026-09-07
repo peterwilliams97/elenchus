@@ -1162,10 +1162,16 @@ func TestFaithCriticSysGapAndSoWhat(t *testing.T) {
 	}
 }
 
-// TestFaithJudgeSysSoWhatForm confirms the faithfulness judge's so_what is capped at 20 words and
-// pinned to the "Report says X; source says Y." two-clause form the tree leaf and root block render.
-func TestFaithJudgeSysSoWhatForm(t *testing.T) {
-	for _, needle := range []string{"SO_WHAT:", "<=20", `"Report says X; source says Y."`} {
+// TestFaithJudgeSysRestatementForm confirms the judge prompt pins report_says/source_says to two
+// ≤12-word plain restatements, bans "reader"/"would" and long imported words, and carries the F46b
+// worked example the code assembles into the stakes line (renderStakes).
+func TestFaithJudgeSysRestatementForm(t *testing.T) {
+	for _, needle := range []string{
+		"REPORT_SAYS and SOURCE_SAYS", "<=12", "three syllables",
+		`no "reader", no "would"`,
+		"most of the work on those 52 projects was done in Victoria",
+		"the projects were based in Victoria",
+	} {
 		if !strings.Contains(faithJudgeSys, needle) {
 			t.Errorf("faithJudgeSys missing %q", needle)
 		}
