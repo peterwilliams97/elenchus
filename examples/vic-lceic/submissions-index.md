@@ -18,12 +18,16 @@ per-submission `…/submission-documents/NN.-name.pdf` paths specifically that w
 
 The current submissions listing
 (`/get-involved/inquiries/inquiry-into-the-cultural-and-creative-industries-in-victoria/submissions/`)
-is an **EPiServer/Optimizely SPA** (`/Static/assets/index-CIDfNjQj.js`, `find.js`): its server HTML
-carries **zero** submission PDF links and no visible data/API endpoint. Harvesting the live URLs
-therefore requires rendering the SPA in a browser (e.g. `claude-in-chrome`) or reverse-engineering
-its EPiServer Find query — neither done here. **Until the URLs are re-harvested from the rendered
-page, the fetch cannot proceed and no submission PDFs are held locally.** The URL column below is
-retained only as a record of the dead paths; treat every entry as unverified.
+is an **EPiServer/Optimizely SPA** (`/Static/assets/index-CIDfNjQj.js`, `find.js`), paginated
+10-per-page ("Showing 1 to 10 of 42 records"): its server HTML carries **zero** submission PDF links.
+
+**Resolved 2026-09-07 — fetch completed.** The SPA was rendered headless with Playwright (throwaway
+Chromium, no profile, parliament.vic.gov.au only) and the `.pdf` hrefs read from the live DOM across
+all 5 pages — no URLs guessed. **42 PDF links** (39 distinct submissions + attachments) downloaded to
+`sources/submissions/` (gitignored), each verified as a real PDF and pdftotext-extracted. Every live
+URL and the method are recorded in `PROVENANCE.md` (§ Written submissions). The `contentassets` hashes
+below in the per-submission table are the **old, dead** ones; the live URLs are in `PROVENANCE.md`.
+The table below is kept for the submitter names (from Appendix A.1); treat its URL column as stale.
 
 Non-public entries are marked: submitters who withheld their name, confidential submissions, and one
 placeholder row (`21 TEST PATTERN`) that appears verbatim in the source index.

@@ -55,3 +55,59 @@ one `TEST PATTERN` placeholder row) are marked in the index.
   SPA rendered or a per-submission lookup.
 - The site search summary said "2 days of public hearings"; the report's Appendix A.2 says **3 days**
   (27 Feb, 12 Mar, 13 Mar). The report is treated as authoritative.
+
+## Written submissions (the source side) — 42 PDFs, fetched 2026-09-07
+
+Harvested from the inquiry submissions listing
+(`/get-involved/inquiries/inquiry-into-the-cultural-and-creative-industries-in-victoria/submissions/`),
+a JS-rendered EPiServer/Optimizely SPA paginated 10-per-page ("Showing 1 to 10 of 42 records").
+The static HTML exposes no PDF links, so the page was rendered headless with Playwright (throwaway
+Chromium context, no profile, parliament.vic.gov.au only) and the `.pdf` hrefs read from the live
+DOM across all 5 pages — no URLs guessed. **The `contentassets` hashes differ from those in the
+2026-09-06 `submissions-index.md`, which now 404**; these are the live URLs as of 2026-09-07.
+42 PDF links (39 distinct submission numbers; some submissions carry an attachment PDF, e.g. 01.1,
+09.1). Downloaded to `sources/submissions/` (gitignored: analysis, not redistribution), each
+verified as a real PDF (`%PDF` header, HTTP 200) and pdftotext-extracted to a sibling `.txt`.
+
+- `01.-coalition-against-duck-shooting.pdf` — /4a436a/contentassets/17f4ca0472e74420a5a0b5d4ef4662ef/submission-documents/01.-coalition-against-duck-shooting.pdf
+- `27.-ausdance-vic.pdf` — /4a437a/contentassets/84e466f4d4fa4de281dfd2d9663ef1b1/submission-documents/27.-ausdance-vic.pdf
+- `28.-nets-victoria.pdf` — /4a437d/contentassets/af68f09a22894113b9b7ec4ed967c569/submission-documents/28.-nets-victoria.pdf
+- `32.-la-mama-theatre.pdf` — /4a437e/contentassets/4b6a3fadd32148e59cfffcee1ee101a5/submission-documents/32.-la-mama-theatre.pdf
+- `31.-community-music-victoria.pdf` — /4a437e/contentassets/8beaac93a31743a799742834702a309a/submission-documents/31.-community-music-victoria.pdf
+- `33.-public-galleries-association-of-victoria-redacted.pdf` — /4a437e/contentassets/a2ddb3b351d44e6fa94b79396d453560/submission-documents/33.-public-galleries-association-of-victoria-redacted.pdf
+- `34.-university-of-melbourne_redacted.pdf` — /4a4381/contentassets/2f908c6dcf9b4bc68a7bdffacc84bded/submission-documents/34.-university-of-melbourne_redacted.pdf
+- `33.1-public-galleries-association-of-victoria_redacted.pdf` — /4a4381/contentassets/a2ddb3b351d44e6fa94b79396d453560/attachment-documents/33.1-public-galleries-association-of-victoria_redacted.pdf
+- `36.-martin-jackson.pdf` — /4a4382/contentassets/3a92e4fe08af420b83ce69db2d3d4b67/submission-documents/36.-martin-jackson.pdf
+- `35.-amaga-victoria.pdf` — /4a4382/contentassets/48cc3dd9baf043e59daf5f0f80e1ae72/submission-documents/35.-amaga-victoria.pdf
+- `38.-nirmidha-sankar_redacted.pdf` — /4a4383/contentassets/0be45c11c8934f6fa9e31aa1429c996c/submission-documents/38.-nirmidha-sankar_redacted.pdf
+- `37.-sense-and-centsability_redacted.pdf` — /4a4383/contentassets/4258050f13d845079932006a7239a026/submission-documents/37.-sense-and-centsability_redacted.pdf
+- `39.-live-performance-australia_redacted.pdf` — /4a4383/contentassets/cd8a90a17a54485483b0dd694c3d3fc1/submission-documents/39.-live-performance-australia_redacted.pdf
+- `40.-association-of-artist-managers.pdf` — /4a4384/contentassets/41fdda6b1a5a4e4a8647dcb850064df3/submission-documents/40.-association-of-artist-managers.pdf
+- `41.-abc.pdf` — /4a4385/contentassets/93cdd91de05f42dbb3ad049226537760/submission-documents/41.-abc.pdf
+- `42.-sbs.pdf` — /4a4385/contentassets/d273ac3b866c428ba647cc1c4ebf15f0/submission-documents/42.-sbs.pdf
+- `01.1-coalition-against-duck-shooting.pdf` — /4a4391/contentassets/17f4ca0472e74420a5a0b5d4ef4662ef/attachment-documents/01.1-coalition-against-duck-shooting.pdf
+- `02.-name-withheld.pdf` — /4a4391/contentassets/f07417999a7447ca93b575894f37da58/submission-documents/02.-name-withheld.pdf
+- `03.-craig-coulson.pdf` — /4a4392/contentassets/9873c21420c54e7c80907bb5a7ae7450/submission-documents/03.-craig-coulson.pdf
+- `04.-robert-heron_redacted.pdf` — /4a4392/contentassets/a082bbf8024b495fa6b39a7cb9b0f777/submission-documents/04.-robert-heron_redacted.pdf
+- `05.-name-withheld.pdf` — /4a4392/contentassets/ef983b0bc6aa4cf2ac6ce5e24a043e6a/submission-documents/05.-name-withheld.pdf
+- `06.-bo-kitty_redacted.pdf` — /4a4394/contentassets/1efee370cbac4636bb4dfd89d73f2560/submission-documents/06.-bo-kitty_redacted.pdf
+- `07.-sophie-travers.pdf` — /4a4394/contentassets/bba69401a8de4a3f9b534dc9273223af/submission-documents/07.-sophie-travers.pdf
+- `09.-ana-a-new-approach-redacted.pdf` — /4a4395/contentassets/2068ba1ac6bd4b4bb302637c8dac7601/submission-documents/09.-ana-a-new-approach-redacted.pdf
+- `08.-australian-publishers-association_redacted.pdf` — /4a4395/contentassets/7721f8ca0c4c415588e2e1857301cdaf/submission-documents/08.-australian-publishers-association_redacted.pdf
+- `09.1-ana-a-new-approach-redacted.pdf` — /4a4396/contentassets/2068ba1ac6bd4b4bb302637c8dac7601/attachment-documents/09.1-ana-a-new-approach-redacted.pdf
+- `11.-desmond-beer.pdf` — /4a4396/contentassets/8d2907b4327244aa9b59280c69bd6566/submission-documents/11.-desmond-beer.pdf
+- `10.-interactive-games-and-entertainment-association-redacted.pdf` — /4a4396/contentassets/9237d3390f694390aa5106f90217ffb2/submission-documents/10.-interactive-games-and-entertainment-association-redacted.pdf
+- `13.-kate-larsen-redacted.pdf` — /4a4397/contentassets/2383b1d956e9411cbcc726d3435a823e/submission-documents/13.-kate-larsen-redacted.pdf
+- `12.-melbourne-fringe.pdf` — /4a4397/contentassets/c454be33b55f4116a56edaf20a5ffa95/submission-documents/12.-melbourne-fringe.pdf
+- `15.-regional-arts-victoria.pdf` — /4a4399/contentassets/0ed66d51cee94e16a689fc4e33b95d52/submission-documents/15.-regional-arts-victoria.pdf
+- `14.-parliamentary-budget-office_redacted.pdf` — /4a4399/contentassets/d1489a470437496b88ef1131319754bf/submission-documents/14.-parliamentary-budget-office_redacted.pdf
+- `16.-stonnington-council_redacted.pdf` — /4a439a/contentassets/04f06b887601479bb9eef5f38b55b2a8/submission-documents/16.-stonnington-council_redacted.pdf
+- `17.-sir-zelman-cowen-school-of-music-and-performance.pdf` — /4a439a/contentassets/fb437a0ae9314b629f8098f747612bfe/submission-documents/17.-sir-zelman-cowen-school-of-music-and-performance.pdf
+- `19.-theatre-network-australia.pdf` — /4a439b/contentassets/0c6cb1f32f8c43fc971604a68d4c8ed0/submission-documents/19.-theatre-network-australia.pdf
+- `18.-city-of-yarra-redacted.pdf` — /4a439b/contentassets/dca486cad6324875898035050d1a16bd/submission-documents/18.-city-of-yarra-redacted.pdf
+- `20.-victorian-major-arts-festivals-alliance_redacted.pdf` — /4a439c/contentassets/0ab9db84b837404299c4fff6e40122e8/submission-documents/20.-victorian-major-arts-festivals-alliance_redacted.pdf
+- `21.-test-pattern_redacted.pdf` — /4a439c/contentassets/db87743d53134a9b841f28b7cdacfd43/submission-documents/21.-test-pattern_redacted.pdf
+- `23.-mva.pdf` — /4a439d/contentassets/1d35701c00f04ec3be78eb35d0ff7f5e/submission-documents/23.-mva.pdf
+- `22.-awg-and-awgacs.pdf` — /4a439d/contentassets/46e1e8c8e2b4486aae8eaa3d60aaef71/submission-documents/22.-awg-and-awgacs.pdf
+- `26.-victorian-independent-and-youth-theatre-organisations.pdf` — /4a439e/contentassets/9d088196b15a46c19655f2e51e47e879/submission-documents/26.-victorian-independent-and-youth-theatre-organisations.pdf
+- `25.-arena-theatre-co_redacted.pdf` — /4a439e/contentassets/9d73d945f3ec4adc98dfb8ca07640e94/submission-documents/25.-arena-theatre-co_redacted.pdf
