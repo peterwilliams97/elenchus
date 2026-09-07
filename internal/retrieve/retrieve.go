@@ -33,14 +33,31 @@ const (
 )
 
 // Passage is one speaker turn. ID is stable across runs ("<date>/<file>#t<n>") so it can be recorded
-// in the chain and matched back to the source.
+// in the chain and matched back to the source. A witness turn also carries, tagged separately, the
+// questioner turn that immediately precedes it (Context/ContextSpeaker/ContextRole): a bare answer
+// ("Absolutely inadequate.") is meaningless without the question it answers, and the question is
+// where the topical terms live. Text stays the witness's own words alone, so a quote still matches the
+// answer precisely; ranking and the judge see the question via searchText and Format.
 type Passage struct {
-	ID      string
-	Date    string
-	Session string // source file stem, e.g. "1_yarra-city-council"
-	Speaker string
-	Role    string
-	Text    string
+	ID             string
+	Date           string
+	Session        string // source file stem, e.g. "1_yarra-city-council"
+	Speaker        string
+	Role           string
+	Text           string
+	Context        string // the immediately preceding questioner/chair turn, "" if none
+	ContextSpeaker string
+	ContextRole    string
+}
+
+// searchText is what ranking and embedding see: the question (when present) then the answer. Text
+// alone is what a quote is matched against, so keeping Context out of Text preserves precise quote
+// attribution while letting the question's terms lift the passage's rank.
+func (p Passage) searchText() string {
+	if p.Context == "" {
+		return p.Text
+	}
+	return p.Context + "\n\n" + p.Text
 }
 
 // Index is a searchable corpus of passages plus the BM25 statistics over them. The embedding fields
@@ -180,6 +197,18 @@ func splitFile(path string) ([]Passage, error) {
 		}
 	}
 	flush()
+	// Attach each witness turn's immediately preceding questioner/chair turn as tagged context. The
+	// turns in `out` are one session in transcript order, so out[i-1] is the immediately preceding turn.
+	for i := range out {
+		if out[i].Role != RoleWitness || i == 0 {
+			continue
+		}
+		if p := out[i-1]; p.Role == RoleQuestioner || p.Role == RoleChair {
+			out[i].Context = p.Text
+			out[i].ContextSpeaker = p.Speaker
+			out[i].ContextRole = p.Role
+		}
+	}
 	return out, sc.Err()
 }
 
@@ -236,7 +265,7 @@ func (ix *Index) build() {
 	for i, p := range ix.Passages {
 		tf := map[string]int{}
 		n := 0
-		for _, tok := range tokenize(p.Text) {
+		for _, tok := range tokenize(p.searchText()) {
 			tf[tok]++
 			n++
 		}
@@ -353,7 +382,15 @@ func (ix *Index) Speakers() []SpeakerInfo {
 func Format(ps []Passage) string {
 	var b strings.Builder
 	for _, p := range ps {
-		fmt.Fprintf(&b, "[%s · %s · %s (%s)]\n%s\n\n", p.ID, p.Date, p.Speaker, p.Role, p.Text)
+		fmt.Fprintf(&b, "[%s · %s · %s (%s)]\n", p.ID, p.Date, p.Speaker, p.Role)
+		if p.Context != "" {
+			// The question is shown first, tagged as the questioner's, so the judge reads the witness
+			// answer in the context it was given — and never mistakes the question for testimony.
+			fmt.Fprintf(&b, "Q — %s (%s): %s\nA — %s (%s): %s\n\n",
+				p.ContextSpeaker, p.ContextRole, p.Context, p.Speaker, p.Role, p.Text)
+			continue
+		}
+		fmt.Fprintf(&b, "%s\n\n", p.Text)
 	}
 	return strings.TrimRight(b.String(), "\n")
 }

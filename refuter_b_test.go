@@ -49,7 +49,7 @@ func TestRetrievalRefuterFusedCoversSonnetQuotes(t *testing.T) {
 
 	misses, matched, quotesChecked, unmatched := 0, 0, 0, 0
 	f17Total, f17Covered := 0, 0
-	fmt.Println("\n── Refuter: Sonnet N=3 quotes vs fused bm25+embed retrieval (token cap 8000) ──")
+	fmt.Printf("\n── Refuter: Sonnet N=3 quotes vs fused bm25+embed retrieval (token cap %d) ──\n", retrieveTokenCap)
 	for i, cl := range claims {
 		q := claimQuery(cl.text, cl.path)
 		got := ix.Retrieve(q, retrieveTokenCap, 0)

@@ -91,7 +91,7 @@ func (ix *Index) AttachEmbeddings(emb Embedder, cacheDir string) error {
 	} else if emb != nil {
 		texts := make([]string, len(ix.Passages))
 		for i, p := range ix.Passages {
-			texts[i] = p.Text
+			texts[i] = p.searchText() // embed the question + answer, matching what BM25 and the judge see
 		}
 		vecs, err := emb.Embed(texts)
 		if err != nil {
@@ -317,7 +317,7 @@ func (ix *Index) queryVector(query string) []float32 {
 func (ix *Index) corpusHash() string {
 	h := sha256.New()
 	for _, p := range ix.Passages {
-		fmt.Fprintf(h, "%s\x00%s\n", p.ID, p.Text)
+		fmt.Fprintf(h, "%s\x00%s\n", p.ID, p.searchText()) // searchText so attaching context invalidates the cache
 	}
 	return hex.EncodeToString(h.Sum(nil))
 }

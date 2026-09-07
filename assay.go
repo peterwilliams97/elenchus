@@ -450,9 +450,11 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 	c.present(rows, tally(vs), mdFaith(results), func() { c.termFaith(results) }, details)
 }
 
-// retrieveTokenCap bounds the passages sent to the judge in bm25 mode — roughly 8K tokens, a third of
-// a full hearing, enough that the answer is present but small enough to keep the judge focused.
-const retrieveTokenCap = 8000
+// retrieveTokenCap bounds the passages sent to the judge — enough that the answer is present but
+// small enough to keep the judge focused. Raised to 10000 when each witness passage grew to carry its
+// preceding question as context: the larger passages need a proportionally larger budget, and 10000 is
+// the knee of the coverage curve (~25 passages/claim), where the refuter reaches its 15/18 ceiling.
+const retrieveTokenCap = 10000
 
 // sourceForClaim returns the source text the faithfulness judge sees for one claim, the ids of the
 // passages it is built from, and whether the retrieval floor suppressed all of them. With retrieval

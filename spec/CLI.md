@@ -74,14 +74,18 @@ case collapses to `error` rather than a silent partial.
 In faithfulness mode the source can be a whole corpus of hearing transcripts, not one file. Rather
 than send every claim the full ~25K-token corpus, `internal/retrieve` splits each transcript into
 speaker-turn passages and, per claim, sends the judge the passages that rank highest, up to a token
-budget (`-max-tokens`, default 8000). Deterministic, no model call. `-retrieve=none` restores the
+budget (`-max-tokens`, default 10000). Deterministic, no model call. `-retrieve=none` restores the
 full-corpus behaviour.
 
 - **Passages.** A transcript is Hansard-style: a header naming committee MEMBERS and the Chair, then a
   body of turns opening with a speaker line ("Vicky GUGLIELMO:", "The CHAIR:"). A turn is one passage,
   tagged with date (parent directory), session (file stem), speaker, and role. Role is `witness`,
   `questioner` (a committee member, matched against the MEMBERS roster), or `chair`. The role tag is
-  what lets a judge reject a claim that quotes a questioner's question as though it were testimony.
+  what lets a judge reject a claim that quotes a questioner's question as though it were testimony. A
+  witness passage also carries, tagged separately (`Q — …` / `A — …`), the questioner turn that
+  immediately precedes it: a bare answer ("Absolutely inadequate.") is unretrievable and ambiguous
+  without the question it answers. Only the answer is matched when attributing a quote; both are seen
+  by the ranker and the judge.
 - **Query.** The claim text plus its §-heading labels (the `key=Label` path from the claims file).
 - **Ranking.** Two rankers, fused. BM25 over the passage terms, and — with `-embed` (default on) — a
   cosine ranker over nomic-embed-text vectors of the same passages. They are fused by reciprocal-rank
@@ -115,7 +119,7 @@ full-corpus run.
 | `-ollama-url`  | `$OLLAMA_HOST` or `http://localhost:11434` | Ollama server base URL (`-backend ollama`).      |
 | `-think`       | `false`                     | Ollama only: emit the model's reasoning block (needs a higher token cap). |
 | `-retrieve`    | `bm25`                      | Per-claim passage retrieval: `bm25` \| `none` (see Retrieval). |
-| `-max-tokens`  | `8000`                      | Retrieval token budget per claim (fused bm25+embed ranking).  |
+| `-max-tokens`  | `10000`                     | Retrieval token budget per claim (fused bm25+embed ranking).  |
 | `-embed`       | `true`                      | Add the nomic-embed-text ranker, fused with BM25 (see Retrieval). |
 | `-embed-model` | `nomic-embed-text`          | Embedding model for the semantic ranker.                     |
 | `-floor`       | `0`                         | Top-passage cosine below this ⇒ verdict `absent`, no model call (`0` = off). |
