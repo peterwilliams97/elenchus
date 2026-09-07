@@ -1,1 +1,4 @@
 {"model":"claude-sonnet-4-6","calls":1,"input_tokens":46,"output_tokens":292,"cache_read_tokens":0,"cache_create_tokens":16154,"web_searches":0,"wall_seconds":45.933912167,"est_usd":"$0.0651 (rates 2026-06-01)"}
+{"model":"claude-sonnet-4-6","calls":0,"input_tokens":0,"output_tokens":0,"cache_read_tokens":0,"cache_create_tokens":0,"web_searches":0,"wall_seconds":0.137158709,"est_usd":"$0.0000 (rates 2026-06-01)"}
+{"model":"claude-sonnet-4-6","calls":1,"input_tokens":0,"output_tokens":0,"cache_read_tokens":0,"cache_create_tokens":0,"web_searches":0,"wall_seconds":1.9560925839999999,"est_usd":"$0.0000 (rates 2026-06-01)"}
+{"model":"claude-sonnet-4-6","calls":2,"input_tokens":132,"output_tokens":561,"cache_read_tokens":16190,"cache_create_tokens":16190,"web_searches":0,"wall_seconds":23.989928125,"est_usd":"$0.0744 (rates 2026-06-01)"}

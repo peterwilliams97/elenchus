@@ -17,8 +17,9 @@ if [ -f "$ALL" ]; then STASH="${TMPDIR:-/tmp}/hearings-all.$$.txt"; mv "$ALL" "$
 restore() { [ -n "$STASH" ] && mv "$STASH" "$ALL" 2>/dev/null || true; }
 trap restore EXIT
 
+# -fresh so every run re-judges rather than resuming the committed chain from a prior run.
 ./assay -source "$SRC" -manifest "$SRC/MANIFEST.md" \
-  -retrieve bm25 -embed -floor 0 -max-tokens 10000 -n 1 \
+  -retrieve bm25 -embed -floor 0 -max-tokens 10000 -n 1 -fresh \
   -chain-dir "$DIR" -usage-out "$DIR/usage.jsonl" -quiet \
   "$DIR/claims-f46b.txt" 2> "$DIR/run.stderr"
 
