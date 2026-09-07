@@ -100,9 +100,9 @@ func TestFaithJudgeRejectsNonVerbatimQuotes(t *testing.T) {
 	}
 }
 
-// TestGroundVerdictDowngrade pins the code-side rule: a verdict asserting source content needs at
-// least one verified quote. With none, contradicted→absent and faithful/partial→unsupported, each
-// counted; a surviving quote leaves the verdict untouched; absent/overstated are never downgraded.
+// TestGroundVerdictDowngrade pins the code-side rule: every verdict except absent needs at least one
+// verified quote. With none, contradicted→absent and faithful/partial/overstated→unsupported, each
+// counted; a surviving quote leaves the verdict untouched; absent alone is never downgraded.
 func TestGroundVerdictDowngrade(t *testing.T) {
 	for _, tc := range []struct {
 		verdict  string
@@ -113,10 +113,11 @@ func TestGroundVerdictDowngrade(t *testing.T) {
 		{"contradicted", nil, "absent", true},
 		{"faithful", nil, "unsupported", true},
 		{"partial", nil, "unsupported", true},
+		{"overstated", nil, "unsupported", true},
 		{"faithful", []string{"a real quote"}, "faithful", false},
 		{"contradicted", []string{"a real quote"}, "contradicted", false},
-		{"absent", nil, "absent", false},
-		{"overstated", nil, "overstated", false},
+		{"overstated", []string{"a real quote"}, "overstated", false},
+		{"absent", nil, "absent", false}, // absent is the only verdict that needs no quote
 	} {
 		c := cfg{usage: newUsageCounters()}
 		got := c.groundVerdict(tc.verdict, tc.verified)

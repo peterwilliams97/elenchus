@@ -55,13 +55,28 @@ def grep_int(text, pat):
     return int(m.group(1)) if m else None
 
 
+def post_rule(verdict, nquotes):
+    """The groundVerdict rule (assay.go) recomputed from a committed record: every verdict except
+    absent needs >=1 verified quote. With none, contradicted->absent, faithful/partial/overstated->
+    unsupported; absent and the non-verdicts (error/unsupported) are unchanged."""
+    if nquotes >= 1:
+        return verdict
+    if verdict == "contradicted":
+        return "absent"
+    if verdict in ("faithful", "partial", "overstated"):
+        return "unsupported"
+    return verdict
+
+
 def verdict_cell(cell, idx):
     r = cell["chain"].get(idx)
     if not r:
         return "—"
     v = r["verdict"]
     sp = r.get("spread")
-    return f"{v} {sp}" if sp else v
+    base = f"{v} {sp}" if sp else v
+    post = post_rule(v, len(r.get("detail", {}).get("quotes", [])))
+    return f"{base} → **{post}**" if post != v else base
 
 
 def main():
@@ -76,8 +91,21 @@ def main():
            "to each cell's chain / usage / run.stderr; nothing is synthetic.",
            ""]
 
-    # Agreement table: claim × cell.
+    # Agreement table: claim × cell. A `→ **post**` annotation is the verdict AFTER the groundVerdict
+    # rule (every verdict but absent needs a verified quote), recomputed from the committed chains.
+    flips = []
+    for i, cid in enumerate(ids):
+        for c in present:
+            r = cells[c]["chain"].get(i)
+            if r:
+                p = post_rule(r["verdict"], len(r.get("detail", {}).get("quotes", [])))
+                if p != r["verdict"]:
+                    flips.append(f"{c} {cid}: {r['verdict']} → {p}")
     out += ["## Agreement table (verdict · N=3 spread)", "",
+            "`→ **post**` marks a verdict changed by the code-side grounding rule (a verdict with no "
+            "verified quote, recomputed from the committed chain — no rerun). "
+            + (f"Post-rule flips: {', '.join(flips)}." if flips else "No post-rule flips."),
+            "",
             "| claim | " + " | ".join(present) + " |",
             "|---|" + "|".join(["---"] * len(present)) + "|"]
     for i, cid in enumerate(ids):
@@ -160,9 +188,9 @@ def main():
     if not (sr["present"] and qr["present"]):
         adj.append("_(both retrieved cells not yet present)_")
     else:
-        adj += ["| claim | Sonnet verdict | Sonnet quotes | Qwen verdict | Qwen quotes | who's right |",
-                "|---|---|---|---|---|---|"]
-        ndiv = 0
+        adj += ["| claim | Sonnet verdict | Sonnet quotes | Qwen verdict | Qwen quotes | who's right | post-rule |",
+                "|---|---|---|---|---|---|---|"]
+        ndiv = resolved = 0
         for i, cid in enumerate(ids):
             s, q = sr["chain"].get(i), qr["chain"].get(i)
             if not (s and q):
@@ -171,10 +199,16 @@ def main():
                 ndiv += 1
                 sq = " / ".join(x[:90] for x in s.get("detail", {}).get("quotes", [])) or "(none)"
                 qq = " / ".join(x[:90] for x in q.get("detail", {}).get("quotes", [])) or "(none)"
+                sp = post_rule(s["verdict"], len(s.get("detail", {}).get("quotes", [])))
+                qp = post_rule(q["verdict"], len(q.get("detail", {}).get("quotes", [])))
+                note = f"resolved → both {sp}" if sp == qp else f"still differs ({sp} vs {qp})"
+                if sp == qp:
+                    resolved += 1
                 adj.append(f"| {cid} | {s['verdict']} {s.get('spread','')} | {sq} | "
-                           f"{q['verdict']} {q.get('spread','')} | {qq} |  |")
+                           f"{q['verdict']} {q.get('spread','')} | {qq} |  | {note} |")
         adj.append("")
-        adj.append(f"_{ndiv} divergence(s)._")
+        adj.append(f"_{ndiv} divergence(s); {resolved} resolved by the grounding rule, "
+                   f"{ndiv - resolved} remain for a human._")
     with open(os.path.join(HERE, "adjudication.md"), "w") as f:
         f.write("\n".join(adj))
 

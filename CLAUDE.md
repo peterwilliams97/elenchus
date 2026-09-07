@@ -94,8 +94,9 @@ main() → runFaithfulness(input, src)
                                       # format), retried once on schema failure.
       quoteInPassage(...)             # grounding check, NO model: each cited quote must be a
                                       # verbatim substring of its passage, else dropped + counted
-      groundVerdict(...)              # a verdict needs a verified quote: none ⇒ contradicted→absent,
-                                      # faithful/partial→"unsupported" (needs-you); counted in usage
+      groundVerdict(...)              # every verdict but absent needs a verified quote: none ⇒
+                                      # contradicted→absent, faithful/partial/overstated→"unsupported"
+                                      # (needs-you); counted in usage
   termFaith / mdFaith
 ```
 `faithClaim` (the older defender+critic two-call, `faithDefenderSys`/`faithCriticSys`) is retained

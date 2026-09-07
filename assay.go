@@ -924,12 +924,13 @@ func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64
 		SourceSays: j.SourceSays, Gap: j.Gap, SoWhat: j.SoWhat, Quotes: verified}
 }
 
-// groundVerdict enforces that a verdict asserting source content is backed by at least one verified
-// quote. With none surviving the grounding check: "contradicted" (which asserts the source says the
-// opposite) downgrades to "absent"; "faithful"/"partial" (which assert the source supports the claim)
-// downgrade to "unsupported" — no verdict, routed to needs-you (brief.Qualify tier 0). Each downgrade
-// is counted in usage. "absent"/"overstated"/"error" are unchanged. The rule lives in code, not the
-// prompt, so it cannot be talked out of.
+// groundVerdict enforces that every verdict except "absent" is backed by at least one verified quote.
+// With none surviving the grounding check: "contradicted" (which asserts the source says the opposite)
+// downgrades to "absent"; "faithful"/"partial"/"overstated" (which assert the source supports some
+// version of the claim) downgrade to "unsupported" — no verdict, routed to needs-you (brief.Qualify
+// tier 0). Each downgrade is counted in usage. "absent" needs no quote (it asserts nothing is there);
+// "error"/"unsupported" are already non-verdicts. The rule lives in code, not the prompt, so a fluent
+// but ungrounded judgment cannot talk its way to a verdict.
 func (c cfg) groundVerdict(verdict string, verified []string) string {
 	if len(verified) > 0 {
 		return verdict
@@ -940,7 +941,7 @@ func (c cfg) groundVerdict(verdict string, verified []string) string {
 			c.usage.addNoQuoteDowngrade()
 		}
 		return "absent"
-	case "faithful", "partial":
+	case "faithful", "partial", "overstated":
 		if c.usage != nil {
 			c.usage.addNoQuoteDowngrade()
 		}

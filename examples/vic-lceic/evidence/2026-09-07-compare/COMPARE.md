@@ -4,6 +4,8 @@ Cells present: sonnet-full, sonnet-retrieved, qwen-retrieved, qwen-oracle. Same 
 
 ## Agreement table (verdict · N=3 spread)
 
+`→ **post**` marks a verdict changed by the code-side grounding rule (a verdict with no verified quote, recomputed from the committed chain — no rerun). Post-rule flips: qwen-retrieved M3: contradicted → absent.
+
 | claim | sonnet-full | sonnet-retrieved | qwen-retrieved | qwen-oracle |
 |---|---|---|---|---|
 | F8 | partial 3/3 | partial 3/3 | faithful 3/3 | faithful 3/3 |
@@ -13,7 +15,7 @@ Cells present: sonnet-full, sonnet-retrieved, qwen-retrieved, qwen-oracle. Same 
 | F31 | partial 3/3 | partial 3/3 | faithful 3/3 | faithful 3/3 |
 | M1 | contradicted 3/3 | contradicted 3/3 | contradicted 3/3 | contradicted 3/3 |
 | M2 | contradicted 3/3 | contradicted 3/3 | contradicted 3/3 | contradicted 3/3 |
-| M3 | absent 3/3 | absent 3/3 | contradicted 2/3 | absent 2/3 |
+| M3 | absent 3/3 | absent 3/3 | contradicted 2/3 → **absent** | absent 2/3 |
 
 ## Per-cell metrics
 
