@@ -237,6 +237,27 @@ func TestLoadSubmissions(t *testing.T) {
 	}
 }
 
+// TestLoadQoN pins that a QoN response ingests as paragraph passages tagged Source=qon. Skips when
+// the gitignored qon/ tree is not present locally.
+func TestLoadQoN(t *testing.T) {
+	const qon = "../../examples/vic-lceic/sources/qon"
+	if _, err := os.Stat(qon); err != nil {
+		t.Skip("no fetched QoN responses locally")
+	}
+	ix, err := Load(qon)
+	if err != nil {
+		t.Fatalf("Load(%s): %v", qon, err)
+	}
+	if len(ix.Passages) == 0 {
+		t.Fatal("no QoN passages")
+	}
+	for _, p := range ix.Passages {
+		if p.Source != SourceQoN || !strings.HasPrefix(p.ID, "qon-") {
+			t.Fatalf("bad QoN passage: id=%q source=%q", p.ID, p.Source)
+		}
+	}
+}
+
 // ── test helpers ───────────────────────────────────────────────────────────────
 
 func idsOf(ps []Passage) string {

@@ -56,6 +56,7 @@ type Passage struct {
 const (
 	SourceHearing    = "hearing"
 	SourceSubmission = "submission"
+	SourceQoN        = "qon" // a response to questions on notice (paragraphs, like a submission)
 )
 
 // searchText is what ranking and embedding see: the question (when present) then the answer. Text
@@ -177,11 +178,49 @@ func LoadMany(paths []string) (*Index, error) {
 // passagesForFile routes a corpus file to its parser: a written submission (path under a
 // "submissions" directory) splits on paragraphs, everything else on Hansard speaker turns.
 func passagesForFile(path string) ([]Passage, error) {
-	if strings.Contains(path, "/submissions/") || strings.Contains(path, "submissions"+string(os.PathSeparator)) {
+	switch {
+	case strings.Contains(path, "/submissions/"):
 		return submissionPassages(path)
+	case strings.Contains(path, "/qon/"):
+		return qonPassages(path)
+	default:
+		return splitFile(path)
 	}
-	return splitFile(path)
 }
+
+// qonPassages splits a response to questions on notice into paragraph passages, tagged Source=qon. A
+// QoN response is not Hansard (no speaker turns) and not a submission; it is the document a report
+// footnote cites as "response to questions on notice", so its passages must be retrievable and
+// distinguishable in the evidence-origin table. The filename stem "<org>-<date>" becomes the speaker.
+func qonPassages(path string) ([]Passage, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	stem := strings.TrimSuffix(filepath.Base(path), ".txt")
+	org := stem
+	if m := qonName.FindStringSubmatch(stem); m != nil {
+		org = strings.ToUpper(m[1]) + " (QoN " + m[2] + ")"
+	}
+	text := strings.ReplaceAll(string(data), "\f", "\n\n")
+	var out []Passage
+	turn := 0
+	for _, para := range paraSplit.Split(text, -1) {
+		p := strings.TrimSpace(para)
+		if len([]rune(p)) < 40 {
+			continue
+		}
+		out = append(out, Passage{
+			ID: fmt.Sprintf("qon-%s#p%d", stem, turn), Session: stem,
+			Speaker: org, Role: SourceQoN, Source: SourceQoN, Text: p,
+		})
+		turn++
+	}
+	return out, nil
+}
+
+// qonName matches a QoN filename stem "<org>-<YYYY-MM-DD>".
+var qonName = regexp.MustCompile(`^(.+)-(\d{4}-\d{2}-\d{2})$`)
 
 // subName pulls the submission number and organisation from a filename stem like
 // "09.-ana-a-new-approach-redacted" → ("09", "ana a new approach") or "01.1-...-redacted" → ("01.1", …).
@@ -463,6 +502,10 @@ func Format(ps []Passage) string {
 			// A written submission: a paragraph, tagged with its number and organisation so the judge
 			// reads it as a submission, not hearing testimony.
 			fmt.Fprintf(&b, "[%s · written submission · %s]\n%s\n\n", p.ID, p.Speaker, p.Text)
+			continue
+		}
+		if p.Source == SourceQoN {
+			fmt.Fprintf(&b, "[%s · response to questions on notice · %s]\n%s\n\n", p.ID, p.Speaker, p.Text)
 			continue
 		}
 		fmt.Fprintf(&b, "[%s · %s · %s (%s)]\n", p.ID, p.Date, p.Speaker, p.Role)

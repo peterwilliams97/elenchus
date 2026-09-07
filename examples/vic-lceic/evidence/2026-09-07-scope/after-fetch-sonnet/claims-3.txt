@@ -1,0 +1,3 @@
+F10	2=Chapter 2 — Overview of Victoria's cultural and creative industries/2.2.1=Loss of audiences and income	Children's and young people's creative participation and attendance declined significantly between 2017–18 and 2021–22.	submission:19/attachment-1
+F33	4=Chapter 4 — National broadcasters/4.3.1=ABC presence in Victoria	No state or territory has an ABC headcount that accurately reflects its population; over- or under-representation exists to varying degrees in all.	qon:abc/2025-03-21 submission:41
+F54b	4=Chapter 4 — National broadcasters/4.5.2=SBS investment in Victoria	SBS reaches 3.42 million Victorian viewers monthly, about 49% of the Victorian population.	qon:sbs/2025-04-10 submission:42

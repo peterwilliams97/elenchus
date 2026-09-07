@@ -1,0 +1,16 @@
+model claude-sonnet-4-6 · backend anthropic · calls 6 · $0.1142 (rates 2026-06-01) · wall 1m30s
+changes 2 summary lines
+tree — depth 3, max width 2, score 5.0 (target ≤20) ok
+
+  2  Chapter 2 — Overview of Victoria's cultural and creative industries  [1]
+    2.2.1  Loss of audiences and income  [1]
+      F10  Children's and young people's creative participation and at…  unverifiable manifest
+          ↳ so what: fetch submission:19/attachment-1
+  4  Chapter 4 — National broadcasters  [2]
+    4.3.1  ABC presence in Victoria  [1]
+      F33  No state or territory has an ABC headcount that accurately …  absent 3/3
+          ↳ so what: Reader would believe a universal finding about all states/territories that no passage actually makes.
+    4.5.2  SBS investment in Victoria  [1]
+      F54b  SBS reaches 3.42 million Victorian viewers monthly, about 4…  faithful 3/3
+
+Full table: examples/vic-lceic/evidence/2026-09-07-scope/after-fetch-sonnet/audit.md

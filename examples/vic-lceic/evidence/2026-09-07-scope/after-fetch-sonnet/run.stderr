@@ -1,0 +1,13 @@
+[  1/3] ✓ unverifiable  "Children's and young people's creative participation and …"  0s
+[  2/3] ✓ absent        "No state or territory has an ABC headcount that accuratel…"  15.18s
+[heartbeat] elapsed=1m0s calls=3 in=174 out=551 web=0 est=$0.0831 (rates 2026-06-01) verified=2 errored=0 seen=2/3 claim="faithfulness 3/3"
+[  3/3] ✓ faithful      "SBS reaches 3.42 million Victorian viewers monthly, about…"  1m14.89s
+tree (html): examples/vic-lceic/evidence/2026-09-07-scope/after-fetch-sonnet/tree.html
+
+SUMMARY claims-3 faithfulness
+  cases 3 · verified 3 · errored 0
+  unverifiable 1 · faithful 1 · absent 1
+  wall 1m30s · est_usd $0.1142 (rates 2026-06-01) · cache_hit 83% (read 86328 / created 17088)
+  schema_retries 0 · quote_rejects 0 · no_quote_downgrades 0
+  detail: examples/vic-lceic/evidence/2026-09-07-scope/after-fetch-sonnet/claims-3.faithfulness.jsonl
+USAGE model=claude-sonnet-4-6 calls=6 in=330 out=1551 cache_read=86328 cache_create=17088 web_searches=0 wall=90s est_usd=$0.1142 (rates 2026-06-01)

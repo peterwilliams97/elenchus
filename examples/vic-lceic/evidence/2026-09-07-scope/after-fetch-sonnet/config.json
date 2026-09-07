@@ -1,0 +1,3 @@
+{"cell":"after-fetch-sonnet","backend":"anthropic","model":"claude-sonnet-4-6","retrieve":"bm25","n":3,
+ "max_tokens":10000,"floor":0,"embed":true,"manifest":"sources/MANIFEST.md","claims":"F10 F33 F54b",
+ "corpus":"hearings+submissions+qon","git_sha":"a0ebc93","date":"2026-09-07","note":"rerun after fetching QoN responses"}

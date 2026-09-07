@@ -111,3 +111,16 @@ verified as a real PDF (`%PDF` header, HTTP 200) and pdftotext-extracted to a si
 - `22.-awg-and-awgacs.pdf` — /4a439d/contentassets/46e1e8c8e2b4486aae8eaa3d60aaef71/submission-documents/22.-awg-and-awgacs.pdf
 - `26.-victorian-independent-and-youth-theatre-organisations.pdf` — /4a439e/contentassets/9d088196b15a46c19655f2e51e47e879/submission-documents/26.-victorian-independent-and-youth-theatre-organisations.pdf
 - `25.-arena-theatre-co_redacted.pdf` — /4a439e/contentassets/9d73d945f3ec4adc98dfb8ca07640e94/submission-documents/25.-arena-theatre-co_redacted.pdf
+
+## Responses to questions on notice (QoN) — fetched 2026-09-07
+
+Harvested from the inquiry **hearings** page (same Playwright render, parliament.vic.gov.au only);
+the QoN replies are published there, not on the submissions page. Downloaded to `sources/qon/`
+(gitignored), verified PDF + pdftotext'd. Named `<org>-<date>.txt` by the report's cited receipt
+date so the manifest id (`qon:<org>/<date>`) matches the claims' cites.
+- `abc-2025-03-21.pdf` (ABC, response to questions on notice, cited 21 Mar 2025) — /4a438c/contentassets/48e45c925db34153b91a938153249cfd/reply-2.-abc---qons.pdf
+- `sbs-2025-04-10.pdf` (SBS, response to questions on notice, cited 10 Apr 2025) — /4a4392/contentassets/530c40047c944c27b2426b831eb0cc13/reply-5.-sbs---qons.pdf
+
+**Not fetched:** Theatre Network Australia Submission 19 **Attachment 1** (the ABS series behind F10)
+— no link for it appears on either the submissions or hearings page (only attachments 01.1, 09.1,
+33.1 are published there). F10 therefore stays `unverifiable` until that attachment is located.
