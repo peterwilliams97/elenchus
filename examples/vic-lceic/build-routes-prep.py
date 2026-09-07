@@ -452,6 +452,20 @@ for r in sorted(records, key=lambda x: int(x[0][1:])):
 with open(OUT, "w", encoding="utf-8") as f:
     f.write("\n".join(out) + "\n")
 
+# Optional 3rd arg: dump the unclear+mixed rows as JSONL, the input to the
+# model-guess pass (build-routes-model.py). Bounded excerpts only.
+if len(sys.argv) > 3:
+    import json
+    with open(sys.argv[3], "w", encoding="utf-8") as f:
+        for r in sorted(records, key=lambda x: int(x[0][1:])):
+            fid, pg, sec, txt, para, subj, fns, route, phrase, flag = r
+            if route in ("unclear", "mixed"):
+                f.write(json.dumps({
+                    "id": fid, "section": sec, "page": pg, "finding": txt,
+                    "paragraph": para, "regex_route": route,
+                    "regex_phrase": phrase,
+                }, ensure_ascii=False) + "\n")
+
 # diagnostics
 nop = [x[0] for x in records if x[9] == "NO-PROSE"]
 from collections import Counter
