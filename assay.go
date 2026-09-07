@@ -364,7 +364,7 @@ func printSummary(fixture, mode, model string, rt *runTally, u *usageCounters, c
 	// Build verdict breakdown line (skip "error" — covered by errored count).
 	var parts []string
 	verdictOrder := []string{"supported", "mixed", "refuted", "unverifiable",
-		"faithful", "partial", "overstated", "absent", "contradicted",
+		"faithful", "partial", "overstated", "absent", "contradicted", "unsupported",
 		"substantive", "hollow", "skipped (over cap)"}
 	for _, v := range verdictOrder {
 		if n := counts[v]; n > 0 {
@@ -385,14 +385,15 @@ func printSummary(fixture, mode, model string, rt *runTally, u *usageCounters, c
 		parts = append(parts, fmt.Sprintf("error %d", counts["error"]))
 	}
 
-	schemaRetries, quoteRejects := u.extras()
+	schemaRetries, quoteRejects, noQuoteDowngrades := u.extras()
 
 	fmt.Fprintf(os.Stderr, "\nSUMMARY %s %s\n", fixture, mode)
 	fmt.Fprintf(os.Stderr, "  cases %d · verified %d · errored %d\n", total, verified, errored)
 	fmt.Fprintf(os.Stderr, "  %s\n", strings.Join(parts, " · "))
 	fmt.Fprintf(os.Stderr, "  wall %s · est_usd %s · cache_hit %.0f%% (read %d / created %d)\n",
 		elapsed.Round(time.Second), cost, 100*u.cacheHitRate(), cr, cc)
-	fmt.Fprintf(os.Stderr, "  schema_retries %d · quote_rejects %d\n", schemaRetries, quoteRejects)
+	fmt.Fprintf(os.Stderr, "  schema_retries %d · quote_rejects %d · no_quote_downgrades %d\n",
+		schemaRetries, quoteRejects, noQuoteDowngrades)
 	if chainFile != "" {
 		fmt.Fprintf(os.Stderr, "  detail: %s\n", chainFile)
 	}
@@ -918,8 +919,34 @@ func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64
 	if rejects > 0 && c.usage != nil {
 		c.usage.addQuoteReject(rejects)
 	}
-	return faith{Claim: claim, Verdict: j.Verdict, Evidence: j.Reason,
+	verdict := c.groundVerdict(j.Verdict, verified)
+	return faith{Claim: claim, Verdict: verdict, Evidence: j.Reason,
 		SourceSays: j.SourceSays, Gap: j.Gap, SoWhat: j.SoWhat, Quotes: verified}
+}
+
+// groundVerdict enforces that a verdict asserting source content is backed by at least one verified
+// quote. With none surviving the grounding check: "contradicted" (which asserts the source says the
+// opposite) downgrades to "absent"; "faithful"/"partial" (which assert the source supports the claim)
+// downgrade to "unsupported" — no verdict, routed to needs-you (brief.Qualify tier 0). Each downgrade
+// is counted in usage. "absent"/"overstated"/"error" are unchanged. The rule lives in code, not the
+// prompt, so it cannot be talked out of.
+func (c cfg) groundVerdict(verdict string, verified []string) string {
+	if len(verified) > 0 {
+		return verdict
+	}
+	switch verdict {
+	case "contradicted":
+		if c.usage != nil {
+			c.usage.addNoQuoteDowngrade()
+		}
+		return "absent"
+	case "faithful", "partial":
+		if c.usage != nil {
+			c.usage.addNoQuoteDowngrade()
+		}
+		return "unsupported"
+	}
+	return verdict
 }
 
 // faithJudgeRepeat runs faithJudge c.repeat times and returns the modal result plus a "k/N" agreement
@@ -1002,7 +1029,7 @@ func (c cfg) faithRepeat(claim, src string) (faith, string) {
 
 // faithVerdictOrder ranks faithfulness verdicts worst-first; modalVerdict breaks a count tie by it,
 // so a split surfaces the verdict a human is likelier to need to look at rather than a random one.
-var faithVerdictOrder = []string{"contradicted", "absent", "overstated", "partial", "faithful", "error"}
+var faithVerdictOrder = []string{"unsupported", "contradicted", "absent", "overstated", "partial", "faithful", "error"}
 
 // modalVerdict returns the most frequent verdict in `counts`, breaking ties by faithVerdictOrder
 // (worst first). It is total over any non-empty map.
@@ -2272,6 +2299,7 @@ type usageCounters struct {
 	webSearches       int
 	schemaRetries     int // judge calls that came back schema-invalid and were retried once
 	quoteRejects      int // evidence quotes rejected as non-verbatim by the grounding check
+	noQuoteDowngrades int // verdicts downgraded because no quote survived the grounding check
 	start             time.Time
 	currentClaim      string // label of the in-flight claim for heartbeat display
 }
@@ -2298,10 +2326,15 @@ func (u *usageCounters) setLabel(label string) {
 }
 
 func (u *usageCounters) addSchemaRetry() { u.mu.Lock(); u.schemaRetries++; u.mu.Unlock() }
-func (u *usageCounters) extras() (schemaRetries, quoteRejects int) {
+func (u *usageCounters) addNoQuoteDowngrade() {
+	u.mu.Lock()
+	u.noQuoteDowngrades++
+	u.mu.Unlock()
+}
+func (u *usageCounters) extras() (schemaRetries, quoteRejects, noQuoteDowngrades int) {
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	return u.schemaRetries, u.quoteRejects
+	return u.schemaRetries, u.quoteRejects, u.noQuoteDowngrades
 }
 func (u *usageCounters) addQuoteReject(n int) {
 	u.mu.Lock()

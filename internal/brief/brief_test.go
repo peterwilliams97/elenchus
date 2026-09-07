@@ -97,6 +97,8 @@ var qualifyCases = []struct {
 }{
 	{"contradicted → a", "contradicted", "", "", "none", "x", 0, true},
 	{"absent → a", "absent", "", "", "none", "x", 0, true},
+	{"unsupported → a", "unsupported", "", "", "none", "x", 0, true}, // a positive verdict with no verified quote
+
 	{"laundering → b", "faithful", "", "refuted", "none", "x", 1, true},
 	{"overstated+number → c", "overstated", "", "", "none", "up 5%", 2, true},
 	{"overstated no number → miss", "overstated", "", "", "none", "many", 0, false},

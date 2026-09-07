@@ -37,7 +37,8 @@ var numRe = regexp.MustCompile(`[0-9]`)
 // Qualify applies the selection rule in spec/CLI.md, returning the highest (lowest-numbered) tier a
 // claim matches. Tiers, in priority order:
 //
-//	0 (a) — faithfulness contradicted or absent
+//	0 (a) — faithfulness contradicted, absent, or unsupported (a positive verdict the grounding
+//	        check could not back with a verified quote — no verdict, surfaced for a human)
 //	1 (b) — faithful AND grounding refuted (the laundering signature)
 //	2 (c) — faithfulness overstated where the claim contains a number
 //	3 (e) — faithfulness partial with a non-"none" gap (scope/denominator/timerange/attribution/other)
@@ -50,7 +51,7 @@ var numRe = regexp.MustCompile(`[0-9]`)
 // tiers a, c, and e. Reused by the tree package for expansion.
 func Qualify(faith, substance, grounding, gap, text string) (tier int, ok bool) {
 	switch {
-	case faith == "contradicted" || faith == "absent":
+	case faith == "contradicted" || faith == "absent" || faith == "unsupported":
 		return 0, true
 	case faith == "faithful" && grounding == "refuted":
 		return 1, true

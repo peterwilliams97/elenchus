@@ -92,11 +92,40 @@ func TestFaithJudgeRejectsNonVerbatimQuotes(t *testing.T) {
 	if len(got.Quotes) != 1 || got.Quotes[0] != passages[0].Text {
 		t.Errorf("only the verbatim quote should survive, got %v", got.Quotes)
 	}
-	if _, rejects := c.usage.extras(); rejects != 2 {
+	if _, rejects, _ := c.usage.extras(); rejects != 2 {
 		t.Errorf("want 2 quote rejects (paraphrase + invented id), got %d", rejects)
 	}
 	if got.SourceSays != "regional gets $1.06 per capita" {
 		t.Errorf("what_source_actually_says not carried: %q", got.SourceSays)
+	}
+}
+
+// TestGroundVerdictDowngrade pins the code-side rule: a verdict asserting source content needs at
+// least one verified quote. With none, contradicted→absent and faithful/partial→unsupported, each
+// counted; a surviving quote leaves the verdict untouched; absent/overstated are never downgraded.
+func TestGroundVerdictDowngrade(t *testing.T) {
+	for _, tc := range []struct {
+		verdict  string
+		verified []string
+		want     string
+		counted  bool
+	}{
+		{"contradicted", nil, "absent", true},
+		{"faithful", nil, "unsupported", true},
+		{"partial", nil, "unsupported", true},
+		{"faithful", []string{"a real quote"}, "faithful", false},
+		{"contradicted", []string{"a real quote"}, "contradicted", false},
+		{"absent", nil, "absent", false},
+		{"overstated", nil, "overstated", false},
+	} {
+		c := cfg{usage: newUsageCounters()}
+		got := c.groundVerdict(tc.verdict, tc.verified)
+		if got != tc.want {
+			t.Errorf("groundVerdict(%q, %d quotes) = %q, want %q", tc.verdict, len(tc.verified), got, tc.want)
+		}
+		if _, _, dg := c.usage.extras(); (dg == 1) != tc.counted {
+			t.Errorf("groundVerdict(%q): downgrade counted=%v, want %v", tc.verdict, dg == 1, tc.counted)
+		}
 	}
 }
 
@@ -150,7 +179,7 @@ func TestSchemaRetryCountedOnce(t *testing.T) {
 	if j.Verdict != "absent" {
 		t.Errorf("retry result not parsed, got %q", j.Verdict)
 	}
-	if retries, _ := c.usage.extras(); retries != 1 {
+	if retries, _, _ := c.usage.extras(); retries != 1 {
 		t.Errorf("want 1 schema retry, got %d", retries)
 	}
 	if n != 2 {

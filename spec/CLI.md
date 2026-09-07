@@ -124,6 +124,13 @@ strict tool call, Ollama via `format`. A schema-invalid answer is retried once (
   any that fails, counting it as a `quote_reject`. This is the grounding check — no model call — and
   it catches a paraphrase presented as a quote (a judge that writes "arts sector" where the source
   says "creative sector").
+- **A verdict needs a verified quote (code, not prompt).** If no quote survives the grounding check,
+  a verdict asserting source content is not trusted: `contradicted` (asserts the source says the
+  opposite) becomes `absent`; `faithful` and `partial` (assert the source supports the claim) become
+  `unsupported` — no verdict, routed to the Needs-you tier for a human. `absent` and `overstated` are
+  left as-is. Each downgrade is counted as a `no_quote_downgrade`. The rule is in code so a fluent but
+  ungrounded judgment cannot talk its way to a verdict. Faithfulness verdicts are therefore
+  `faithful` | `partial` | `overstated` | `absent` | `contradicted` | `unsupported`.
 - **Cache-friendly ordering.** Claims whose retrieved passages overlap by at least half are run
   consecutively over one shared (union) passage prefix, so the judge's cached prefix stays hot; the
   repeats of `-n` sample the same cached prefix at a non-zero temperature. The SUMMARY reports

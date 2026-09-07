@@ -94,6 +94,8 @@ main() → runFaithfulness(input, src)
                                       # format), retried once on schema failure.
       quoteInPassage(...)             # grounding check, NO model: each cited quote must be a
                                       # verbatim substring of its passage, else dropped + counted
+      groundVerdict(...)              # a verdict needs a verified quote: none ⇒ contradicted→absent,
+                                      # faithful/partial→"unsupported" (needs-you); counted in usage
   termFaith / mdFaith
 ```
 `faithClaim` (the older defender+critic two-call, `faithDefenderSys`/`faithCriticSys`) is retained
@@ -136,7 +138,8 @@ actually fetched); `callJSONSourced` threads these back so `crossCheckEvidence` 
 
 **Verdicts:**
 - Dialectic: `"substantive"` | `"partial"` | `"hollow"`     | `"error"`. Only `substantive` and `partial` appear in the final residue. `partial` claims carry `SurvivingClaim`.
-- Faithfulness: `"faithful"` | `"partial"` | `"overstated"` | `"absent"` | `"contradicted"`
+- Faithfulness: `"faithful"` | `"partial"` | `"overstated"` | `"absent"` | `"contradicted"` | `"unsupported"`
+  (`unsupported` is set in code, never by the judge: a `faithful`/`partial` with no verified quote — see `groundVerdict`)
 - Evidence: `"supported"`    | `"mixed"`   | `"refuted"`    | `"unverifiable"`
   - Grounding integrity: `crossCheckEvidence` downgrades `supported`/`mixed`/`refuted` →
     `unverifiable` when the model's cited URLs are absent from the retrieved set (or nothing was
