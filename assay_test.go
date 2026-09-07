@@ -1162,6 +1162,16 @@ func TestFaithCriticSysGapAndSoWhat(t *testing.T) {
 	}
 }
 
+// TestFaithJudgeSysSoWhatForm confirms the faithfulness judge's so_what is capped at 20 words and
+// pinned to the "Report says X; source says Y." two-clause form the tree leaf and root block render.
+func TestFaithJudgeSysSoWhatForm(t *testing.T) {
+	for _, needle := range []string{"SO_WHAT:", "<=20", `"Report says X; source says Y."`} {
+		if !strings.Contains(faithJudgeSys, needle) {
+			t.Errorf("faithJudgeSys missing %q", needle)
+		}
+	}
+}
+
 // ── backend seam ──────────────────────────────────────────────────────────────
 
 // TestDispatchThroughBackend confirms that with no cfg.call stub, dispatch routes through the

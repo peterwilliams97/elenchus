@@ -1443,8 +1443,9 @@ GAP — the single field that most changes what a reader would do, err toward na
 "timerange" (a limited period dropped), "attribution" (support is about a different actor/programme/
 body), "other", or "none" (benign narrowing; use for "faithful").
 
-SO_WHAT: if a reader who believed the summary would act on a false impression, state in <=20 words
-what they would get wrong; "" when faithful or the gap is benign. REASON: <=40 words, why this verdict.`
+SO_WHAT: when a reader who believed the summary would act on a false impression, state it in <=20
+words in the form "Report says X; source says Y." — X the impression the summary gives, Y what the
+passages actually support; "" when faithful or the gap is benign. REASON: <=40 words, why this verdict.`
 
 const evidenceSys = `You are the Evidence Grounder. Decide whether the CLAIM is TRUE, using web
 search to find real, current evidence — the actual truth-makers, not anyone's assertion that it is
