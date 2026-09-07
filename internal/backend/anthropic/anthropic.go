@@ -63,8 +63,23 @@ func (c *Client) Complete(req backend.Request) (backend.Response, error) {
 		// The system prompt is stable per mode, so cache it too — one breakpoint, reused every call.
 		ar.System = []textBlock{{Type: "text", Text: req.System, CacheControl: ephemeral}}
 	}
+	if req.Temperature != nil {
+		ar.Temperature = req.Temperature
+	}
 	if req.WithTools {
 		ar.Tools = []apiTool{{Type: "web_search_20250305", Name: "web_search", MaxUses: 5}}
+	}
+	// Schema constrains the answer to JSON via a forced strict tool call — the response then arrives
+	// as a tool_use block whose `input` is schema-valid JSON (no beta header; forced tool_choice is
+	// supported on sonnet-4-6 / opus-4-8). Mutually exclusive with web search in practice: the judge
+	// uses a schema, evidence grounding uses tools.
+	if len(req.Schema) > 0 {
+		name := req.SchemaName
+		if name == "" {
+			name = "emit"
+		}
+		ar.Tools = []apiTool{{Name: name, Description: "Return the result as JSON.", InputSchema: req.Schema, Strict: true}}
+		ar.ToolChoice = &toolChoice{Type: "tool", Name: name}
 	}
 	body, _ := json.Marshal(ar)
 
@@ -141,6 +156,10 @@ func (c *Client) Complete(req backend.Request) (backend.Response, error) {
 		switch b.Type {
 		case "text":
 			sb.WriteString(b.Text)
+		case "tool_use":
+			// A forced schema tool call returns the answer as the tool input (schema-valid JSON), not
+			// as text; surface it as the response text so callJSON parses it exactly as before.
+			sb.Write(b.Input)
 		case "web_search_tool_result":
 			// b.Content is the raw JSON value of the "content" field: either a []web_search_result
 			// array or a web_search_tool_result_error object. Unmarshal directly into a slice; an
@@ -180,11 +199,17 @@ func retryDelay(retryAfter string, attempt int) time.Duration {
 }
 
 type apiReq struct {
-	Model     string      `json:"model"`
-	MaxTokens int         `json:"max_tokens"`
-	System    []textBlock `json:"system,omitempty"`
-	Messages  []apiMsg    `json:"messages"`
-	Tools     []apiTool   `json:"tools,omitempty"`
+	Model       string      `json:"model"`
+	MaxTokens   int         `json:"max_tokens"`
+	System      []textBlock `json:"system,omitempty"`
+	Messages    []apiMsg    `json:"messages"`
+	Tools       []apiTool   `json:"tools,omitempty"`
+	ToolChoice  *toolChoice `json:"tool_choice,omitempty"`
+	Temperature *float64    `json:"temperature,omitempty"`
+}
+type toolChoice struct {
+	Type string `json:"type"` // "tool"
+	Name string `json:"name"`
 }
 type apiMsg struct {
 	Role    string      `json:"role"`
@@ -206,9 +231,12 @@ type cacheControl struct {
 var ephemeral = &cacheControl{Type: "ephemeral"}
 
 type apiTool struct {
-	Type    string `json:"type"`
-	Name    string `json:"name"`
-	MaxUses int    `json:"max_uses,omitempty"`
+	Type        string          `json:"type,omitempty"` // "web_search_20250305"; empty for a custom schema tool
+	Name        string          `json:"name"`
+	MaxUses     int             `json:"max_uses,omitempty"`
+	Description string          `json:"description,omitempty"`
+	InputSchema json.RawMessage `json:"input_schema,omitempty"`
+	Strict      bool            `json:"strict,omitempty"`
 }
 type apiUsage struct {
 	InputTokens              int `json:"input_tokens"`

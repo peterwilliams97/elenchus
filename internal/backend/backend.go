@@ -5,6 +5,8 @@ package backend
 // §"Backends" is the contract. The package holds only the request/response shapes and the interface;
 // each concrete provider lives in a subpackage (anthropic, ollama) and the test double in fake.
 
+import "encoding/json"
+
 // MaxTokens caps the output of every model call — Anthropic's max_tokens and Ollama's num_predict.
 // Raise it if critiques truncate; a cutoff collapses a case to an error rather than a silent partial.
 const MaxTokens = 1500
@@ -12,11 +14,19 @@ const MaxTokens = 1500
 // Request is one model call. Cached is a stable prefix (e.g. a source transcript) that a provider
 // may bill once and reuse across calls; a provider without prompt caching folds it into the prompt.
 // WithTools asks for web search — honoured only by a backend whose SupportsWebSearch reports true.
+//
+// Schema, when set, constrains the response to that JSON schema: Anthropic via a forced strict tool
+// call, Ollama via the `format` field. SchemaName is the tool name Anthropic forces. Temperature,
+// when non-nil, is sent to the provider (nil leaves the provider default) — the faithfulness judge
+// sends 0 for a single deterministic call and >0 for repeat sampling.
 type Request struct {
-	System    string
-	Prompt    string
-	Cached    string
-	WithTools bool
+	System      string
+	Prompt      string
+	Cached      string
+	WithTools   bool
+	Schema      json.RawMessage
+	SchemaName  string
+	Temperature *float64
 }
 
 // Source is a URL actually fetched during a web_search round trip — the provenance record the

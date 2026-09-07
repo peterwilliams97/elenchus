@@ -60,13 +60,25 @@ func (c *Client) Complete(req backend.Request) (backend.Response, error) {
 		msgs = append(msgs, chatMsg{Role: "system", Content: req.System})
 	}
 	msgs = append(msgs, chatMsg{Role: "user", Content: user})
-	body, _ := json.Marshal(chatReq{
-		Model:    c.model,
-		Messages: msgs,
-		Stream:   false,
-		Think:    c.think,
-		Options:  chatOptions{NumPredict: backend.MaxTokens, Temperature: 0},
-	})
+	// num_ctx sized to the prompt: ~4 bytes/token, rounded up to a 2048 multiple, clamped to
+	// [4096, 32768], so the whole prompt fits without over-allocating KV cache on a short one.
+	temp := 0.0
+	if req.Temperature != nil {
+		temp = *req.Temperature
+	}
+	opts := chatOptions{NumPredict: backend.MaxTokens, Temperature: temp, NumCtx: numCtxFor(req.System, user)}
+	creq := chatReq{
+		Model:     c.model,
+		Messages:  msgs,
+		Stream:    false,
+		Think:     c.think,
+		KeepAlive: keepAlive, // hold the model + its KV cache hot across a grouped run
+		Options:   opts,
+	}
+	if len(req.Schema) > 0 {
+		creq.Format = req.Schema // Ollama constrains the answer to this JSON schema
+	}
+	body, _ := json.Marshal(creq)
 
 	client := defaultHTTP
 	if c.http != nil {
@@ -106,12 +118,27 @@ func (c *Client) Complete(req backend.Request) (backend.Response, error) {
 	return out, nil
 }
 
+// keepAlive holds the model and its KV cache resident between calls, so a run that groups claims
+// sharing passages keeps the cached prefix hot instead of paying a cold reload per claim.
+const keepAlive = "30m"
+
+// numCtxFor sizes the context window to the prompt: ~4 bytes/token, rounded up to a 2048 multiple and
+// clamped to [4096, 32768]. Sizing it to the prompt keeps a short call cheap while never truncating a
+// long grouped one.
+func numCtxFor(system, user string) int {
+	tokens := (len(system) + len(user)) / 4
+	ctx := ((tokens+512)/2048 + 1) * 2048 // headroom for the answer, then round up
+	return min(max(ctx, 4096), 32768)
+}
+
 type chatReq struct {
-	Model    string      `json:"model"`
-	Messages []chatMsg   `json:"messages"`
-	Stream   bool        `json:"stream"`
-	Think    bool        `json:"think"`
-	Options  chatOptions `json:"options"`
+	Model     string          `json:"model"`
+	Messages  []chatMsg       `json:"messages"`
+	Stream    bool            `json:"stream"`
+	Think     bool            `json:"think"`
+	KeepAlive string          `json:"keep_alive,omitempty"`
+	Format    json.RawMessage `json:"format,omitempty"`
+	Options   chatOptions     `json:"options"`
 }
 type chatMsg struct {
 	Role    string `json:"role"`
@@ -120,6 +147,7 @@ type chatMsg struct {
 type chatOptions struct {
 	NumPredict  int     `json:"num_predict"`
 	Temperature float64 `json:"temperature"`
+	NumCtx      int     `json:"num_ctx,omitempty"`
 }
 type chatResp struct {
 	Message         chatMsg `json:"message"`

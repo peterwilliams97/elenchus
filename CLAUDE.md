@@ -79,17 +79,25 @@ main() → runSubstance(input)
   termSubstance / mdSubstance
 ```
 
-**Faithfulness — `runFaithfulness`**
+**Faithfulness — `runFaithfulness`** (single schema-enforced judge over retrieved passages)
 ```
 main() → runFaithfulness(input, src)
-  splitSummary(input)    # splits numbered/bulleted lists or lines
-  for claim:
-    faithClaim(claim, src)
-      callJSON(faithDefenderSys, ...)  # find strongest verbatim support
-      callJSON(faithCriticSys, ...)    # verdict: faithful|partial|overstated|absent|contradicted
-                                       # Literalization mode: rhetorical claim → overstated
+  splitSummary(input)                 # splits numbered/bulleted lists or lines
+  passagesForClaim per claim          # fused bm25+embed retrieval; floor ⇒ "absent" from code
+  groupBySharedPassages               # claims sharing ≥½ passages run consecutively over one
+                                      # union prefix, so the judge's cache prefix stays hot
+  for group, for claim:
+    faithJudgeRepeat → faithJudge(claim, passages, temp)
+      callSchema(faithJudgeSys, judgeSchema, ...)  # ONE call: verdict|partial|overstated|absent|
+                                      # contradicted + gap + evidence[{passage_id,quote}] + so_what
+                                      # + reason. Schema-enforced (Anthropic strict tool / Ollama
+                                      # format), retried once on schema failure.
+      quoteInPassage(...)             # grounding check, NO model: each cited quote must be a
+                                      # verbatim substring of its passage, else dropped + counted
   termFaith / mdFaith
 ```
+`faithClaim` (the older defender+critic two-call, `faithDefenderSys`/`faithCriticSys`) is retained
+only for `runEvidence`/`runAudit`'s intended-proposition reconstruction, not the faithfulness mode.
 
 **Evidence-grounding — `runEvidence`**
 ```

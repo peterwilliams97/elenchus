@@ -1,0 +1,159 @@
+package main
+
+// judge_test covers the Step-2 faithfulness judge: the output schema is valid, the prompt keeps the
+// literalization + verbatim-quote rules, the code-side grounding check rejects a non-verbatim quote
+// (the bendigo#t15 canary — a Sonnet paraphrase), the judge drops rejected quotes and counts them,
+// claims sharing passages are grouped for cache reuse, and a schema-invalid answer is retried once.
+
+import (
+	"encoding/json"
+	"strings"
+	"testing"
+
+	"assay/internal/retrieve"
+)
+
+func TestJudgeSchemaValid(t *testing.T) {
+	if !json.Valid([]byte(judgeSchema)) {
+		t.Fatal("judgeSchema is not valid JSON")
+	}
+	var s struct {
+		Required   []string `json:"required"`
+		Properties map[string]json.RawMessage
+	}
+	if err := json.Unmarshal([]byte(judgeSchema), &s); err != nil {
+		t.Fatalf("judgeSchema decode: %v", err)
+	}
+	for _, f := range []string{"verdict", "gap", "evidence", "so_what", "reason"} {
+		if _, ok := s.Properties[f]; !ok {
+			t.Errorf("judgeSchema missing property %q", f)
+		}
+	}
+	if len(s.Required) < 5 {
+		t.Errorf("judgeSchema should require the core fields, got %v", s.Required)
+	}
+}
+
+func TestFaithJudgeSysKeepsLiteralizationAndVerbatim(t *testing.T) {
+	for _, want := range []string{"Literalization", "VERBATIM", "passage_id"} {
+		if !strings.Contains(faithJudgeSys, want) {
+			t.Errorf("faithJudgeSys missing %q", want)
+		}
+	}
+}
+
+// TestQuoteInPassageVerbatimVsParaphrase is the grounding-check canary: the exact span verifies, but
+// the Sonnet paraphrase ("arts" for the source's "creative") does not, and a question-context quote
+// verifies against the passage's visible Q text.
+func TestQuoteInPassageVerbatimVsParaphrase(t *testing.T) {
+	p := retrieve.Passage{
+		ID:      "2025-03-13/6_bendigo#t15",
+		Text:    "The creative sector had shut down, and as a mother I had no viable career prospects.",
+		Context: "Gaelle BROAD: How did the pandemic affect your career?",
+	}
+	if !quoteInPassage("The creative sector had shut down, and as a mother I had no viable career prospects.", p) {
+		t.Error("verbatim answer quote should verify")
+	}
+	if quoteInPassage("The arts sector had shut down, and as a mother I had no viable career prospects.", p) {
+		t.Error("paraphrase (arts≠creative) must NOT verify — this is the grounding check")
+	}
+	if !quoteInPassage("How did the pandemic affect your career?", p) {
+		t.Error("verbatim question-context quote should verify against visible Q text")
+	}
+	if quoteInPassage("", p) {
+		t.Error("empty quote must never verify")
+	}
+}
+
+// TestFaithJudgeRejectsNonVerbatimQuotes drives the real faithJudge with a stub returning one verbatim
+// quote, one paraphrase, and one invented passage id. Only the verbatim quote survives; the two bad
+// ones are counted as quote rejects.
+func TestFaithJudgeRejectsNonVerbatimQuotes(t *testing.T) {
+	passages := []retrieve.Passage{
+		{ID: "p1", Text: "regional Victorians receive $1.06 per capita in federal arts funding."},
+		{ID: "p2", Text: "Creative Australia's annual report shows the shortfall."},
+	}
+	const judge = `{"verdict":"partial","gap":"denominator",` +
+		`"evidence":[` +
+		`{"passage_id":"p1","quote":"regional Victorians receive $1.06 per capita in federal arts funding."},` +
+		`{"passage_id":"p1","quote":"regional Victorians receive $2.00 per capita"},` +
+		`{"passage_id":"p9","quote":"Creative Australia's annual report shows the shortfall."}],` +
+		`"so_what":"reader overstates the share","reason":"narrower than claimed","what_source_actually_says":"regional gets $1.06 per capita"}`
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
+		return judge, nil, nil
+	}
+	c := cfg{call: stub, usage: newUsageCounters()}
+	zero := 0.0
+	got := c.faithJudge("Regional Victoria gets its fair share.", passages, &zero)
+
+	if got.Verdict != "partial" || got.Gap != "denominator" {
+		t.Errorf("verdict/gap not parsed: %q/%q", got.Verdict, got.Gap)
+	}
+	if len(got.Quotes) != 1 || got.Quotes[0] != passages[0].Text {
+		t.Errorf("only the verbatim quote should survive, got %v", got.Quotes)
+	}
+	if _, rejects := c.usage.extras(); rejects != 2 {
+		t.Errorf("want 2 quote rejects (paraphrase + invented id), got %d", rejects)
+	}
+	if got.SourceSays != "regional gets $1.06 per capita" {
+		t.Errorf("what_source_actually_says not carried: %q", got.SourceSays)
+	}
+}
+
+func TestGroupBySharedPassages(t *testing.T) {
+	ps := func(ids ...string) []retrieve.Passage {
+		out := make([]retrieve.Passage, len(ids))
+		for i, id := range ids {
+			out[i] = retrieve.Passage{ID: id}
+		}
+		return out
+	}
+	// claim 0 and 1 share 2 of 3 (≥half); claim 2 is disjoint.
+	claimPassages := [][]retrieve.Passage{
+		ps("a", "b", "c"),
+		ps("a", "b", "z"),
+		ps("x", "y"),
+	}
+	groups := groupBySharedPassages(claimPassages, []int{0, 1, 2})
+	if len(groups) != 2 {
+		t.Fatalf("want 2 groups, got %d: %v", len(groups), groups)
+	}
+	if len(groups[0]) != 2 || groups[0][0] != 0 || groups[0][1] != 1 {
+		t.Errorf("group 0 should be claims [0 1], got %v", groups[0])
+	}
+	if len(groups[1]) != 1 || groups[1][0] != 2 {
+		t.Errorf("group 1 should be the singleton [2], got %v", groups[1])
+	}
+	// The union of the shared group is deduplicated in first-seen order.
+	union := unionPassages(claimPassages, groups[0])
+	if got := retrieve.IDs(union); strings.Join(got, ",") != "a,b,c,z" {
+		t.Errorf("union order wrong: %v", got)
+	}
+}
+
+// TestSchemaRetryCountedOnce drives callSchema with a stub that returns unparseable text first and
+// valid JSON on the retry, asserting exactly one schema retry is counted.
+func TestSchemaRetryCountedOnce(t *testing.T) {
+	n := 0
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
+		n++
+		if n == 1 {
+			return "not json at all", nil, nil
+		}
+		return `{"verdict":"absent","gap":"none","evidence":[],"so_what":"","reason":"nope","what_source_actually_says":""}`, nil, nil
+	}
+	c := cfg{call: stub, usage: newUsageCounters()}
+	var j judgeJSON
+	if err := c.callSchema(faithJudgeSys, "cached", "claim", json.RawMessage(judgeSchema), "faith_verdict", nil, &j); err != nil {
+		t.Fatalf("callSchema: %v", err)
+	}
+	if j.Verdict != "absent" {
+		t.Errorf("retry result not parsed, got %q", j.Verdict)
+	}
+	if retries, _ := c.usage.extras(); retries != 1 {
+		t.Errorf("want 1 schema retry, got %d", retries)
+	}
+	if n != 2 {
+		t.Errorf("want exactly 2 dispatches (1 + 1 retry), got %d", n)
+	}
+}

@@ -178,6 +178,52 @@ func TestCompleteNoCacheSingleBlock(t *testing.T) {
 	}
 }
 
+// TestSchemaForcesStrictTool confirms that a Request.Schema shapes the call into a forced strict tool
+// call — a custom tool carrying the schema, tool_choice pinned to it — and that the tool_use input in
+// the response is surfaced as the response text so callJSON parses it.
+func TestSchemaForcesStrictTool(t *testing.T) {
+	var body []byte
+	cl := New("claude-sonnet-4-6", "k",
+		&http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			body, _ = io.ReadAll(r.Body)
+			return fakeResp(200, toolUseBody, nil), nil
+		})})
+	temp := 0.0
+	resp, err := cl.Complete(backend.Request{
+		System: "SYSTEM", Prompt: "CLAIM", Cached: "PASSAGES",
+		Schema:     json.RawMessage(`{"type":"object","properties":{"verdict":{"type":"string"}},"required":["verdict"],"additionalProperties":false}`),
+		SchemaName: "faith_verdict", Temperature: &temp,
+	})
+	if err != nil {
+		t.Fatalf("Complete: %v", err)
+	}
+	var req apiReq
+	if err := json.Unmarshal(body, &req); err != nil {
+		t.Fatalf("unmarshal req: %v", err)
+	}
+	if len(req.Tools) != 1 || req.Tools[0].Name != "faith_verdict" || !req.Tools[0].Strict {
+		t.Errorf("want one strict tool named faith_verdict, got %+v", req.Tools)
+	}
+	if req.Tools[0].Type != "" || len(req.Tools[0].InputSchema) == 0 {
+		t.Errorf("schema tool should carry input_schema and no web-search type: %+v", req.Tools[0])
+	}
+	if req.ToolChoice == nil || req.ToolChoice.Type != "tool" || req.ToolChoice.Name != "faith_verdict" {
+		t.Errorf("tool_choice not pinned to the schema tool: %+v", req.ToolChoice)
+	}
+	if req.Temperature == nil || *req.Temperature != 0 {
+		t.Errorf("temperature not sent: %+v", req.Temperature)
+	}
+	if !strings.Contains(resp.Text, `"verdict":"faithful"`) {
+		t.Errorf("tool_use input should surface as text, got %q", resp.Text)
+	}
+}
+
+// toolUseBody is a response to a forced tool call: the answer arrives as the tool_use block's input.
+const toolUseBody = `{"id":"msg_03","type":"message","role":"assistant",` +
+	`"content":[{"type":"tool_use","id":"tu_1","name":"faith_verdict","input":{"verdict":"faithful"}}],` +
+	`"model":"claude-sonnet-4-6","stop_reason":"tool_use","stop_sequence":null,` +
+	`"usage":{"input_tokens":10,"output_tokens":5,"cache_read_input_tokens":0,"cache_creation_input_tokens":0}}`
+
 // ── test helpers ───────────────────────────────────────────────────────────────
 
 // roundTripFunc adapts a function to the http.RoundTripper interface.

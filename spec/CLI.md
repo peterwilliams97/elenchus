@@ -110,6 +110,26 @@ scattered across many transcripts or phrased without the claim's terms (a bare a
 cross-reference). `examples/vic-lceic/RETRIEVAL_REFUTER.md` measures the gap against a Sonnet
 full-corpus run.
 
+## Faithfulness judge
+
+The faithfulness pass over retrieved passages is a single **schema-enforced** judge call, not the
+defender+critic pair (which is kept only for the intended-proposition reconstruction that
+`-evidence -source` and `-audit` need). One call returns `verdict`, `gap`, `evidence[]`, `so_what`,
+and a `reason` (≤40 words), constrained to that JSON shape on both backends — Anthropic via a forced
+strict tool call, Ollama via `format`. A schema-invalid answer is retried once (counted as
+`schema_retries`).
+
+- **Quote by reference.** Each evidence item is `{passage_id, quote}`. Code verifies the quote is a
+  verbatim substring of the passage it names (whitespace/curly-punctuation normalised only) and drops
+  any that fails, counting it as a `quote_reject`. This is the grounding check — no model call — and
+  it catches a paraphrase presented as a quote (a judge that writes "arts sector" where the source
+  says "creative sector").
+- **Cache-friendly ordering.** Claims whose retrieved passages overlap by at least half are run
+  consecutively over one shared (union) passage prefix, so the judge's cached prefix stays hot; the
+  repeats of `-n` sample the same cached prefix at a non-zero temperature. The SUMMARY reports
+  `cache_hit` (Anthropic cache-read tokens over cacheable input; Ollama bills none) alongside
+  `schema_retries` and `quote_rejects`.
+
 ## Flags
 
 | Flag           | Default                     | Meaning                                                        |

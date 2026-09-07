@@ -98,8 +98,6 @@ func TestRetrievalRefuterFusedCoversSonnetQuotes(t *testing.T) {
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-type claimLine struct{ id, path, text string }
-
 func readClaimLines(t *testing.T, path string) []claimLine {
 	t.Helper()
 	data, err := os.ReadFile(path)

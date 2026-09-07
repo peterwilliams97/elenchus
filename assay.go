@@ -72,6 +72,12 @@ type cfg struct {
 	// prompt and the Ollama backend folds into the prompt. Set per-call by callJSON/callJSONSourced
 	// from their `cached` argument; "" sends no prefix.
 	cachedSource string
+	// reqSchema/reqSchemaName/reqTemp are the per-call structured-output controls dispatch threads into
+	// the backend Request, set by callSchema on its value copy (like cachedSource). Empty schema and a
+	// nil temp leave a call unconstrained at the provider default.
+	reqSchema     json.RawMessage
+	reqSchemaName string
+	reqTemp       *float64
 	// backend is the LLM provider dispatch uses when `call` is nil (production). Set in main from
 	// -backend; nil under -from, where no model call is made.
 	backend backend.Backend
@@ -366,10 +372,14 @@ func printSummary(fixture, mode, model string, rt *runTally, u *usageCounters, c
 		parts = append(parts, fmt.Sprintf("error %d", counts["error"]))
 	}
 
+	schemaRetries, quoteRejects := u.extras()
+
 	fmt.Fprintf(os.Stderr, "\nSUMMARY %s %s\n", fixture, mode)
 	fmt.Fprintf(os.Stderr, "  cases %d · verified %d · errored %d\n", total, verified, errored)
 	fmt.Fprintf(os.Stderr, "  %s\n", strings.Join(parts, " · "))
-	fmt.Fprintf(os.Stderr, "  wall %s · est_usd %s\n", elapsed.Round(time.Second), cost)
+	fmt.Fprintf(os.Stderr, "  wall %s · est_usd %s · cache_hit %.0f%% (read %d / created %d)\n",
+		elapsed.Round(time.Second), cost, 100*u.cacheHitRate(), cr, cc)
+	fmt.Fprintf(os.Stderr, "  schema_retries %d · quote_rejects %d\n", schemaRetries, quoteRejects)
 	if chainFile != "" {
 		fmt.Fprintf(os.Stderr, "  detail: %s\n", chainFile)
 	}
@@ -408,6 +418,9 @@ func (c *cfg) runSubstance(input string) {
 	c.present(rows, tally(vs), mdSubstance(results), func() { c.termSubstance(results) }, details)
 }
 
+// claimLine is one parsed claim from a claims file: its id, its §-heading path, and its text.
+type claimLine struct{ id, path, text string }
+
 func (c *cfg) runFaithfulness(input, srcPath string) {
 	raw := splitSummary(input)
 	c.tally = newRunTally(len(raw))
@@ -415,39 +428,127 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 	rows := make([]brief.Row, len(raw))
 	vs := make([]string, len(raw))
 	details := make(map[string]tree.Leaf, len(raw))
-	fullSrc := "" // lazily loaded once, only when retrieval is off
+
+	// Retrieve every claim's passages first, then run claims sharing passages consecutively over one
+	// shared (union) prefix, so the judge's cached prefix stays hot across a group (2c). A claim the
+	// retrieval floor suppressed gets no group and no model call.
+	parsed := make([]claimLine, len(raw))
+	claimPassages := make([][]retrieve.Passage, len(raw))
+	below := make([]bool, len(raw))
+	var fullSrc []retrieve.Passage
+	var eligible []int
 	for i, item := range raw {
 		id, path, text := parseClaimLine(item)
 		if id == "" {
 			id = fmt.Sprintf("c%d", i+1)
 		}
-		claimSrc, pids, below := c.sourceForClaim(text, path, srcPath, &fullSrc)
-		t := c.progressStart(i, len(raw), "faithfulness")
-		var (
-			chosen faith
-			spread string
-		)
-		if below {
-			// Nothing cleared the retrieval floor: the source does not address this claim. Record
-			// "absent" from code (retrieved=0) rather than paying for a judge call on empty context.
-			chosen = faith{Verdict: "absent", Evidence: "no passage cleared the retrieval floor (retrieved=0)"}
-			spread = "floor"
-		} else {
-			chosen, spread = c.faithRepeat(text, claimSrc)
+		parsed[i] = claimLine{id: id, path: path, text: text}
+		claimPassages[i], below[i] = c.passagesForClaim(text, path, srcPath, &fullSrc)
+		if !below[i] {
+			eligible = append(eligible, i)
 		}
+	}
+
+	emit := func(i int, chosen faith, spread string, pids []string, t time.Time) {
 		results[i] = chosen
-		rec := faithChainRecord(i, len(raw), text, chosen, t)
+		rec := faithChainRecord(i, len(raw), parsed[i].text, chosen, t)
 		rec.Spread = spread
 		rec.Passages = pids
 		c.appendChain(rec)
-		c.progressDone(i, len(raw), chosen.Verdict, text, t)
-		rows[i] = brief.Row{ID: id, Path: path, Text: text,
+		c.progressDone(i, len(raw), chosen.Verdict, parsed[i].text, t)
+		rows[i] = brief.Row{ID: parsed[i].id, Path: parsed[i].path, Text: parsed[i].text,
 			Faith: chosen.Verdict, FaithReason: chosen.Evidence, Spread: spread,
 			Gap: chosen.Gap, SoWhat: chosen.SoWhat}
-		details[id] = tree.Leaf{Reason: chosen.Evidence, Quotes: chosen.Quotes}
+		details[parsed[i].id] = tree.Leaf{Reason: chosen.Evidence, Quotes: chosen.Quotes}
 		vs[i] = chosen.Verdict
 	}
+
+	// Floor-suppressed claims: "absent" from code, no model call.
+	for i, isBelow := range below {
+		if isBelow {
+			emit(i, faith{Verdict: "absent", Evidence: "no passage cleared the retrieval floor (retrieved=0)"},
+				"floor", nil, time.Now())
+		}
+	}
+
+	// Grouped judge calls: within a group every claim sees the same union prefix, so calls after the
+	// first read the cache instead of re-billing the passages.
+	for _, group := range groupBySharedPassages(claimPassages, eligible) {
+		shared := unionPassages(claimPassages, group)
+		pids := retrieve.IDs(shared)
+		for _, i := range group {
+			t := c.progressStart(i, len(raw), "faithfulness")
+			chosen, spread := c.faithJudgeRepeat(parsed[i].text, shared)
+			emit(i, chosen, spread, pids, t)
+		}
+	}
 	c.present(rows, tally(vs), mdFaith(results), func() { c.termFaith(results) }, details)
+}
+
+// groupBySharedPassages partitions eligible claim indices into groups whose passage sets overlap by
+// at least half (|A∩B| ≥ ½·min(|A|,|B|)), so a group's claims can share one cached prefix. A greedy
+// seed-and-attach pass against each seed; claims that match nothing form singleton groups. Order is
+// stable (seeds and members in ascending index) so a run is deterministic.
+func groupBySharedPassages(claimPassages [][]retrieve.Passage, eligible []int) [][]int {
+	sets := make(map[int]map[string]bool, len(eligible))
+	for _, i := range eligible {
+		s := make(map[string]bool, len(claimPassages[i]))
+		for _, p := range claimPassages[i] {
+			s[p.ID] = true
+		}
+		sets[i] = s
+	}
+	used := make(map[int]bool, len(eligible))
+	var groups [][]int
+	for _, seed := range eligible {
+		if used[seed] {
+			continue
+		}
+		group := []int{seed}
+		used[seed] = true
+		for _, other := range eligible {
+			if used[other] {
+				continue
+			}
+			if sharedAtLeastHalf(sets[seed], sets[other]) {
+				group = append(group, other)
+				used[other] = true
+			}
+		}
+		groups = append(groups, group)
+	}
+	return groups
+}
+
+// sharedAtLeastHalf reports whether a and b overlap by at least half the smaller set.
+func sharedAtLeastHalf(a, b map[string]bool) bool {
+	if len(a) == 0 || len(b) == 0 {
+		return false
+	}
+	inter := 0
+	for id := range a {
+		if b[id] {
+			inter++
+		}
+	}
+	smaller := min(len(a), len(b))
+	return inter*2 >= smaller
+}
+
+// unionPassages returns the deduplicated passages across a group's claims, in first-seen order, so
+// every claim in the group is judged against one identical prefix.
+func unionPassages(claimPassages [][]retrieve.Passage, group []int) []retrieve.Passage {
+	seen := map[string]bool{}
+	var out []retrieve.Passage
+	for _, i := range group {
+		for _, p := range claimPassages[i] {
+			if !seen[p.ID] {
+				seen[p.ID] = true
+				out = append(out, p)
+			}
+		}
+	}
+	return out
 }
 
 // retrieveTokenCap bounds the passages sent to the judge — enough that the answer is present but
@@ -456,24 +557,24 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 // the knee of the coverage curve (~25 passages/claim), where the refuter reaches its 15/18 ceiling.
 const retrieveTokenCap = 10000
 
-// sourceForClaim returns the source text the faithfulness judge sees for one claim, the ids of the
-// passages it is built from, and whether the retrieval floor suppressed all of them. With retrieval
-// off it is the full corpus (loaded once into *fullSrc); with retrieval on it is the fused bm25+embed
-// top passages up to the token budget for the claim text plus its §-heading hint. When `below` is
-// true nothing cleared -floor, and the caller records "absent" from code without a model call.
-func (c cfg) sourceForClaim(text, path, srcPath string, fullSrc *string) (src string, pids []string, below bool) {
+// passagesForClaim returns the passages the faithfulness judge sees for one claim, and whether the
+// retrieval floor suppressed all of them. With retrieval off it is the whole corpus as a single
+// "corpus" passage (loaded once into *fullSrc); with retrieval on it is the fused bm25+embed top
+// passages up to the token budget for the claim text plus its §-heading hint. When `below` is true
+// nothing cleared -floor and the caller records "absent" from code without a model call.
+func (c cfg) passagesForClaim(text, path, srcPath string, fullSrc *[]retrieve.Passage) (ps []retrieve.Passage, below bool) {
 	if c.index == nil {
-		if *fullSrc == "" {
-			*fullSrc = readCorpus(srcPath)
+		if len(*fullSrc) == 0 {
+			*fullSrc = []retrieve.Passage{{ID: "corpus", Text: readCorpus(srcPath)}}
 		}
-		return *fullSrc, nil, false
+		return *fullSrc, false
 	}
 	q := claimQuery(text, path)
 	res := c.index.Retrieve(q, c.maxTokens, c.floor)
 	if res.Below {
-		return "", nil, true
+		return nil, true
 	}
-	return retrieve.Format(res.Passages), retrieve.IDs(res.Passages), false
+	return res.Passages, false
 }
 
 // claimQuery builds the retrieval query for a claim: its text, the §-heading labels as a hint, and —
@@ -751,6 +852,95 @@ func (c cfg) faithClaim(claim, src string) faith {
 		SourceSays: fj.SourceSays, Gap: fj.Gap, SoWhat: fj.SoWhat, Quotes: d.Quotes}
 }
 
+// judgeSampleTemp is the sampling temperature for repeat (-n>1) judge calls, so the N samples can
+// disagree and the spread is meaningful; a single call runs at 0 (deterministic). Both backends
+// accept it (sonnet-4-6 permits temperature; ollama sets it in options).
+const judgeSampleTemp = 0.7
+
+// faithJudge is the single schema-enforced faithfulness pass over retrieved passages: one model call
+// returns the verdict and cites its evidence by {passage_id, quote}, then this code verifies each
+// quote is a verbatim substring of the passage it names — the grounding check, no second model call.
+// A quote that fails is dropped and counted; the passages are the cached prefix so a run that groups
+// claims sharing passages reuses it. temp is nil for a deterministic call, non-nil for repeat sampling.
+func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64) faith {
+	cached := "PASSAGES:\n" + retrieve.Format(passages)
+	var j judgeJSON
+	if err := c.callSchema(faithJudgeSys, cached, "SUMMARY CLAIM:\n"+claim, json.RawMessage(judgeSchema), "faith_verdict", temp, &j); err != nil {
+		return faith{Claim: claim, Verdict: "error", Evidence: err.Error()}
+	}
+	byID := make(map[string]retrieve.Passage, len(passages))
+	for _, p := range passages {
+		byID[p.ID] = p
+	}
+	var verified []string
+	rejects := 0
+	for _, e := range j.Evidence {
+		p, ok := byID[e.PassageID]
+		if ok && quoteInPassage(e.Quote, p) {
+			verified = append(verified, e.Quote)
+		} else {
+			rejects++ // a paraphrase presented as verbatim, or an id the judge invented
+		}
+	}
+	if rejects > 0 && c.usage != nil {
+		c.usage.addQuoteReject(rejects)
+	}
+	return faith{Claim: claim, Verdict: j.Verdict, Evidence: j.Reason,
+		SourceSays: j.SourceSays, Gap: j.Gap, SoWhat: j.SoWhat, Quotes: verified}
+}
+
+// faithJudgeRepeat runs faithJudge c.repeat times and returns the modal result plus a "k/N" agreement
+// string ("" when N=1). N=1 is deterministic (temperature 0); N>1 samples at judgeSampleTemp so the
+// spread reflects real judge instability, with the cached passage prefix reused across the repeats.
+func (c cfg) faithJudgeRepeat(claim string, passages []retrieve.Passage) (faith, string) {
+	n := c.repeat
+	if n < 1 {
+		n = 1
+	}
+	if n == 1 {
+		zero := 0.0
+		return c.faithJudge(claim, passages, &zero), ""
+	}
+	t := judgeSampleTemp
+	counts := make(map[string]int, n)
+	rep := make(map[string]faith, n)
+	for k := 0; k < n; k++ {
+		r := c.faithJudge(claim, passages, &t)
+		counts[r.Verdict]++
+		if _, seen := rep[r.Verdict]; !seen {
+			rep[r.Verdict] = r
+		}
+	}
+	modal := modalVerdict(counts)
+	return rep[modal], fmt.Sprintf("%d/%d", counts[modal], n)
+}
+
+// quoteInPassage reports whether quote appears verbatim in the passage the judge cited — checked over
+// the passage's full visible text (question context + answer), normalised for whitespace and curly
+// punctuation only. This is the grounding check: a paraphrase ("arts sector" for the source's
+// "creative sector") is not a substring and is rejected. An empty quote never verifies.
+func quoteInPassage(quote string, p retrieve.Passage) bool {
+	q := normQuote(quote)
+	if q == "" {
+		return false
+	}
+	visible := p.Text
+	if p.Context != "" {
+		visible = p.Context + "\n\n" + p.Text
+	}
+	return strings.Contains(normQuote(visible), q)
+}
+
+var quoteWS = regexp.MustCompile(`\s+`)
+var quotePunct = strings.NewReplacer("’", "'", "‘", "'", "“", `"`, "”", `"`, "—", "-", "–", "-")
+
+// normQuote lowercases, folds curly punctuation/dashes to ASCII, and collapses whitespace, so a quote
+// matches its passage despite a line wrap or a curly apostrophe. It does NOT strip words, so a changed
+// word still fails the substring test — that is the point of the grounding check.
+func normQuote(s string) string {
+	return quoteWS.ReplaceAllString(quotePunct.Replace(strings.ToLower(strings.TrimSpace(s))), " ")
+}
+
 // faithRepeat runs faithClaim c.repeat times (once when repeat ≤ 1) and returns the modal result
 // plus a "k/N" agreement string, "" when N=1. Repeat sampling measures how stable the critic's
 // verdict is on one claim — a claim that comes back "partial 2/3" is one the human should not read
@@ -981,6 +1171,69 @@ what they would get wrong. Empty string when the summary is faithful or the gap 
 Return ONLY JSON:
 {"findings":[{"mode":string,"finding":string}],"verdict":"faithful"|"partial"|"overstated"|"absent"|"contradicted","evidence":string,"what_source_actually_says":string|null,"gap":"none"|"scope"|"denominator"|"timerange"|"attribution"|"other","so_what":string}`
 
+// judgeSchema constrains the faithfulness judge's answer. Field order matches the prompt: verdict,
+// gap, evidence[], so_what, reason, then what_source_actually_says. All are required (Anthropic strict
+// tools and the Ollama format both accept "" for the free-text fields), and evidence cites the source
+// by passage id and a verbatim quote, so code can verify the quote without a second model call.
+const judgeSchema = `{
+  "type":"object",
+  "properties":{
+    "verdict":{"type":"string","enum":["faithful","partial","overstated","absent","contradicted"]},
+    "gap":{"type":"string","enum":["none","scope","denominator","timerange","attribution","other"]},
+    "evidence":{"type":"array","items":{"type":"object","properties":{"passage_id":{"type":"string"},"quote":{"type":"string"}},"required":["passage_id","quote"],"additionalProperties":false}},
+    "so_what":{"type":"string"},
+    "reason":{"type":"string"},
+    "what_source_actually_says":{"type":"string"}
+  },
+  "required":["verdict","gap","evidence","so_what","reason","what_source_actually_says"],
+  "additionalProperties":false
+}`
+
+// faithJudgeSys is the single schema-enforced faithfulness judge, replacing the defender+critic pair
+// for retrieval-fed runs: one call decides the verdict AND cites its evidence by passage id, so the
+// quotes are verified in code (a substring check, no second model call) rather than trusted.
+const faithJudgeSys = `You are the Faithfulness Judge. You are given PASSAGES from a hearing
+transcript — each headed by an id line "[<id> · <date> · <speaker> (<role>)]", and a witness passage
+shows the question that prompted it ("Q — …") above the answer ("A — …"). You are also given a
+SUMMARY CLAIM. Decide whether the SUMMARY CLAIM faithfully represents what a witness actually said in
+the PASSAGES. You check sense-preservation, not truth: your only question is whether the summary
+reports the speaker accurately, never whether the speaker was right.
+
+Watch for the ways a summary distorts a source:
+- Fabrication: the claim is simply not in the passages.
+- Overstatement: the source hedged or qualified it; the summary made it absolute.
+- Distortion: the meaning was changed.
+- Context-stripping: a conditional or hypothetical presented as an unconditional belief.
+- Misattribution: the words are a questioner's (role questioner/chair), or the speaker was quoting or
+  steelmanning someone else, and the summary attributes it as a witness's own view.
+- Cherry-pick: present but unrepresentative of the source's stance.
+- Literalization: the summary states as a sincere literal assertion something the speaker meant as
+  provocation, hyperbole, or irony. The words may appear in the source but the asserted proposition
+  does not — the speaker's force or register was rhetorical, not declarative. When this occurs the
+  verdict is NOT "faithful"; use "overstated", and ALWAYS populate what_source_actually_says.
+
+EVIDENCE: cite the passages that decide the verdict. Each evidence item is {passage_id, quote} where
+passage_id is the id from a header line and quote is copied VERBATIM from that passage — never
+paraphrase, never edit, never merge across passages. If nothing supports the claim, return an empty
+evidence array and verdict "absent".
+
+VERDICT:
+- "faithful": the summary reports the claim as the speaker stated it, including register and force.
+- "partial": the source supports a weaker/narrower version.
+- "overstated": same in kind but the summary strengthened it — or literalized a rhetorical claim.
+- "absent": not in the passages.
+- "contradicted": the source says the opposite.
+For "partial"/"overstated", give what_source_actually_says (the faithful version, correct register);
+otherwise set it to "".
+
+GAP — the single field that most changes what a reader would do, err toward naming one over "none":
+"scope" (narrower population/place/category), "denominator" (a fraction/share whose base is dropped),
+"timerange" (a limited period dropped), "attribution" (support is about a different actor/programme/
+body), "other", or "none" (benign narrowing; use for "faithful").
+
+SO_WHAT: if a reader who believed the summary would act on a false impression, state in <=20 words
+what they would get wrong; "" when faithful or the gap is benign. REASON: <=40 words, why this verdict.`
+
 const evidenceSys = `You are the Evidence Grounder. Decide whether the CLAIM is TRUE, using web
 search to find real, current evidence — the actual truth-makers, not anyone's assertion that it is
 true. Search for data, primary sources, and credible reporting; weigh what you find. Then judge:
@@ -1028,6 +1281,33 @@ func (c cfg) callJSONSourced(system, cached, prompt string, withTools bool, v an
 	return rs2, unmarshalLoose(out2, v)
 }
 
+// callSchema makes one structured-output judge call: the backend constrains the answer to `schema`
+// (Anthropic via a forced strict tool, Ollama via `format`), `cached` is the reusable passage prefix,
+// and `temp` sets sampling (nil = provider default). On a parse failure — schema-invalid JSON despite
+// the constraint — it retries once, counting the retry in usage, then returns whatever the retry
+// parsed. The retry itself is a real billed call, so its tokens land in usage automatically.
+func (c cfg) callSchema(system, cached, prompt string, schema json.RawMessage, name string, temp *float64, v any) error {
+	c.cachedSource = cached
+	c.reqSchema = schema
+	c.reqSchemaName = name
+	c.reqTemp = temp
+	out, _, err := c.dispatch(system, prompt, false)
+	if err != nil {
+		return err
+	}
+	if unmarshalLoose(out, v) == nil {
+		return nil
+	}
+	if c.usage != nil {
+		c.usage.addSchemaRetry()
+	}
+	out2, _, err := c.dispatch(system, prompt, false)
+	if err != nil {
+		return err
+	}
+	return unmarshalLoose(out2, v)
+}
+
 // dispatch runs one model call. When the test seam `call` is set it is used directly (canned JSON,
 // no network); otherwise the configured backend's Complete is invoked, its usage accumulated, and —
 // under -v — the request and response are traced. Usage is added even on an error return, because a
@@ -1046,6 +1326,7 @@ func (c cfg) dispatch(system, prompt string, withTools bool) (string, []retrieve
 	}
 	resp, err := c.backend.Complete(backend.Request{
 		System: system, Prompt: prompt, Cached: c.cachedSource, WithTools: withTools,
+		Schema: c.reqSchema, SchemaName: c.reqSchemaName, Temperature: c.reqTemp,
 	})
 	if c.usage != nil {
 		u := resp.Usage
@@ -1234,6 +1515,20 @@ type evidenceJSON struct {
 		Title string `json:"title"`
 		URL   string `json:"url"`
 	} `json:"sources"`
+}
+
+// judgeJSON is the single faithfulness judge's schema-enforced output (judgeSchema). Evidence cites
+// the source by passage id and a verbatim quote, so the grounding check is a code-side substring test.
+type judgeJSON struct {
+	Verdict  string `json:"verdict"`
+	Gap      string `json:"gap"`
+	Evidence []struct {
+		PassageID string `json:"passage_id"`
+		Quote     string `json:"quote"`
+	} `json:"evidence"`
+	SoWhat     string `json:"so_what"`
+	Reason     string `json:"reason"`
+	SourceSays string `json:"what_source_actually_says"`
 }
 
 // ── markdown rendering ───────────────────────────────────────────────────────
@@ -1942,6 +2237,8 @@ type usageCounters struct {
 	cacheReadTokens   int
 	cacheCreateTokens int
 	webSearches       int
+	schemaRetries     int // judge calls that came back schema-invalid and were retried once
+	quoteRejects      int // evidence quotes rejected as non-verbatim by the grounding check
 	start             time.Time
 	currentClaim      string // label of the in-flight claim for heartbeat display
 }
@@ -1965,6 +2262,31 @@ func (u *usageCounters) setLabel(label string) {
 	u.mu.Lock()
 	u.currentClaim = label
 	u.mu.Unlock()
+}
+
+func (u *usageCounters) addSchemaRetry() { u.mu.Lock(); u.schemaRetries++; u.mu.Unlock() }
+func (u *usageCounters) extras() (schemaRetries, quoteRejects int) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.schemaRetries, u.quoteRejects
+}
+func (u *usageCounters) addQuoteReject(n int) {
+	u.mu.Lock()
+	u.quoteRejects += n
+	u.mu.Unlock()
+}
+
+// cacheHitRate is cache-read tokens over all cacheable input (read + created), 0 when nothing was
+// cacheable. It is the per-backend prompt-cache effectiveness the SUMMARY reports; Ollama bills no
+// cache tokens, so it reads 0 there even when keep_alive kept the KV cache warm.
+func (u *usageCounters) cacheHitRate() float64 {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	denom := u.cacheReadTokens + u.cacheCreateTokens
+	if denom == 0 {
+		return 0
+	}
+	return float64(u.cacheReadTokens) / float64(denom)
 }
 
 // snapshot returns a consistent read without holding the lock across formatting.

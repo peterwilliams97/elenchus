@@ -50,6 +50,38 @@ func TestSystemAndCachedFold(t *testing.T) {
 	}
 }
 
+// TestSchemaAndKeepAliveAndCtx confirms a Request.Schema reaches the request as `format`, keep_alive
+// holds the model resident, num_ctx is sized to the prompt (not the default), and Temperature is
+// forwarded into options.
+func TestSchemaAndKeepAliveAndCtx(t *testing.T) {
+	temp := 0.7
+	schema := json.RawMessage(`{"type":"object","properties":{"verdict":{"type":"string"}}}`)
+	long := strings.Repeat("passage text ", 2000) // ~26KB → sizes num_ctx above the 4096 floor
+	req := captureRequest(t, false, backend.Request{
+		System: "SYS", Cached: long, Prompt: "CLAIM", Schema: schema, Temperature: &temp,
+	})
+	if len(req.Format) == 0 || !strings.Contains(string(req.Format), "verdict") {
+		t.Errorf("schema not sent as format: %q", string(req.Format))
+	}
+	if req.KeepAlive != "30m" {
+		t.Errorf("keep_alive: want 30m, got %q", req.KeepAlive)
+	}
+	if req.Options.Temperature != 0.7 {
+		t.Errorf("temperature not forwarded: %v", req.Options.Temperature)
+	}
+	if req.Options.NumCtx <= 4096 {
+		t.Errorf("num_ctx should be sized above the floor for a long prompt, got %d", req.Options.NumCtx)
+	}
+}
+
+// TestNumCtxFloor confirms a short prompt still gets at least the 4096 floor.
+func TestNumCtxFloor(t *testing.T) {
+	req := captureRequest(t, false, backend.Request{Prompt: "hi"})
+	if req.Options.NumCtx != 4096 {
+		t.Errorf("short prompt num_ctx: want 4096 floor, got %d", req.Options.NumCtx)
+	}
+}
+
 // TestParsesUsageAndText maps prompt_eval_count/eval_count to input/output tokens and returns the
 // assistant content; cache and web-search figures stay zero.
 func TestParsesUsageAndText(t *testing.T) {
