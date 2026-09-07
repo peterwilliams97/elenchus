@@ -66,6 +66,73 @@ at — chosen by `internal/brief`'s tier rule (`Qualify`), highest priority firs
 run's headline "changes N summary lines" (the value line from `docs/VALUE.md`). By default the tree
 expands only the Needs-you branches; `-tree=full` expands every node.
 
+## Root node rendering
+
+Above the tree — in the text output and at the top of `tree.html` — sits a **root summary block**: the
+one screen a reader sees before any branch. It is `tree.RootBlock`, assembled entirely from the
+verdict rows and the chain (`spec/CLI.md` § Tier-2 chain); it makes **no model call**, so `-from`
+prints it for free. Every count in it is a partition of the run's findings — each finding lands in
+exactly one class — so the classes sum to the headline N and nothing is silently dropped.
+
+### The `route` field
+
+Each claim carries a `route` — what kind of thing can settle it — declared in `claims-machine.txt`
+(`route=…`) and propagated into `claims-machine-full.txt` (a fifth tab column) and each chain record
+(`"route"`). It aligns with the axis boundary in CLAUDE.md:
+
+- `evidence` — a factual claim about the world; needs an external truth-maker.
+- `source` — compresses witness/submission testimony; checked against the corpus (faithfulness).
+- `evaluative` — a Committee value judgment ("disappointing", "should"); only checkable as *did
+  stakeholders say this*, never groundable as world-fact.
+- `data-gap` — a claim about a dataset's own limits (a breakdown "is not released").
+
+An **opinion** — `route=evaluative`, or a recommendation (an `R`-prefixed id) — is not judged: its leaf
+renders verdict `opinion` (grey in `tree.html`), it never enters Needs-you, and at render it costs
+`$0`. `route` is read from the chain record; a record without one falls back to the claims file, so a
+chain written before `route` existed still renders correctly once the claims file carries it.
+
+### The block, line for line
+
+1. **Title line.** `<report title>, <date> — <N> findings checked against <M> source documents` — the
+   title and date from the claims file's `# title:` / `# date:` header, `M` from the manifest
+   (`-manifest`, else a `# sources:` header). The "checked against M source documents" clause is
+   dropped when `M` is unknown (0).
+2. A blank line, then one line per **class** below, each omitted when its count is 0, in this order.
+   `route=evaluative` is resolved to the opinion class *first*, before any verdict-based class, so a
+   claim's verdict never places it once it is an opinion.
+
+| class line | membership | detail shown |
+|---|---|---|
+| `Holds: <n> findings say what their sources say.` | verdict `faithful`, non-opinion | none |
+| `Contradicted by their own sources: <n>` | verdict `contradicted`, non-opinion | one indented line per claim: id, then `so_what` (≤ 20 words) |
+| `Overstated: <n>` | verdict `overstated`, non-opinion | ids + `so_what` |
+| `Unsupported by any held source: <n>` | verdict `unsupported`, or verdict `absent` on a non-opinion claim (route `source`/`evidence`/`data-gap`) | ids, `so_what` where present |
+| `Committee opinions, not checked: <n>` | opinions (`route=evaluative` and recommendations) | none (no ids) |
+| `Unverifiable, document not held: <n>` | verdict `unverifiable` | ids + the missing document name (from `so_what`, "fetch X" → X) |
+| `Generalised from narrower evidence: <n>` | verdict `partial` | up to **2** indented lines for partials with a non-`none` gap **and** a number or place name in the claim text, ranked by spread (`3/3` before `2/3`), id + `so_what` |
+
+3. A blank line, then the value line: `Changes <s> summary lines across <c> chapters.` — `s` is the
+   number of distinct §-heading sections (a claim's full heading path) holding a Needs-you leaf, `c`
+   the number of distinct chapters (top-level branches, `brief.OpenedBranches`) holding one.
+
+An `absent` or `unsupported` verdict on an *opinion* never reaches the Unsupported class — the opinion
+resolution runs first — which is what the mislabel refuter below turns on. A "number or place name" is
+a digit anywhere in the claim, or a mixed-case capitalised word (≥ 2 letters) that is not the claim's
+first word (so `New York`, `Victoria` mid-sentence, `NSW`-adjacent proper nouns qualify; a
+sentence-initial capital and an all-caps acronym like `ABC` do not).
+
+**Line budget.** Any class listing ids shows at most the first **3**, then `and <k> more`; the whole
+block body (the class region) stays within 15 lines. `so_what` text is used verbatim from the chain,
+truncated to 20 words; a leaf with none prints the id alone.
+
+### Refuter
+
+`internal/tree` `TestRootBlock` builds a hand-made chain of 12 records covering every class and checks
+the block line for line against a golden string. A companion mutation flips one `route=evaluative`
+record to `route=source`; because that record's verdict is `absent`, the flip must move it out of
+*Committee opinions* and into *Unsupported by any held source*, changing that count — the test that
+`route` actually gates the partition, not just decorates it.
+
 ## The rules that gate a verdict
 
 The verdict on a leaf is not the judge's word taken on trust. Four code-side rules stand between the

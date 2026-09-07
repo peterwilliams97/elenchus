@@ -24,6 +24,19 @@ type Row struct {
 	Spread                                     string // "k/N" verdict agreement under -n>1, else ""
 	Gap                                        string // judge's gap class; a non-"none" gap on a partial opens the branch
 	SoWhat                                     string // ≤20-word stakes line for a needs-you leaf
+	Route                                      string // what can settle the claim: evidence|source|evaluative|data-gap
+}
+
+// IsOpinion reports a claim the tool does not judge: a Committee value judgment (`route=evaluative`)
+// or a recommendation (an `R`-prefixed id such as "R3"). An opinion never enters Needs-you and renders
+// verdict "opinion" in the tree, so its faithfulness verdict — even a `contradicted` or `absent` — is
+// not allowed to place it in a verdict-based class. spec/TREE.md § Root node rendering is the contract.
+func IsOpinion(r Row) bool {
+	if strings.EqualFold(strings.TrimSpace(r.Route), "evaluative") {
+		return true
+	}
+	id := strings.TrimSpace(r.ID)
+	return len(id) >= 2 && (id[0] == 'R' || id[0] == 'r') && '0' <= id[1] && id[1] <= '9'
 }
 
 // Sel is a selected row plus the tier that selected it (0 = highest priority).
@@ -75,6 +88,9 @@ func Qualify(faith, substance, grounding, gap, text string) (tier int, ok bool) 
 func Selected(rows []Row) []Sel {
 	var sels []Sel
 	for _, r := range rows {
+		if IsOpinion(r) {
+			continue // an opinion is never judged, so it never needs a reader's attention
+		}
 		if tier, ok := Qualify(r.Faith, r.Substance, r.Grounding, r.Gap, r.Text); ok {
 			sels = append(sels, Sel{Row: r, Tier: tier})
 		}
@@ -98,6 +114,21 @@ func OpenedBranches(rows []Row) int {
 	seen := make(map[string]bool)
 	for _, s := range Selected(rows) {
 		seen[topSegment(s.Row.Path)] = true
+	}
+	return len(seen)
+}
+
+// OpenedSections counts the distinct §-heading sections that hold a Needs-you claim — a section being a
+// claim's whole heading path, the finer grain beneath OpenedBranches's chapters. It is the "s" in the
+// root block's "changes s summary lines across c chapters"; s ≥ c, since sections nest under chapters.
+func OpenedSections(rows []Row) int {
+	seen := make(map[string]bool)
+	for _, s := range Selected(rows) {
+		p := strings.TrimSpace(s.Row.Path)
+		if p == "" {
+			p = "unplaced"
+		}
+		seen[p] = true
 	}
 	return len(seen)
 }

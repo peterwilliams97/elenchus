@@ -141,7 +141,7 @@ func TestRenderHTML(t *testing.T) {
 	details := map[string]Leaf{
 		"F1": {Reason: "the source hedged this", Quotes: []string{"we saw some price sensitivity"}},
 	}
-	out := RenderHTML(rows, details, "model X · calls 0 · $0.0000")
+	out := RenderHTML(rows, details, "model X · calls 0 · $0.0000", "")
 	for _, want := range []string{
 		"<details open>", "overstated", "claim: ticket prices bar entry",
 		"reason: the source hedged this", "&gt; we saw some price sensitivity",
@@ -160,7 +160,7 @@ func TestSpreadInLeaf(t *testing.T) {
 	if txt := Render(rows, true, ""); !strings.Contains(txt, "partial 2/3") {
 		t.Errorf("text tree missing spread:\n%s", txt)
 	}
-	if h := RenderHTML(rows, map[string]Leaf{}, ""); !strings.Contains(h, "partial 2/3") {
+	if h := RenderHTML(rows, map[string]Leaf{}, "", ""); !strings.Contains(h, "partial 2/3") {
 		t.Errorf("html tree missing spread:\n%s", h)
 	}
 }
@@ -180,7 +180,7 @@ func TestSoWhatOnNeedsLeaf(t *testing.T) {
 	if strings.Count(txt, "↳ so what:") != 1 {
 		t.Errorf("so-what should appear once (only on the needs-you leaf):\n%s", txt)
 	}
-	if h := RenderHTML(rows, map[string]Leaf{}, ""); !strings.Contains(h, "so what:") {
+	if h := RenderHTML(rows, map[string]Leaf{}, "", ""); !strings.Contains(h, "so what:") {
 		t.Errorf("html missing so-what:\n%s", h)
 	}
 }

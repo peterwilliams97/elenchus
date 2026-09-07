@@ -109,8 +109,8 @@ func readClaimLines(t *testing.T, path string) []claimLine {
 		if strings.TrimSpace(ln) == "" {
 			continue
 		}
-		id, p, txt, cites := parseClaimLine(ln)
-		out = append(out, claimLine{id, p, txt, cites})
+		id, p, txt, cites, route := parseClaimLine(ln)
+		out = append(out, claimLine{id, p, txt, cites, route})
 	}
 	return out
 }

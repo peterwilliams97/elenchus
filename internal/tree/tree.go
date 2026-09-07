@@ -90,7 +90,7 @@ type Leaf struct {
 const htmlHead = `<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>assay tree</title>
 <style>body{font-family:monospace;margin:1.5rem}details{margin-left:2ch}summary{cursor:pointer}` +
-	`.d{margin:.3em 0 .6em 2ch}</style>
+	`.d{margin:.3em 0 .6em 2ch}.op{color:#888}.root{margin:0 0 1.5rem}</style>
 </head><body>
 `
 const htmlTail = "</body></html>\n"
@@ -98,15 +98,19 @@ const htmlTail = "</body></html>\n"
 // RenderHTML renders the same tree as Render into a self-contained HTML page built from nested
 // <details>/<summary> elements — no JavaScript. Every node is open by default; a leaf's body reveals
 // the full claim text, the verdict reason, and the quoted source lines from `details` (keyed by row
-// ID). Width regrouping matches Render; the depth ceiling is not enforced here (the text renderer is
-// the gate). Styling is monospace only, per spec/CLI.md.
-func RenderHTML(rows []brief.Row, details map[string]Leaf, header string) string {
+// ID). `rootBlock` (from RootBlock) sits above the tree, matching the text output. Width regrouping
+// matches Render; the depth ceiling is not enforced here (the text renderer is the gate). Styling is
+// monospace only, per spec/CLI.md.
+func RenderHTML(rows []brief.Row, details map[string]Leaf, header, rootBlock string) string {
 	root := build(rows)
 	regroupWide(root)
 	var b strings.Builder
 	b.WriteString(htmlHead)
 	if header != "" {
 		fmt.Fprintf(&b, "<pre>%s</pre>\n", html.EscapeString(header))
+	}
+	if rootBlock != "" {
+		fmt.Fprintf(&b, "<pre class=\"root\">%s</pre>\n", html.EscapeString(rootBlock))
 	}
 	for _, c := range root.children {
 		renderHTML(&b, c, details)
@@ -120,9 +124,12 @@ func RenderHTML(rows []brief.Row, details map[string]Leaf, header string) string
 func renderHTML(b *strings.Builder, n *node, details map[string]Leaf) {
 	if n.leaf() {
 		r := *n.row
+		verd := html.EscapeString(leafVerdict(r))
+		if brief.IsOpinion(r) {
+			verd = `<span class="op">` + verd + `</span>`
+		}
 		fmt.Fprintf(b, "<details open><summary>%s  %s  %s</summary>\n",
-			html.EscapeString(r.ID), html.EscapeString(truncate(r.Text, 60)),
-			html.EscapeString(leafVerdict(r)))
+			html.EscapeString(r.ID), html.EscapeString(truncate(r.Text, 60)), verd)
 		b.WriteString(`<div class="d">`)
 		if r.SoWhat != "" {
 			fmt.Fprintf(b, "so what: %s\n", html.EscapeString(r.SoWhat))
@@ -298,6 +305,9 @@ func verdictOf(r brief.Row) string {
 // (-n>1) recorded a spread — e.g. "partial 2/3". Both the text and HTML renderers use it so the two
 // agree on what a split verdict looks like.
 func leafVerdict(r brief.Row) string {
+	if brief.IsOpinion(r) {
+		return "opinion" // a Committee value judgment or recommendation: not judged, rendered grey in HTML
+	}
 	v := verdictOf(r)
 	if r.Spread != "" {
 		return v + " " + r.Spread

@@ -69,6 +69,9 @@ type cfg struct {
 	index        *retrieve.Index     // built once from the source corpus when retrieveMode != "none"
 	auditPath    string              // full-table sink; every run writes it, whichever renderer stdout gets
 	treeHTMLPath string              // eval/<stamp>/tree.html sink, written alongside audit.md
+	rootTitle    string              // report title for the root block's line 1, from the claims file "# title:" header
+	rootDate     string              // report date for the root block's line 1, from the claims file "# date:" header
+	sourceDocs   int                 // M: documents held per the manifest; the root block's "checked against M" figure
 	usage        *usageCounters
 	tally        *runTally
 	// cachedSource is the stable prefix (e.g. the source transcript) placed in a Request's Cached
@@ -185,6 +188,19 @@ func main() {
 		c.renderMode = "brief"
 	}
 
+	// -manifest: load the held-document set. A claim citing a document not in it is judged
+	// "unverifiable" from code, no model call — distinct from "absent" (cited doc present, claim not
+	// found in it). Loaded before -from too: the root block's "checked against M source documents" is
+	// M = the held count, and reading a manifest costs nothing and needs no key.
+	if manifestFile != "" {
+		held, err := manifest.LoadHeld(manifestFile)
+		if err != nil {
+			fatal("load manifest: " + err.Error())
+		}
+		c.held = held
+		c.sourceDocs = len(held)
+	}
+
 	// -from replays a saved chain with no model calls, so it needs neither an API key nor a new
 	// chain directory. It renders straight from the JSONL and returns.
 	if fromChain != "" {
@@ -240,17 +256,6 @@ func main() {
 	}
 	c.backendName = backendName
 	c.usage = newUsageCounters()
-
-	// -manifest: load the held-document set. A claim citing a document not in it is judged
-	// "unverifiable" from code, no model call — distinct from "absent" (cited doc present, claim not
-	// found in it).
-	if manifestFile != "" {
-		held, err := manifest.LoadHeld(manifestFile)
-		if err != nil {
-			fatal("load manifest: " + err.Error())
-		}
-		c.held = held
-	}
 	input := readInput(text)
 
 	// Derive the fixture base name for Tier-2 JSONL naming.
@@ -468,7 +473,7 @@ func (c *cfg) runSubstance(input string) {
 
 // claimLine is one parsed claim from a claims file: its id, its §-heading path, its text, and an
 // optional cites field (document ids the finding rests on, checked against the manifest).
-type claimLine struct{ id, path, text, cites string }
+type claimLine struct{ id, path, text, cites, route string }
 
 func (c *cfg) runFaithfulness(input, srcPath string) {
 	raw := splitSummary(input)
@@ -488,11 +493,11 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 	var eligible []int
 	unverif := make([][]string, len(raw)) // per claim: cited doc ids not in the manifest, if any
 	for i, item := range raw {
-		id, path, text, cites := parseClaimLine(item)
+		id, path, text, cites, route := parseClaimLine(item)
 		if id == "" {
 			id = fmt.Sprintf("c%d", i+1)
 		}
-		parsed[i] = claimLine{id: id, path: path, text: text, cites: cites}
+		parsed[i] = claimLine{id: id, path: path, text: text, cites: cites, route: route}
 		// A claim whose cited truth-maker is not held cannot be checked: mark it unverifiable and skip
 		// retrieval and the judge entirely.
 		if miss := c.missingCites(cites); len(miss) > 0 {
@@ -510,11 +515,12 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 		rec := faithChainRecord(i, len(raw), parsed[i].text, chosen, t)
 		rec.Spread = spread
 		rec.Passages = pids
+		rec.Route = parsed[i].route
 		c.appendChain(rec)
 		c.progressDone(i, len(raw), chosen.Verdict, parsed[i].text, t)
 		rows[i] = brief.Row{ID: parsed[i].id, Path: parsed[i].path, Text: parsed[i].text,
 			Faith: chosen.Verdict, FaithReason: chosen.Evidence, Spread: spread,
-			Gap: chosen.Gap, SoWhat: chosen.SoWhat}
+			Gap: chosen.Gap, SoWhat: chosen.SoWhat, Route: parsed[i].route}
 		details[parsed[i].id] = tree.Leaf{Reason: chosen.Evidence, Quotes: chosen.Quotes}
 		vs[i] = chosen.Verdict
 	}
@@ -530,7 +536,8 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 			c.tally.record(rec.Verdict)
 		}
 		rows[i] = brief.Row{ID: parsed[i].id, Path: parsed[i].path, Text: parsed[i].text,
-			Faith: rec.Verdict, FaithReason: fd.CriticFinding, Spread: rec.Spread, Gap: fd.Gap, SoWhat: fd.SoWhat}
+			Faith: rec.Verdict, FaithReason: fd.CriticFinding, Spread: rec.Spread, Gap: fd.Gap,
+			SoWhat: fd.SoWhat, Route: routeOr(rec.Route, parsed[i].route)}
 		details[parsed[i].id] = tree.Leaf{Reason: fd.CriticFinding, Quotes: fd.Quotes}
 		vs[i] = rec.Verdict
 	}
@@ -1969,17 +1976,56 @@ func (f *treeFlag) Set(v string) error {
 // parseClaimLine pulls an optional "<id>\t<path>\t<text>" prefix off a claim line so the tree can
 // key claims to the source document's headings (path carries "/"-separated key=label segments).
 // A line with no tabs is a bare claim: no id, no path, the whole line is the text.
-// parseClaimLine splits a claims-file line: id, §-path, text, and an optional 4th tab field of cites
-// (space/comma-separated document ids checked against the manifest). A 3-field line has no cites.
-func parseClaimLine(raw string) (id, path, text, cites string) {
-	parts := strings.SplitN(raw, "\t", 4)
-	switch len(parts) {
-	case 4:
-		return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), strings.TrimSpace(parts[2]), strings.TrimSpace(parts[3])
-	case 3:
-		return strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1]), strings.TrimSpace(parts[2]), ""
+// parseClaimLine splits a claims-file line: id, §-path, text, an optional 4th tab field of cites
+// (space/comma-separated document ids checked against the manifest), and an optional 5th of route
+// (evidence|source|evaluative|data-gap, per spec/TREE.md). Shorter lines leave the trailing fields "".
+func parseClaimLine(raw string) (id, path, text, cites, route string) {
+	parts := strings.SplitN(raw, "\t", 5)
+	get := func(i int) string {
+		if i < len(parts) {
+			return strings.TrimSpace(parts[i])
+		}
+		return ""
 	}
-	return "", "", raw, ""
+	if len(parts) < 3 {
+		return "", "", raw, "", ""
+	}
+	return get(0), get(1), get(2), get(3), get(4)
+}
+
+// routeOr prefers the route recorded in the chain, falling back to the claims file's — so a chain
+// written before the `route` field existed still renders correctly once the claims file carries it.
+func routeOr(chainRoute, claimsRoute string) string {
+	if strings.TrimSpace(chainRoute) != "" {
+		return chainRoute
+	}
+	return claimsRoute
+}
+
+// loadClaimsFile reads a claims file, pulling any leading "# key: value" header lines the tree wants —
+// "# title:" and "# date:" for the root block — and returning the claim lines with all "#"-comment
+// lines removed, so a header never counts as a claim. The tab-delimited claim lines are untouched.
+func loadClaimsFile(path string) (title, date string, items []string) {
+	for _, ln := range strings.Split(mustRead(path), "\n") {
+		t := strings.TrimSpace(ln)
+		if t == "" {
+			continue
+		}
+		if strings.HasPrefix(t, "#") {
+			body := strings.TrimSpace(strings.TrimPrefix(t, "#"))
+			if k, v, ok := strings.Cut(body, ":"); ok {
+				switch strings.ToLower(strings.TrimSpace(k)) {
+				case "title":
+					title = strings.TrimSpace(v)
+				case "date":
+					date = strings.TrimSpace(v)
+				}
+			}
+			continue
+		}
+		items = append(items, t)
+	}
+	return title, date, items
 }
 
 // citedDocs splits a cites field into document ids (space- or comma-separated).
@@ -2019,8 +2065,10 @@ func (c *cfg) present(rows []brief.Row, counts, mdTable string, termTable func()
 			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.auditPath, err)
 		}
 	}
+	// The root summary block sits above the tree in both stdout (tree mode) and tree.html.
+	rootBlock := tree.RootBlock(rows, tree.RootMeta{Title: c.rootTitle, Date: c.rootDate, SourceDocs: c.sourceDocs})
 	if c.treeHTMLPath != "" {
-		htmlDoc := tree.RenderHTML(rows, details, c.headerLine())
+		htmlDoc := tree.RenderHTML(rows, details, c.headerLine(), rootBlock)
 		if err := os.WriteFile(c.treeHTMLPath, []byte(htmlDoc), 0o644); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.treeHTMLPath, err)
 		} else {
@@ -2028,18 +2076,21 @@ func (c *cfg) present(rows []brief.Row, counts, mdTable string, termTable func()
 		}
 	}
 	fmt.Println(c.headerLine())
-	// The value line (docs/VALUE.md): how many executive-summary lines this run changes.
-	fmt.Printf("changes %d summary lines\n", brief.OpenedBranches(rows))
 	switch c.renderMode {
 	case "full":
+		fmt.Printf("changes %d summary lines\n", brief.OpenedBranches(rows))
 		if c.asMarkdown {
 			fmt.Print(mdTable)
 		} else {
 			termTable()
 		}
 	case "tree":
+		fmt.Print(rootBlock) // its last line is the value line; it replaces the bare "changes N" above the tree
+		fmt.Println()
 		fmt.Print(tree.Render(rows, c.treeAll, c.auditPath))
 	default:
+		// The value line (docs/VALUE.md): how many executive-summary lines this run changes.
+		fmt.Printf("changes %d summary lines\n", brief.OpenedBranches(rows))
 		s, _ := brief.Brief(rows, counts, c.auditPath)
 		fmt.Print(s)
 	}
@@ -2087,6 +2138,7 @@ type chainRecord struct {
 	Backend  string          `json:"backend,omitempty"` // provider that produced this verdict
 	Claim    string          `json:"claim"`
 	Verdict  string          `json:"verdict"`
+	Route    string          `json:"route,omitempty"`    // what settles the claim: evidence|source|evaluative|data-gap
 	Spread   string          `json:"spread,omitempty"`   // "k/N" agreement when -n>1, else ""
 	Passages []string        `json:"passages,omitempty"` // retrieved passage ids the judge saw (bm25 mode)
 	ElapsedS float64         `json:"elapsed_s"`
@@ -2323,19 +2375,21 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 	if err != nil {
 		fatal("read chain " + chainPath + ": " + err.Error())
 	}
-	items := splitSummary(mustRead(claimsPath))
+	title, date, items := loadClaimsFile(claimsPath)
+	c.rootTitle, c.rootDate = title, date
 	if len(recs) != len(items) {
 		fatal(fmt.Sprintf("chain has %d records but %s has %d claims", len(recs), claimsPath, len(items)))
 	}
 	ids := make([]string, len(items))
 	paths := make([]string, len(items))
 	texts := make([]string, len(items))
+	routes := make([]string, len(items))
 	for i, it := range items {
-		id, path, text, _ := parseClaimLine(it)
+		id, path, text, _, route := parseClaimLine(it)
 		if id == "" {
 			id = fmt.Sprintf("c%d", i+1)
 		}
-		ids[i], paths[i], texts[i] = id, path, text
+		ids[i], paths[i], texts[i], routes[i] = id, path, text, route
 	}
 	for i, r := range recs {
 		if strings.TrimSpace(r.Claim) != strings.TrimSpace(texts[i]) {
@@ -2362,7 +2416,7 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 				SourceSays: det.SourceSays, Gap: det.Gap, SoWhat: det.SoWhat, Quotes: det.Quotes}
 			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
 				Faith: r.Verdict, FaithReason: det.CriticFinding, Spread: r.Spread,
-				Gap: det.Gap, SoWhat: det.SoWhat}
+				Gap: det.Gap, SoWhat: det.SoWhat, Route: routeOr(r.Route, routes[i])}
 			details[ids[i]] = tree.Leaf{Reason: det.CriticFinding, Quotes: det.Quotes}
 			vs[i] = r.Verdict
 		}
@@ -2379,7 +2433,7 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 			sr[i] = substance{Claim: r.Claim, Verdict: r.Verdict, Reason: det.Reason,
 				SurvivingClaim: det.SurvivingClaim, Steelman: det.Steelman, Rounds: det.Rounds}
 			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
-				Substance: r.Verdict, SubstanceReason: reason}
+				Substance: r.Verdict, SubstanceReason: reason, Route: routeOr(r.Route, routes[i])}
 			details[ids[i]] = tree.Leaf{Reason: reason}
 			vs[i] = r.Verdict
 		}
@@ -2394,7 +2448,7 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 				SourcesVerified: det.SourcesVerified, DowngradeReason: det.DowngradeReason,
 				OriginalVerdict: det.OriginalVerdict}
 			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
-				Grounding: r.Verdict, GroundReason: det.Finding}
+				Grounding: r.Verdict, GroundReason: det.Finding, Route: routeOr(r.Route, routes[i])}
 			details[ids[i]] = tree.Leaf{Reason: det.Finding}
 			vs[i] = r.Verdict
 		}
@@ -2421,7 +2475,7 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
 				Faith: fv, Substance: sv, Grounding: evv,
 				FaithReason: det.Faith.CriticFinding, GroundReason: det.Evidence.Finding,
-				Gap: det.Faith.Gap, SoWhat: det.Faith.SoWhat}
+				Gap: det.Faith.Gap, SoWhat: det.Faith.SoWhat, Route: routeOr(r.Route, routes[i])}
 			details[ids[i]] = tree.Leaf{Reason: det.Faith.CriticFinding, Quotes: det.Faith.Quotes}
 			fvs[i], svs[i], evs[i] = fv, sv, evv
 		}
