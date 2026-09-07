@@ -1,21 +1,12 @@
-# current/ — provenance (which run each claim's verdict came from)
+# current/ — provenance
 
-Merged from the Sonnet evidence cells, newest run per claim (by chain mtime). This is a
-heterogeneous stopgap — claims come from runs with different corpora/judge versions;
-`evidence/2026-09-08-full/` is the uniform replacement. `assay -from` renders `tree.html`.
+`current/` points at the first complete tree of the report: **all 69 findings from
+`../evidence/2026-09-08-full/sonnet-retrieved/`**, one uniform run — Sonnet, retrieved, N=3, on the
+final corpus (hearings + submissions + QoN responses), under the manifest and the four verdict rules
+(`spec/TREE.md`). `assay -from current.faithfulness.jsonl claims.txt` renders `tree.html`.
 
-| claim | verdict | source run |
-|---|---|---|
-| F4 | faithful 3/3 | 2026-09-07-scope/after-sonnet |
-| F2a | faithful 3/3 | 2026-09-07-scope/after-sonnet |
-| F10 | faithful 3/3 | 2026-09-07-scope/f10-after-attachment |
-| F8 | partial 3/3 | 2026-09-07-submissions/sonnet-retrieved |
-| F12 | partial 3/3 | 2026-09-07-scope/after-sonnet |
-| M3 | absent 3/3 | 2026-09-07-scope/after-sonnet |
-| F17 | faithful 3/3 | 2026-09-07-scope/after-sonnet |
-| M2 | contradicted 3/3 | 2026-09-07-scope/after-sonnet |
-| F29 | partial 3/3 | 2026-09-07-scope/after-sonnet |
-| F31 | partial 3/3 | 2026-09-07-submissions/sonnet-retrieved |
-| M1 | contradicted 3/3 | 2026-09-07-scope/after-sonnet |
-| F33 | absent 3/3 | 2026-09-07-scope/after-fetch-sonnet |
-| F54b | faithful 3/3 | 2026-09-07-scope/after-fetch-sonnet |
+Rollup (69): 23 faithful · 26 partial · 13 absent · 2 overstated · 2 contradicted · 1 unsupported ·
+2 unverifiable (F38a/b — cite the ABC QoN of 27 Feb 2025, which is not held). Spend $5.42.
+
+Superseded the earlier heterogeneous per-claim merge (`build-current.py`), which stands as the $0
+stopgap builder for use between full runs.

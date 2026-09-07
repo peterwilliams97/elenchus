@@ -1,0 +1,148 @@
+model claude-sonnet-4-6 · backend anthropic · calls 201 · $5.4170 (rates 2026-06-01) · wall 36m45s
+changes 3 summary lines
+tree — depth 4, max width 7, score 19.0 (target ≤20) ok
+
+  2  Chapter 2 — Overview of Victoria's cultural and creative industries  [2]
+    2.1.1–2.2.5  2.1.1–2.2.5  [7]
+      2.1.1  §2.1.1  [5]
+        F1  Victorian cultural & creative industries contributed $40.5 …  faithful 3/3
+        F2a  The industries employ more than 320,000 Victorians.  faithful 2/3
+        F2b  That is almost 9% of total employment in the state.  faithful 3/3
+        F3  The industries provide significant economic stimulus by att…  partial 3/3
+            ↳ so what: The claim attributes tourism/visitation stimulus to "the industries" broadly; sources tie it specifically to performing arts, festivals, and public galleries — not all creative industries uniformly.
+        F4  Victoria rated higher for cultural participation than all o…  partial 3/3
+            ↳ so what: The source says "other jurisdictions where this research has been undertaken," not "all other jurisdictions surveyed globally"; the UK is mentioned, not "the UK" as a country-level comparator identical to the claim.
+      2.1.2  §2.1.2  [2]
+        F5  Engagement with the industries brings communities together,…  absent 3/3
+            ↳ so what: Reader would believe a specific claim was made in testimony when no witness stated it in those terms.
+        F6  A growing body of evidence recognises the role arts and cre…  partial 3/3
+            ↳ so what: Reader would think this is a direct witness assertion, but it appears only in written submissions, not as a witness's own oral testimony.
+      2.2.1  §2.2.1  [5]
+        F7  COVID-19 severely damaged the industries, limiting opportun…  faithful 3/3
+        F8  COVID-19 took away critical training opportunities from tho…  partial 3/3
+            ↳ so what: Reader would think COVID eliminated training opportunities outright; sources describe degraded or reduced work/skills opportunities, not removal of training per se.
+        F9  Exclusion from COVID-19 financial support programs exacerba…  partial 3/3
+            ↳ so what: Sources support exclusion worsening financial hardship and skill/workforce loss, but do not explicitly link exclusion itself as the cause of skill gaps — skill gaps are attributed to workers leaving the industry, not directly to exclusion from support programs.
+        F10  Children's and young people's creative participation and at…  partial 3/3
+            ↳ so what: The reader would think children's creative participation broadly declined, but the source only shows children's performing arts attendance specifically, not creative participation generally.
+        F11  Several live music venues have closed following COVID-19 du…  partial 3/3
+            ↳ so what: Reader would underestimate the scale: 256 Victoria / 1,300 Australia venues closed — far more than "several"; also the causes are broader than stated.
+      2.2.2  §2.2.2  [1]
+        F12  COVID-19 led to worsening mental health in the industries, …  partial 3/3
+            ↳ so what: The reader would think COVID-caused mental health deterioration in the industries is established fact, when the children/young people point was a questioner relaying a third-party claim, and the broader mental health finding covers CALD creatives, not the industries generally.
+      2.2.3  §2.2.3  [1]
+      2.2.4  §2.2.4  [2]
+        F14  It has never been harder for Victorians to make a living in…  overstated 3/3
+        F15  Insecure or low wages impact retention and discourage peopl…  partial 3/3
+            ↳ so what: Reader may think wages alone drive attrition; sources show burnout, lack of work, and work-life balance are equal or larger drivers, and the evidence is mostly about retention, not entry into the industries.
+      2.2.5  §2.2.5  [3]
+        F16  Many who want to engage with the industries cannot afford t…  partial 3/3
+            ↳ so what: Reader would think the barrier is solely about entering the industries as workers/creators, not about attending as audiences.
+        F17  Ticket prices are a key barrier for people wanting to engag…  faithful 3/3
+        F18  COVID-19 and the cost-of-living crisis have accelerated the…  partial 3/3
+            ↳ so what: Sources link COVID-19 and cost-of-living to volunteering pressure in specific sectors (community music, public galleries), not to a broad industry-wide decline in volunteerism.
+    2.2.6–2.2.6  2.2.6–2.2.6  [1]
+      2.2.6  §2.2.6  [1]
+        F19  COVID-19 exposed and intensified systemic issues in the ind…  absent 2/3
+            ↳ so what: Reader would believe a witness explicitly linked COVID-19 to barriers for women/gender-diverse people with caring responsibilities; no passage makes this specific claim.
+  3  Chapter 3 — Government investment in Victoria's cultural and creative industries  [2]
+    3.2.1–3.2.7  3.2.1–3.2.7  [7]
+      3.2.1  §3.2.1  [1]
+      3.2.2  §3.2.2  [1]
+      3.2.3  §3.2.3  [1]
+        F22  Unpredictable grant programs cause instability and prevent …  partial 3/3
+            ↳ so what: Reader would think all sources explicitly link unpredictable grants to instability and blocked long-term investment; sources speak to related but narrower/different problems.
+      3.2.4  §3.2.4  [1]
+        F23  Infrequent grant programs leave greater numbers of applican…  absent 3/3
+            ↳ so what: Reader would believe a specific claim about grant frequency and applicant coverage that no passage actually makes.
+      3.2.5  §3.2.5  [1]
+        F24  A low $20,000 max grant cap in some programs limits what re…  partial 3/3
+            ↳ so what: The source only notes the cap exists in one specific program; it says nothing about limiting recipients or necessitating multiple applications.
+      3.2.6  §3.2.6  [1]
+      3.2.7  §3.2.7  [1]
+        F26  By requiring a developed concept/project, grant programs ex…  partial 3/3
+            ↳ so what: The source describes unpaid ideation as a burden on applicants, not as a barrier that excludes those who cannot do unpaid work.
+    3.2.8–3.3.6  3.2.8–3.3.6  [4]
+      3.2.8  §3.2.8  [1]
+        F27  The role each level of government plays could be better def…  absent 3/3
+            ↳ so what: Readers would believe a witness or submitter made this specific policy recommendation, when none did.
+      3.2.9  §3.2.9  [1]
+        F28  People should not need to leave regional Victoria to engage…  absent 3/3
+            ↳ so what: Readers would believe a specific access/equity principle was stated by a witness, when no such statement appears in the passages.
+      3.3.5  §3.3.5  [2]
+        F29  Victoria receives its fair share of funding from Creative A…  partial 3/3
+            ↳ so what: Reader would miss that "fair share" applies only narrowly (population-proportionate share) while multiple sources say that share is still grossly insufficient for the sector's actual needs.
+        F30  It is difficult to determine Victoria's fair share of other…  faithful 3/3
+      3.3.6  §3.3.6  [2]
+        F31  Regional Victoria does not receive its fair share of fundin…  partial 3/3
+            ↳ so what: Reader would think the claim is about Creative Australia specifically shortchanging regional Victoria, but sources show under-investment in regional Australia broadly, with regional Victoria as a subset; also hedged as "in some cases."
+        F32  It is difficult to determine regional Victoria's fair share…  faithful 3/3
+  4  Chapter 4 — National broadcasters  [7]
+    4.3.1  §4.3.1  [7]
+      F33  No state/territory has an ABC headcount that accurately ref…  absent 3/3
+          ↳ so what: Reader would think the passages establish a universal finding about all states/territories, but no such claim appears.
+      F34a  The ABC Ultimo→Parramatta relocation was influenced by lega…  faithful 3/3
+      F34b  ...and by budget constraints that made NSW the most cost-ef…  absent 3/3
+          ↳ so what: Readers would believe NSW was identified as the most cost-effective location, but no such comparison or conclusion appears in the passages.
+      F34c  ...and by the Parramatta office's proximity to key state de…  partial 3/3
+          ↳ so what: Reader would think Tapley said this in testimony; it only appears in a written QoN response, not in his spoken evidence.
+      F34d  ...and by a strategic goal to better reflect NSW's populati…  partial 3/3
+          ↳ so what: Reader would think the population figure was a strategic goal, not a contextual fact; also the figure cited is ~11%, not exactly "1 in 10".
+      F35  It is disappointing that both the ABC and SBS expanded thei…  overstated 2/3
+      F36  The ABC's ability to culturally represent a state goes beyo…  faithful 2/3
+    4.3.2  §4.3.2  [6]
+      F37  The Committee calls for continued advocacy for the return o…  absent 3/3
+          ↳ so what: Reader would think the Committee formally resolved to advocate for the return of the Victorian 7.30 Report, which never occurred.
+      F38a  ABC spending is unevenly distributed across states/territor…  unverifiable manifest
+          ↳ so what: fetch qon:abc/2025-02-27
+      F38b  No state/territory receives ABC funding proportionate to it…  unverifiable manifest
+          ↳ so what: fetch qon:abc/2025-02-27
+      F39a  ABC content-production decisions are shaped by state screen…  partial 3/3
+          ↳ so what: Reader would think state screen-agency policy is the primary driver; sources show it is one of several factors alongside editorial choices and federal funding.
+      F39b  The ABC's budget is, in real terms, 14% less than it was a …  partial 3/3
+          ↳ so what: The source says the budget is 14% less in real terms than 10 years ago, but does NOT link that figure to the ~$1.2bn nominal figure — the nominal figure confirmed is $1.288bn, not ~$1.2bn.
+      F39c  Rising production costs and the budget reduction have const…  absent 3/3
+          ↳ so what: Reader would believe ABC witnesses cited rising production costs and budget cuts as constraints on content creation and expansion — no such claim appears in the passages.
+    4.4.1  §4.4.1  [4]
+      F40  No state/territory reflects an SBS FTE number proportionate…  absent 3/3
+          ↳ so what: Reader would think SBS confirmed no state gets a population-proportionate FTE share; no witness said this.
+      F41  SBS staff distribution doesn't reflect content availability…  partial 3/3
+          ↳ so what: The claim says SBS staff are concentrated in NSW, but the source says 83% (not merely "a large share") are in Sydney/NSW; the precision matters for the committee's assessment.
+      F42  SBS's decision to relocate to Western Sydney was determined…  partial 2/3
+          ↳ so what: Reader would think SBS is relocating its headquarters/operations to Western Sydney; the funding is for a production hub, not a full relocation, and the board retains the ultimate decision.
+      F43  It is unclear why Victoria was not considered in the Federa…  contradicted 3/3
+          ↳ so what: A reader would think the exclusion of Victoria was unexplained, when witnesses clearly stated the study was deliberately scoped to western Sydney only by the federal government.
+    4.4.2  §4.4.2  [1]
+    4.5  §4.5  [1]
+    4.5.1  §4.5.1  [2]
+      F46a–F49b  F46a–F49b  [7]
+        F46a  Between 2020–21 and Jan 2025, the ABC commissioned 75 exter…  partial 3/3
+            ↳ so what: The period starts in 2020/21, not 2020–21; the summary's period label is slightly imprecise but the core figure and scope are supported.
+        F46b  ...and produced 52 internal projects with the majority of p…  contradicted 3/3
+            ↳ so what: Reader would think the 52 internal projects had production majorities in Victoria; the source says they were simply 'based in' Victoria, not that the majority of production occurred there — a different and weaker claim than the external commissions criterion.
+        F46c  ...demonstrating the ABC's vital role in supporting the sta…  absent 3/3
+            ↳ so what: A reader would believe witnesses explicitly described the ABC as playing a "vital role" in Victoria's screen industry, when no such characterisation appears in the passages.
+        F47  The ABC partners with major Victorian cultural institutions…  partial 3/3
+            ↳ so what: The claim omits that the educational content partnership is a distinct activity from showcasing Victorian talent; the source does not describe the cultural-institution partnerships as primarily about showcasing talent.
+        F48  Through VicScreen internships and Indigenous placements, th…  unsupported 2/3
+            ↳ so what: The Indigenous placement is a single four-month placement per year, not a broad ongoing workforce development program; the claim overstates the scale and omits that it is one practitioner at a time.
+        F49a  The ABC delivers 16 unique regional local-radio programs in…  faithful 3/3
+        F49b  ...producing over 112 hours (6,751 minutes) of local conten…  partial 2/3
+            ↳ so what: Reader would think all ABC Victorian local content totals 112 hrs/week; it is only the 16 regional radio programs.
+      F49c–F52  F49c–F52  [4]
+        F49c  ...across 9 local radio stations/services.  faithful 3/3
+        F50  A main challenge for ABC regional-Victoria content is the l…  faithful 3/3
+        F51  The cost of producing content in regional Victoria requires…  absent 2/3
+            ↳ so what: Reader would think a witness made a specific claim about regional production costs that was never stated.
+        F52  Producing content in regional areas delivers significant so…  faithful 2/3
+    4.5.2  §4.5.2  [6]
+      F53a  SBS receives about one-third of the ABC's funding.  faithful 3/3
+      F53b  ...which restricts its ability to produce and commission co…  absent 3/3
+          ↳ so what: Reader would believe a witness explicitly cited funding constraints as limiting SBS's Victorian content production/commissioning, but no witness said this.
+      F54a  SBS sustains substantial Melbourne-based operations produci…  faithful 3/3
+      F54b  ...reaching 3.42 million Victorian viewers monthly (~49% of…  faithful 3/3
+      F54c  ...while supporting diverse communities through partnership…  partial 3/3
+          ↳ so what: Reader would think SBS explicitly frames its VicScreen partnership as a mechanism for supporting diverse communities, which is not how it is presented in the source.
+      F55  SBS deeply engages Victoria's multilingual/multicultural co…  faithful 3/3
+
+Full table: examples/vic-lceic/evidence/2026-09-08-full/sonnet-retrieved/audit.md

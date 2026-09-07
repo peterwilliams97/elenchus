@@ -1,0 +1,114 @@
+[ 42/69] ✓ unverifiable  "ABC spending is unevenly distributed across states/territ…"  0s
+[ 43/69] ✓ unverifiable  "No state/territory receives ABC funding proportionate to …"  0s
+[  1/69] ✓ faithful      "Victorian cultural & creative industries contributed $40.…"  32.19s
+[heartbeat] elapsed=1m0s calls=4 in=203 out=1345 web=0 est=$0.2821 (rates 2026-06-01) verified=3 errored=0 seen=3/69 claim="faithfulness 2/69"
+[  2/69] ✓ faithful      "The industries employ more than 320,000 Victorians."  59.63s
+[  3/69] ✓ faithful      "That is almost 9% of total employment in the state."  22.25s
+[heartbeat] elapsed=2m0s calls=9 in=376 out=2540 web=0 est=$0.5619 (rates 2026-06-01) verified=5 errored=0 seen=5/69 claim="faithfulness 4/69"
+[  4/69] ✓ partial       "The industries provide significant economic stimulus by a…"  38.67s
+[  5/69] ✓ partial       "Victoria rated higher for cultural participation than all…"  25.18s
+[heartbeat] elapsed=3m0s calls=15 in=667 out=4996 web=0 est=$0.7008 (rates 2026-06-01) verified=7 errored=0 seen=7/69 claim="faithfulness 6/69"
+[  6/69] ✓ absent        "Engagement with the industries brings communities togethe…"  26.79s
+[heartbeat] elapsed=4m0s calls=20 in=929 out=6622 web=0 est=$0.8103 (rates 2026-06-01) verified=8 errored=0 seen=8/69 claim="faithfulness 7/69"
+[  7/69] ✓ partial       "A growing body of evidence recognises the role arts and c…"  39.35s
+[  8/69] ✓ faithful      "COVID-19 severely damaged the industries, limiting opport…"  42.33s
+[heartbeat] elapsed=5m0s calls=25 in=1188 out=9381 web=0 est=$0.9367 (rates 2026-06-01) verified=10 errored=0 seen=10/69 claim="faithfulness 9/69"
+[  9/69] ✓ partial       "COVID-19 took away critical training opportunities from t…"  34.02s
+[ 11/69] ✓ partial       "Children's and young people's creative participation and …"  22.65s
+[heartbeat] elapsed=6m0s calls=31 in=1502 out=11676 web=0 est=$1.0733 (rates 2026-06-01) verified=12 errored=0 seen=12/69 claim="faithfulness 13/69"
+[ 13/69] ✓ partial       "COVID-19 led to worsening mental health in the industries…"  36.9s
+[ 14/69] ✓ faithful      "Since COVID-19, the costs to produce and present work hav…"  23.37s
+[heartbeat] elapsed=7m0s calls=37 in=1791 out=13932 web=0 est=$1.2091 (rates 2026-06-01) verified=14 errored=0 seen=14/69 claim="faithfulness 15/69"
+[ 15/69] ✓ overstated    "It has never been harder for Victorians to make a living …"  22.45s
+[ 16/69] ✓ partial       "Insecure or low wages impact retention and discourage peo…"  51.28s
+[heartbeat] elapsed=8m0s calls=42 in=2038 out=16619 web=0 est=$1.3345 (rates 2026-06-01) verified=16 errored=0 seen=16/69 claim="faithfulness 17/69"
+[ 17/69] ✓ partial       "Many who want to engage with the industries cannot afford…"  36.31s
+[heartbeat] elapsed=9m0s calls=47 in=2283 out=19040 web=0 est=$1.4558 (rates 2026-06-01) verified=17 errored=0 seen=17/69 claim="faithfulness 18/69"
+[ 18/69] ✓ faithful      "Ticket prices are a key barrier for people wanting to eng…"  29s
+[ 19/69] ✓ partial       "COVID-19 and the cost-of-living crisis have accelerated t…"  30.83s
+[heartbeat] elapsed=10m0s calls=53 in=2632 out=21338 web=0 est=$1.5925 (rates 2026-06-01) verified=19 errored=0 seen=19/69 claim="faithfulness 20/69"
+[ 20/69] ✓ absent        "COVID-19 exposed and intensified systemic issues in the i…"  31.91s
+[ 29/69] ✓ absent        "People should not need to leave regional Victoria to enga…"  25.06s
+[heartbeat] elapsed=11m0s calls=59 in=2924 out=23828 web=0 est=$1.7319 (rates 2026-06-01) verified=21 errored=0 seen=21/69 claim="faithfulness 30/69"
+[ 30/69] ✓ partial       "Victoria receives its fair share of funding from Creative…"  40.19s
+[ 10/69] ✓ partial       "Exclusion from COVID-19 financial support programs exacer…"  43.3s
+[heartbeat] elapsed=12m0s calls=63 in=3124 out=26272 web=0 est=$1.8824 (rates 2026-06-01) verified=23 errored=0 seen=23/69 claim="faithfulness 12/69"
+[ 12/69] ✓ partial       "Several live music venues have closed following COVID-19 …"  36.61s
+[heartbeat] elapsed=13m0s calls=68 in=3381 out=28530 web=0 est=$2.0609 (rates 2026-06-01) verified=24 errored=0 seen=24/69 claim="faithfulness 21/69"
+[ 21/69] ✓ faithful      "Failing to index the industries' funding has decreased fi…"  35.91s
+[ 24/69] ✓ absent        "Infrequent grant programs leave greater numbers of applic…"  16.05s
+[ 28/69] ✓ absent        "The role each level of government plays could be better d…"  17.34s
+[heartbeat] elapsed=14m0s calls=76 in=3799 out=30674 web=0 est=$2.1701 (rates 2026-06-01) verified=27 errored=0 seen=27/69 claim="faithfulness 31/69"
+[ 31/69] ✓ faithful      "It is difficult to determine Victoria's fair share of oth…"  35.21s
+[ 22/69] ✓ faithful      "Grant and reporting requirements can be very onerous, esp…"  24.75s
+[heartbeat] elapsed=15m0s calls=82 in=4143 out=33130 web=0 est=$2.3376 (rates 2026-06-01) verified=29 errored=0 seen=29/69 claim="faithfulness 23/69"
+[ 23/69] ✓ partial       "Unpredictable grant programs cause instability and preven…"  43.99s
+[ 25/69] ✓ partial       "A low $20,000 max grant cap in some programs limits what …"  22.87s
+[heartbeat] elapsed=16m0s calls=87 in=4408 out=34927 web=0 est=$2.4026 (rates 2026-06-01) verified=31 errored=0 seen=31/69 claim="faithfulness 26/69"
+[ 26/69] ✓ faithful      "There needs to be a balance between infrastructure invest…"  34.76s
+[ 27/69] ✓ partial       "By requiring a developed concept/project, grant programs …"  34.05s
+[heartbeat] elapsed=17m0s calls=93 in=4750 out=37312 web=0 est=$2.5676 (rates 2026-06-01) verified=33 errored=0 seen=33/69 claim="faithfulness 32/69"
+[ 32/69] ✓ partial       "Regional Victoria does not receive its fair share of fund…"  40.63s
+[heartbeat] elapsed=18m0s calls=98 in=4994 out=39983 web=0 est=$2.6938 (rates 2026-06-01) verified=34 errored=0 seen=34/69 claim="faithfulness 33/69"
+[ 33/69] ✓ faithful      "It is difficult to determine regional Victoria's fair sha…"  24.38s
+[ 34/69] ✓ absent        "No state/territory has an ABC headcount that accurately r…"  21.52s
+[heartbeat] elapsed=19m0s calls=102 in=5224 out=40990 web=0 est=$2.8444 (rates 2026-06-01) verified=36 errored=0 seen=36/69 claim="faithfulness 40/69"
+[heartbeat] elapsed=20m0s calls=103 in=5272 out=41352 web=0 est=$2.8593 (rates 2026-06-01) verified=36 errored=0 seen=36/69 claim="faithfulness 40/69"
+[ 40/69] ✓ faithful      "The ABC's ability to culturally represent a state goes be…"  1m57.62s
+[ 47/69] ✓ absent        "No state/territory reflects an SBS FTE number proportiona…"  16.53s
+[heartbeat] elapsed=21m0s calls=109 in=5581 out=43036 web=0 est=$3.1426 (rates 2026-06-01) verified=38 errored=0 seen=38/69 claim="faithfulness 35/69"
+[ 35/69] ✓ faithful      "The ABC Ultimo→Parramatta relocation was influenced by …"  49.83s
+[ 36/69] ✓ absent        "...and by budget constraints that made NSW the most cost-…"  25.2s
+[heartbeat] elapsed=22m0s calls=114 in=5842 out=44436 web=0 est=$3.2506 (rates 2026-06-01) verified=40 errored=0 seen=40/69 claim="faithfulness 37/69"
+[ 37/69] ✓ partial       "...and by the Parramatta office's proximity to key state …"  25.8s
+[heartbeat] elapsed=23m0s calls=119 in=6098 out=46632 web=0 est=$3.3706 (rates 2026-06-01) verified=41 errored=0 seen=41/69 claim="faithfulness 39/69"
+[ 39/69] ✓ overstated    "It is disappointing that both the ABC and SBS expanded th…"  49.38s
+[ 44/69] ✓ partial       "ABC content-production decisions are shaped by state scre…"  43.78s
+[heartbeat] elapsed=24m0s calls=124 in=6353 out=49085 web=0 est=$3.4944 (rates 2026-06-01) verified=43 errored=0 seen=43/69 claim="faithfulness 46/69"
+[ 46/69] ✓ absent        "Rising production costs and the budget reduction have con…"  15.46s
+[ 53/69] ✓ partial       "Between 2020–21 and Jan 2025, the ABC commissioned 75 e…"  37.84s
+[heartbeat] elapsed=25m0s calls=131 in=6742 out=51052 web=0 est=$3.6459 (rates 2026-06-01) verified=45 errored=0 seen=45/69 claim="faithfulness 55/69"
+[ 55/69] ✓ absent        "...demonstrating the ABC's vital role in supporting the s…"  19.12s
+[ 56/69] ✓ partial       "The ABC partners with major Victorian cultural institutio…"  29.53s
+[heartbeat] elapsed=26m0s calls=137 in=7043 out=53335 web=0 est=$3.7845 (rates 2026-06-01) verified=47 errored=0 seen=47/69 claim="faithfulness 57/69"
+[ 57/69] ✓ unsupported   "Through VicScreen internships and Indigenous placements, …"  35.36s
+[ 58/69] ✓ faithful      "The ABC delivers 16 unique regional local-radio programs …"  15.28s
+[ 60/69] ✓ faithful      "...across 9 local radio stations/services."  20.66s
+[heartbeat] elapsed=27m0s calls=146 in=7456 out=55943 web=0 est=$3.9802 (rates 2026-06-01) verified=50 errored=0 seen=50/69 claim="faithfulness 64/69"
+[ 64/69] ✓ faithful      "SBS receives about one-third of the ABC's funding."  18.37s
+[ 38/69] ✓ partial       "...and by a strategic goal to better reflect NSW's popula…"  36.26s
+[heartbeat] elapsed=28m0s calls=151 in=7755 out=57929 web=0 est=$4.1425 (rates 2026-06-01) verified=52 errored=0 seen=52/69 claim="faithfulness 48/69"
+[ 48/69] ✓ partial       "SBS staff distribution doesn't reflect content availabili…"  36.22s
+[ 41/69] ✓ absent        "The Committee calls for continued advocacy for the return…"  18.91s
+[heartbeat] elapsed=29m0s calls=158 in=8166 out=60410 web=0 est=$4.4023 (rates 2026-06-01) verified=54 errored=0 seen=54/69 claim="faithfulness 45/69"
+[ 45/69] ✓ partial       "The ABC's budget is, in real terms, 14% less than it was …"  27.36s
+[ 62/69] ✓ absent        "The cost of producing content in regional Victoria requir…"  26.42s
+[ 67/69] ✓ faithful      "...reaching 3.42 million Victorian viewers monthly (~49% …"  23.59s
+[heartbeat] elapsed=30m0s calls=165 in=8539 out=62630 web=0 est=$4.5084 (rates 2026-06-01) verified=57 errored=0 seen=57/69 claim="faithfulness 49/69"
+[ 49/69] ✓ partial       "SBS's decision to relocate to Western Sydney was determin…"  37.03s
+[ 50/69] ✓ contradicted  "It is unclear why Victoria was not considered in the Fede…"  28.79s
+[heartbeat] elapsed=31m0s calls=171 in=8794 out=65049 web=0 est=$4.6908 (rates 2026-06-01) verified=59 errored=0 seen=59/69 claim="faithfulness 52/69"
+[ 52/69] ✓ faithful      "SBS content remains nationally accessible regardless of p…"  25.21s
+[ 51/69] ✓ faithful      "SBS provides significant financial and creative investmen…"  34.65s
+[heartbeat] elapsed=32m0s calls=177 in=9040 out=67690 web=0 est=$4.9070 (rates 2026-06-01) verified=61 errored=0 seen=61/69 claim="faithfulness 54/69"
+[ 54/69] ✓ contradicted  "...and produced 52 internal projects with the majority of…"  27.12s
+[ 65/69] ✓ absent        "...which restricts its ability to produce and commission …"  14.68s
+[heartbeat] elapsed=33m0s calls=184 in=9359 out=69832 web=0 est=$5.0145 (rates 2026-06-01) verified=63 errored=0 seen=63/69 claim="faithfulness 66/69"
+[ 66/69] ✓ faithful      "SBS sustains substantial Melbourne-based operations produ…"  36.74s
+[ 68/69] ✓ partial       "...while supporting diverse communities through partnersh…"  36.75s
+[heartbeat] elapsed=34m0s calls=189 in=9583 out=72092 web=0 est=$5.1022 (rates 2026-06-01) verified=65 errored=0 seen=65/69 claim="faithfulness 69/69"
+[ 69/69] ✓ faithful      "SBS deeply engages Victoria's multilingual/multicultural …"  58.26s
+[heartbeat] elapsed=35m0s calls=192 in=9739 out=73808 web=0 est=$5.1603 (rates 2026-06-01) verified=66 errored=0 seen=66/69 claim="faithfulness 59/69"
+[ 59/69] ✓ partial       "...producing over 112 hours (6,751 minutes) of local cont…"  32.52s
+[ 61/69] ✓ faithful      "A main challenge for ABC regional-Victoria content is the…"  18.67s
+[heartbeat] elapsed=36m0s calls=198 in=10066 out=75480 web=0 est=$5.3223 (rates 2026-06-01) verified=68 errored=0 seen=68/69 claim="faithfulness 63/69"
+[ 63/69] ✓ faithful      "Producing content in regional areas delivers significant …"  1m1.87s
+tree (html): examples/vic-lceic/evidence/2026-09-08-full/sonnet-retrieved/tree.html
+
+SUMMARY claims-machine-full faithfulness
+  cases 69 · verified 69 · errored 0
+  unverifiable 2 · faithful 23 · partial 26 · overstated 2 · absent 13 · contradicted 2 · unsupported 1
+  wall 36m45s · est_usd $5.4170 (rates 2026-06-01) · cache_hit 94% (read 7821328 / created 502787)
+  schema_retries 0 · quote_rejects 36 · no_quote_downgrades 2
+  detail: examples/vic-lceic/evidence/2026-09-08-full/sonnet-retrieved/claims-machine-full.faithfulness.jsonl
+USAGE model=claude-sonnet-4-6 calls=201 in=10222 out=76965 cache_read=7821328 cache_create=502787 web_searches=0 wall=2204s est_usd=$5.4170 (rates 2026-06-01)

@@ -43,8 +43,8 @@
 | 39 | It is disappointing that both the ABC and SBS expanded their presence to Western Sydney instead of Victoria. | overstated | Committee members (particularly David Davis and Evan Mulholland) expressed strong criticism that both national broadcasters were directing new facilities to western Sydney rather than Victoria; the ABC witness explained the Parramatta move was a cost-neutral decentralisation from Ultimo facilitated by a surplus property sale, while the SBS witness explained the western Sydney hub was constrained by federal government funding parameters outside SBS's control. |
 | 40 | The ABC's ability to culturally represent a state goes beyond headcount or office location. | faithful | </antml_parameter> |
 | 41 | The Committee calls for continued advocacy for the return of a Victorian 7:30 Report. | **absent** | </antml :parameter> |
-| 42 | ABC spending is unevenly distributed across states/territories relative to their population sizes. | unverifiable |  |
-| 43 | No state/territory receives ABC funding proportionate to its share of Australia's population. | unverifiable |  |
+| 42 |  | unverifiable |  |
+| 43 |  | unverifiable |  |
 | 44 | ABC content-production decisions are shaped by state screen-agency policies and funding availability. | partial | ABC content-production decisions are influenced by a combination of factors including state screen-agency policies and funding availability, federal funding (Screen Australia, producer offset), where production companies are based, and editorial choices about the best ideas arising nationally. |
 | 45 | The ABC's budget is, in real terms, 14% less than it was a decade ago (~$1.2bn annual budget). | partial | The ABC's current budget is approximately $1.288 billion; in real terms it is 14% less than it was 10 years ago. The source does not state that the current budget is ~$1.2bn. |
 | 46 | Rising production costs and the budget reduction have constrained the ABC's capacity to create content and expand its footprint. | **absent** | </antml :parameter> |
