@@ -1,9 +1,10 @@
 package retrieve
 
 // retrieve_test runs against the real committed LCEIC corpus (examples/vic-lceic/sources/hearings) —
-// no synthetic transcript, per the repo's no-fabricated-inputs rule. It pins the two things a
-// downstream judge relies on: that speaker turns split with correct role tags (a witness is not a
-// questioner), and that BM25 retrieval is deterministic, bounded by k, and capped by tokens.
+// no synthetic transcript, per the repo's no-fabricated-inputs rule. It pins what a downstream judge
+// relies on: that speaker turns split with correct role tags (a witness is not a questioner), that
+// BM25 Search is deterministic, bounded by k, and token-capped, and that the fused Retrieve orders by
+// best rank, floats a named witness first, and floors on cosine.
 
 import (
 	"strings"
@@ -95,6 +96,82 @@ func TestSearchTokenCapForcesFewer(t *testing.T) {
 	tight := ix.Search("funding creative australia regional victoria fair share", 8, 120)
 	if len(tight) >= len(full) || len(tight) == 0 {
 		t.Errorf("tight cap should return fewer (but >0): tight=%d full=%d", len(tight), len(full))
+	}
+}
+
+// withEmbeddings loads the corpus and attaches the committed embedding cache (no ollama). Tests that
+// need the semantic ranker call it and skip when the cache is absent, so the suite stays green on a
+// checkout that has not yet seeded the cache with ASSAY_EMBED=1.
+func withEmbeddings(t *testing.T) *Index {
+	t.Helper()
+	ix := loadCorpus(t)
+	if err := ix.AttachEmbeddings(nil, "../../examples/vic-lceic/sources/hearings/.embcache"); err != nil {
+		t.Fatalf("attach embeddings: %v", err)
+	}
+	if !ix.HasEmbeddings() {
+		t.Skip("no committed embedding cache; seed with ASSAY_EMBED=1 go test -run Refuter .")
+	}
+	return ix
+}
+
+// TestRetrieveDeterministicAndCapped pins that fused Retrieve returns the same ids twice and stays
+// within the token budget (allowing the one-passage floor).
+func TestRetrieveDeterministicAndCapped(t *testing.T) {
+	ix := withEmbeddings(t)
+	q := Query{Text: "regional victoria fair share of funding creative australia"}
+	a := ix.Retrieve(q, 8000, 0)
+	b := ix.Retrieve(q, 8000, 0)
+	if len(a.Passages) == 0 {
+		t.Fatal("no passages retrieved")
+	}
+	if idsOf(a.Passages) != idsOf(b.Passages) {
+		t.Errorf("non-deterministic retrieval")
+	}
+	tokens := 0
+	for _, p := range a.Passages {
+		tokens += len(tokenize(p.Text))
+	}
+	if len(a.Passages) > 1 && tokens > 8000 {
+		t.Errorf("token budget exceeded: %d passages, %d tokens", len(a.Passages), tokens)
+	}
+}
+
+// TestRetrieveWitnessHardFilter pins that naming a witness floats every one of their turns ahead of
+// all other speakers in the fused order — the 1b hard filter.
+func TestRetrieveWitnessHardFilter(t *testing.T) {
+	ix := withEmbeddings(t)
+	const surname = "GUGLIELMO" // Vicky Guglielmo, a witness with turns in the corpus
+	q := Query{Text: "cost of living ticket prices barrier", Witness: surname}
+	order := ix.FusedRanking(q)
+	seenOther := false
+	named := 0
+	for _, p := range order {
+		fields := strings.Fields(p.Speaker)
+		isNamed := len(fields) > 0 && strings.EqualFold(fields[len(fields)-1], surname)
+		if isNamed {
+			named++
+			if seenOther {
+				t.Fatalf("named witness turn %s ranked after a non-witness turn", p.ID)
+			}
+		} else {
+			seenOther = true
+		}
+	}
+	if named == 0 {
+		t.Fatalf("witness %s has no turns — pick a speaker who does", surname)
+	}
+}
+
+// TestRetrieveFloorAbsent pins that an impossibly high cosine floor suppresses everything (Below set,
+// no passages) while a zero floor returns the fused set — the 1d code-side "absent" path.
+func TestRetrieveFloorAbsent(t *testing.T) {
+	ix := withEmbeddings(t)
+	q := Query{Text: "regional victoria fair share of funding"}
+	if hi := ix.Retrieve(q, 8000, 1.01); !hi.Below || len(hi.Passages) != 0 {
+		t.Errorf("floor 1.01 should suppress all: below=%v passages=%d", hi.Below, len(hi.Passages))
+	}
+	if lo := ix.Retrieve(q, 8000, 0); lo.Below || len(lo.Passages) == 0 {
+		t.Errorf("floor 0 should return passages: below=%v passages=%d", lo.Below, len(lo.Passages))
 	}
 }
 

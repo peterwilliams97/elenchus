@@ -73,8 +73,9 @@ case collapses to `error` rather than a silent partial.
 
 In faithfulness mode the source can be a whole corpus of hearing transcripts, not one file. Rather
 than send every claim the full ~25K-token corpus, `internal/retrieve` splits each transcript into
-speaker-turn passages and, per claim, sends the judge only the BM25 top-`k` (default 8, ~8K-token cap).
-Deterministic, no model call. `-retrieve=none` restores the full-corpus behaviour.
+speaker-turn passages and, per claim, sends the judge the passages that rank highest, up to a token
+budget (`-max-tokens`, default 8000). Deterministic, no model call. `-retrieve=none` restores the
+full-corpus behaviour.
 
 - **Passages.** A transcript is Hansard-style: a header naming committee MEMBERS and the Chair, then a
   body of turns opening with a speaker line ("Vicky GUGLIELMO:", "The CHAIR:"). A turn is one passage,
@@ -82,14 +83,28 @@ Deterministic, no model call. `-retrieve=none` restores the full-corpus behaviou
   `questioner` (a committee member, matched against the MEMBERS roster), or `chair`. The role tag is
   what lets a judge reject a claim that quotes a questioner's question as though it were testimony.
 - **Query.** The claim text plus its §-heading labels (the `key=Label` path from the claims file).
+- **Ranking.** Two rankers, fused. BM25 over the passage terms, and — with `-embed` (default on) — a
+  cosine ranker over nomic-embed-text vectors of the same passages. They are fused by reciprocal-rank
+  fusion combined by the *best* rank across the two (not the sum): the corpus's evidence is
+  complementary, a span strong in one ranker and weak in the other, and summing penalises a true
+  single-ranker hit. Passages are then admitted in fused order up to `-max-tokens`.
+- **Embedding cache.** The corpus vectors and each query's vector are cached under
+  `<corpus>/.embcache`, keyed by a hash of the corpus text and the model, so only the first run needs
+  a live ollama; later runs (the refuter and `go test`) read the cache offline. The cache lives beside
+  the corpus and is regenerable — seed it with `ASSAY_EMBED=1`.
+- **Hard filter.** When a claim explicitly attributes itself to a named person ("According to Jane
+  Doe", "Jane Doe of X", "Jane Doe said"), that speaker's turns are floated ahead of the fused ranking.
+- **Floor (`-floor`).** When the top passage's cosine is below `-floor`, retrieval returns nothing and
+  the verdict is `absent` from code with no model call (`0` = off).
 - **Chain.** Each faithfulness record carries the ids of the passages the judge saw (`passages`), so a
   verdict can be traced to its evidence.
 - **`-speakers`.** `assay -speakers -source CORPUS` splits the corpus and prints the distinct speakers
   and their roles, then exits — a corpus inspection with no model call.
 
-Retrieval is lossy by construction: top-`k` cannot reach evidence a full-corpus judge would find
-scattered across many transcripts. `examples/vic-lceic/RETRIEVAL_REFUTER.md` measures the gap against a
-Sonnet full-corpus run.
+Retrieval is lossy by construction: passage ranking cannot reach evidence a full-corpus judge finds
+scattered across many transcripts or phrased without the claim's terms (a bare answer, a
+cross-reference). `examples/vic-lceic/RETRIEVAL_REFUTER.md` measures the gap against a Sonnet
+full-corpus run.
 
 ## Flags
 
@@ -100,7 +115,10 @@ Sonnet full-corpus run.
 | `-ollama-url`  | `$OLLAMA_HOST` or `http://localhost:11434` | Ollama server base URL (`-backend ollama`).      |
 | `-think`       | `false`                     | Ollama only: emit the model's reasoning block (needs a higher token cap). |
 | `-retrieve`    | `bm25`                      | Per-claim passage retrieval: `bm25` \| `none` (see Retrieval). |
-| `-k`           | `8`                         | Passages retrieved per claim (BM25 top-k).                    |
+| `-max-tokens`  | `8000`                      | Retrieval token budget per claim (fused bm25+embed ranking).  |
+| `-embed`       | `true`                      | Add the nomic-embed-text ranker, fused with BM25 (see Retrieval). |
+| `-embed-model` | `nomic-embed-text`          | Embedding model for the semantic ranker.                     |
+| `-floor`       | `0`                         | Top-passage cosine below this ⇒ verdict `absent`, no model call (`0` = off). |
 | `-speakers`    | `false`                     | Print the distinct speakers + roles in `-source`, then exit.  |
 | `-source`      | `""`                        | Transcript file or corpus dir → faithfulness mode.            |
 | `-evidence`    | `false`                     | Evidence-grounding mode (enables web search).                 |

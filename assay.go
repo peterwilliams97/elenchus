@@ -29,6 +29,7 @@ import (
 	"assay/internal/backend/anthropic"
 	"assay/internal/backend/ollama"
 	"assay/internal/brief"
+	"assay/internal/embed"
 	"assay/internal/retrieve"
 	"assay/internal/tree"
 )
@@ -54,14 +55,16 @@ type cfg struct {
 	showProgress bool
 	quiet        bool
 	usageOut     string
-	chainFile    string // Tier-2 JSONL destination; set by runners before case loop
-	renderMode   string // stdout renderer: "brief" (default), "full", or "tree"
-	treeAll      bool   // -tree=full: expand every node rather than only Needs-you branches
-	retrieveMode string // "bm25" (default) retrieves per-claim passages; "none" sends the full corpus
-	k            int    // -k: passages retrieved per claim (BM25 top-k)
+	chainFile    string          // Tier-2 JSONL destination; set by runners before case loop
+	renderMode   string          // stdout renderer: "brief" (default), "full", or "tree"
+	treeAll      bool            // -tree=full: expand every node rather than only Needs-you branches
+	retrieveMode string          // "bm25" (default) retrieves per-claim passages; "none" sends the full corpus
+	maxTokens    int             // -max-tokens: retrieval token budget per claim (fused bm25+embed ranking)
+	floor        float64         // -floor: top-passage cosine below this ⇒ absent from code, no model call
+	embed        bool            // -embed: add the nomic-embed-text ranker, fused with BM25 by RRF
 	index        *retrieve.Index // built once from the source corpus when retrieveMode != "none"
-	auditPath    string // full-table sink; every run writes it, whichever renderer stdout gets
-	treeHTMLPath string // eval/<stamp>/tree.html sink, written alongside audit.md
+	auditPath    string          // full-table sink; every run writes it, whichever renderer stdout gets
+	treeHTMLPath string          // eval/<stamp>/tree.html sink, written alongside audit.md
 	usage        *usageCounters
 	tally        *runTally
 	// cachedSource is the stable prefix (e.g. the source transcript) placed in a Request's Cached
@@ -127,8 +130,12 @@ func main() {
 	flag.StringVar(&ollamaURL, "ollama-url", envOr("OLLAMA_HOST", ollama.DefaultBaseURL), "ollama server base URL")
 	flag.BoolVar(&think, "think", false, "ollama: emit the model's reasoning block (default off; on needs a higher token cap)")
 	var speakers bool
+	var embedModel string
 	flag.StringVar(&c.retrieveMode, "retrieve", "bm25", "per-claim passage retrieval: bm25|none (none sends the full corpus)")
-	flag.IntVar(&c.k, "k", 8, "passages retrieved per claim (BM25 top-k)")
+	flag.IntVar(&c.maxTokens, "max-tokens", retrieveTokenCap, "retrieval token budget per claim (fused bm25+embed ranking)")
+	flag.Float64Var(&c.floor, "floor", 0, "retrieval floor: top passage cosine below this ⇒ verdict absent, no model call (0=off)")
+	flag.BoolVar(&c.embed, "embed", true, "add the nomic-embed-text ranker fused with BM25 by RRF (needs local ollama or a committed cache)")
+	flag.StringVar(&embedModel, "embed-model", embed.DefaultModel, "embedding model for the semantic ranker")
 	flag.BoolVar(&speakers, "speakers", false, "print the distinct speakers + roles found in -source, then exit")
 	flag.StringVar(&src, "source", "", "transcript file or corpus dir → faithfulness mode")
 	flag.BoolVar(&ev, "evidence", false, "evidence-grounding mode (web search)")
@@ -246,8 +253,17 @@ func main() {
 			c.retrieveMode = "none"
 		} else {
 			c.index = ix
+			// Attach the semantic ranker. An embedder is passed only when -embed is on; with it off,
+			// or when the embedder cannot reach ollama, retrieval stays BM25-only rather than aborting.
+			if c.embed {
+				var emb retrieve.Embedder = embed.New(embedModel, ollamaURL, nil)
+				if err := ix.AttachEmbeddings(emb, embedCacheDir(src)); err != nil {
+					fmt.Fprintf(os.Stderr, "warning: embeddings disabled (%v); BM25-only retrieval\n", err)
+				}
+			}
 			if c.verbose {
-				fmt.Fprintf(os.Stderr, "[retrieve] %d passages, k=%d\n", len(ix.Passages), c.k)
+				fmt.Fprintf(os.Stderr, "[retrieve] %d passages, max-tokens=%d, embeddings=%v\n",
+					len(ix.Passages), c.maxTokens, ix.HasEmbeddings())
 			}
 		}
 	}
@@ -405,9 +421,20 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 		if id == "" {
 			id = fmt.Sprintf("c%d", i+1)
 		}
-		claimSrc, pids := c.sourceForClaim(text, path, srcPath, &fullSrc)
+		claimSrc, pids, below := c.sourceForClaim(text, path, srcPath, &fullSrc)
 		t := c.progressStart(i, len(raw), "faithfulness")
-		chosen, spread := c.faithRepeat(text, claimSrc)
+		var (
+			chosen faith
+			spread string
+		)
+		if below {
+			// Nothing cleared the retrieval floor: the source does not address this claim. Record
+			// "absent" from code (retrieved=0) rather than paying for a judge call on empty context.
+			chosen = faith{Verdict: "absent", Evidence: "no passage cleared the retrieval floor (retrieved=0)"}
+			spread = "floor"
+		} else {
+			chosen, spread = c.faithRepeat(text, claimSrc)
+		}
 		results[i] = chosen
 		rec := faithChainRecord(i, len(raw), text, chosen, t)
 		rec.Spread = spread
@@ -427,18 +454,63 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 // a full hearing, enough that the answer is present but small enough to keep the judge focused.
 const retrieveTokenCap = 8000
 
-// sourceForClaim returns the source text the faithfulness judge sees for one claim, plus the ids of
-// any passages it is built from. With retrieval off it is the full corpus (loaded once into *fullSrc);
-// with retrieval on it is the BM25 top-k passages for the claim text plus its §-heading hint.
-func (c cfg) sourceForClaim(text, path, srcPath string, fullSrc *string) (string, []string) {
+// sourceForClaim returns the source text the faithfulness judge sees for one claim, the ids of the
+// passages it is built from, and whether the retrieval floor suppressed all of them. With retrieval
+// off it is the full corpus (loaded once into *fullSrc); with retrieval on it is the fused bm25+embed
+// top passages up to the token budget for the claim text plus its §-heading hint. When `below` is
+// true nothing cleared -floor, and the caller records "absent" from code without a model call.
+func (c cfg) sourceForClaim(text, path, srcPath string, fullSrc *string) (src string, pids []string, below bool) {
 	if c.index == nil {
 		if *fullSrc == "" {
 			*fullSrc = readCorpus(srcPath)
 		}
-		return *fullSrc, nil
+		return *fullSrc, nil, false
 	}
-	passages := c.index.Search(text+" "+hintFromPath(path), c.k, retrieveTokenCap)
-	return retrieve.Format(passages), retrieve.IDs(passages)
+	q := claimQuery(text, path)
+	res := c.index.Retrieve(q, c.maxTokens, c.floor)
+	if res.Below {
+		return "", nil, true
+	}
+	return retrieve.Format(res.Passages), retrieve.IDs(res.Passages), false
+}
+
+// claimQuery builds the retrieval query for a claim: its text, the §-heading labels as a hint, and —
+// when the claim explicitly attributes itself to a named person ("According to Jane Doe", "Jane Doe
+// of X", "Jane Doe said") — that person's surname as a hard filter, so their turns rank first.
+func claimQuery(text, path string) retrieve.Query {
+	return retrieve.Query{Text: text, Hint: hintFromPath(path), Witness: namedWitness(text)}
+}
+
+// witnessRe pulls an attributed speaker from a claim: a capitalised "First Last" (optionally "First
+// Middle Last") introduced by "according to", or followed by "of"/"said"/"told"/"argued"/"noted".
+// Returns "" when the claim makes no attribution — the common case, where retrieval falls back to the
+// fused ranking with no hard filter.
+var witnessRe = regexp.MustCompile(`(?:According to|according to) ([A-Z][a-z]+(?: [A-Z][a-z]+){1,2})|([A-Z][a-z]+(?: [A-Z][a-z]+){1,2}) (?:of|said|told|argued|noted|stated)`)
+
+func namedWitness(text string) string {
+	m := witnessRe.FindStringSubmatch(text)
+	if m == nil {
+		return ""
+	}
+	name := m[1]
+	if name == "" {
+		name = m[2]
+	}
+	fields := strings.Fields(name)
+	if len(fields) == 0 {
+		return ""
+	}
+	return fields[len(fields)-1] // surname
+}
+
+// embedCacheDir is where a corpus's embedding caches live: a .embcache directory beside the corpus,
+// so the committed vectors travel with the transcripts they were computed from. For a single file it
+// sits in that file's directory.
+func embedCacheDir(src string) string {
+	if info, err := os.Stat(src); err == nil && info.IsDir() {
+		return filepath.Join(src, ".embcache")
+	}
+	return filepath.Join(filepath.Dir(src), ".embcache")
 }
 
 // hintFromPath turns a claim's "key=Label/key=Label" §-path into a plain-text query hint (the Labels),

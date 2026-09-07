@@ -43,13 +43,23 @@ type Passage struct {
 	Text    string
 }
 
-// Index is a searchable corpus of passages plus the BM25 statistics over them.
+// Index is a searchable corpus of passages plus the BM25 statistics over them. The embedding fields
+// are populated by AttachEmbeddings (rank.go) and are the second, semantic ranker; they stay nil for
+// a BM25-only index.
 type Index struct {
 	Passages []Passage
 	docTerms []map[string]int // term frequencies per passage
 	docLen   []int            // token count per passage
 	df       map[string]int   // document frequency per term
 	avgLen   float64
+
+	embed     [][]float32          // per-passage unit vector, aligned to Passages; nil if none
+	embModel  string               // embedding model id the caches are keyed on
+	embedder  Embedder             // live query embedder; nil in cache-only (offline) mode
+	cacheDir  string               // where corpus/query caches live
+	hash      string               // corpus hash the vectors were built for
+	queryPath string               // query-vector cache file
+	queryVecs map[string][]float32 // query text hash → unit vector
 }
 
 const (
@@ -147,8 +157,8 @@ func splitFile(path string) ([]Passage, error) {
 			return
 		}
 		out = append(out, Passage{
-			ID:      fmt.Sprintf("%s/%s#t%d", date, session, turn),
-			Date:    date, Session: session, Speaker: speaker, Role: role, Text: text,
+			ID:   fmt.Sprintf("%s/%s#t%d", date, session, turn),
+			Date: date, Session: session, Speaker: speaker, Role: role, Text: text,
 		})
 		turn++
 	}
@@ -242,19 +252,12 @@ func (ix *Index) build() {
 	}
 }
 
-// scored pairs a passage index with its BM25 score for ranking.
-type scored struct {
-	i     int
-	score float64
-}
-
-// Search returns the top-k passages for a query, in rank order, stopping early once the running token
-// budget (maxTokens, approx by word count) would be exceeded. Ties break by passage ID so the result
-// is deterministic. A zero or negative k or maxTokens disables that bound.
-func (ix *Index) Search(query string, k, maxTokens int) []Passage {
-	qTerms := tokenize(query)
+// bm25Scores returns the BM25 score of every passage against the query terms, in passage order. It is
+// the shared scoring both Search (top-k, token-capped) and bm25Ranks (fusion) call, so the two never
+// diverge on how a passage is scored.
+func (ix *Index) bm25Scores(qTerms []string) []float64 {
 	n := float64(len(ix.Passages))
-	ranked := make([]scored, len(ix.Passages))
+	out := make([]float64, len(ix.Passages))
 	for i := range ix.Passages {
 		var s float64
 		dl := float64(ix.docLen[i])
@@ -267,7 +270,25 @@ func (ix *Index) Search(query string, k, maxTokens int) []Passage {
 			idf := math.Log((n-df+0.5)/(df+0.5) + 1)
 			s += idf * (tf * (bm25K1 + 1)) / (tf + bm25K1*(1-bm25B+bm25B*dl/ix.avgLen))
 		}
-		ranked[i] = scored{i, s}
+		out[i] = s
+	}
+	return out
+}
+
+// scored pairs a passage index with its BM25 score for ranking.
+type scored struct {
+	i     int
+	score float64
+}
+
+// Search returns the top-k passages for a query, in rank order, stopping early once the running token
+// budget (maxTokens, approx by word count) would be exceeded. Ties break by passage ID so the result
+// is deterministic. A zero or negative k or maxTokens disables that bound.
+func (ix *Index) Search(query string, k, maxTokens int) []Passage {
+	scores := ix.bm25Scores(tokenize(query))
+	ranked := make([]scored, len(ix.Passages))
+	for i := range ix.Passages {
+		ranked[i] = scored{i, scores[i]}
 	}
 	sort.SliceStable(ranked, func(a, b int) bool {
 		if ranked[a].score != ranked[b].score {
