@@ -1170,10 +1170,12 @@ func TestFaithJudgeSysRestatementForm(t *testing.T) {
 	for _, needle := range []string{
 		"REPORT_SAYS and SOURCE_SAYS", "<=12", "three syllables",
 		`no "reader", no "would"`,
-		"NEVER copy a run of three or more words",
+		"report_says must NOT copy a run of",
+		"must NOT contrast or negate",
+		`no "not", "only", "just"`,
 		"as if to someone who hasn't read the report",
-		"most of those 52 shows were mainly made in Victoria",
-		"those shows were only located in Victoria",
+		"most of the work on those 52 projects was done in Victoria",
+		"the projects were based in Victoria",
 	} {
 		if !strings.Contains(faithJudgeSys, needle) {
 			t.Errorf("faithJudgeSys missing %q", needle)

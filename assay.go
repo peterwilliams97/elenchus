@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -1062,16 +1063,16 @@ func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64
 	}
 	verified, sources, rejects := ground(j)
 
-	// report_says/source_says must be a plain restatement the reader can act on: no "reader"/"would",
-	// no ≥4-syllable word the source never used, and no 3+-word run lifted verbatim from the claim or a
-	// verified quote (the check reads the grounded quotes, so it runs after grounding). A violation gets
-	// one retry (counted), steered to rephrase in everyday words; whatever the retry returns is kept.
-	if restatementBad(j.ReportSays, claim, verified) || restatementBad(j.SourceSays, claim, verified) {
+	// report_says/source_says must be plain restatements the reader can act on (the check reads the
+	// grounded quotes, so it runs after grounding). A violation gets one retry (counted), steered to
+	// rephrase in everyday words; whatever the retry returns is kept.
+	if reportSaysBad(j.ReportSays, claim, verified) || sourceSaysBad(j.SourceSays, claim, verified) {
 		if c.usage != nil {
 			c.usage.addPlainRetry()
 		}
 		steer := user + "\n\nYour report_says and source_says must not copy the report's or a quote's " +
-			"wording: rephrase in everyday words, as if to someone who hasn't read the report."
+			"wording, and source_says must not contrast or negate: rephrase in everyday words, as if to " +
+			"someone who hasn't read the report."
 		var j2 judgeJSON
 		if err := c.callSchema(faithJudgeSys, cached, steer, json.RawMessage(judgeSchema), "faith_verdict", temp, &j2); err == nil {
 			j = j2
@@ -1112,31 +1113,59 @@ func renderStakes(verdict, reportSays, sourceSays string) string {
 	}
 }
 
-// restatementBad reports whether s fails the plain-restatement discipline: it uses a banned or
-// imported word (plainBadWord), or it lifts a run of three or more words verbatim from the claim or a
-// verified quote (verbatimRun). The two together force a genuine paraphrase in the reader's own words
-// rather than a lightly-edited copy of the report.
-func restatementBad(s, claim string, quotes []string) bool {
-	return plainBadWord(s, claim, quotes) != "" || verbatimRun(s, claim, quotes) != ""
+// reportSaysBad reports whether report_says fails its discipline: a banned or imported word
+// (plainBadWord), or a run of 3+ words lifted verbatim from the CLAIM — report_says is the summary's
+// own framing restated, so copying the claim's wording is the failure. It is NOT checked against the
+// quotes: echoing a source phrase in report_says is not the concern there.
+func reportSaysBad(s, claim string, quotes []string) bool {
+	return plainBadWord(s, claim, quotes) != "" || verbatimRun(s, []string{claim}, 3) != ""
 }
 
-// verbatimRun returns the first run of three consecutive words in s that also appears, as a contiguous
-// word sequence, in the claim or any quote (case-insensitive, numbers kept as words) — or "" when s
-// copies no such run. Three is the shortest run that signals lifted phrasing rather than the
-// unavoidable overlap of a shared noun; a longer copied run necessarily contains a three-word one, so
-// checking trigrams suffices.
-func verbatimRun(s, claim string, quotes []string) string {
-	refs := [][]string{runTokens(claim)}
-	for _, q := range quotes {
-		refs = append(refs, runTokens(q))
+// sourceSaysBad reports whether source_says fails its discipline: a banned or imported word
+// (plainBadWord); a run of 5+ words lifted verbatim from a QUOTE — a short source phrase like "based
+// in Victoria" is the source's own and belongs here, so only a long lift counts as copying; or a
+// contrast/negation word (contrastWord). The contrast is renderStakes's job ("The source only says
+// …"); the field states what the source says and nothing else.
+func sourceSaysBad(s, claim string, quotes []string) bool {
+	return plainBadWord(s, claim, quotes) != "" || verbatimRun(s, quotes, 5) != "" || contrastWord(s) != ""
+}
+
+// contrastWord returns the first contrast or negation term in s — "not", "only", "just", "instead",
+// "but", or the phrase "rather than" — or "" when s carries none. source_says must state what the
+// source supports without setting it against the report; the code frame supplies the contrast.
+func contrastWord(s string) string {
+	banned := map[string]bool{"not": true, "only": true, "just": true, "instead": true, "but": true}
+	words := splitWords(s)
+	for i, w := range words {
+		if banned[w] {
+			return w
+		}
+		if w == "rather" && i+1 < len(words) && words[i+1] == "than" {
+			return "rather than"
+		}
+	}
+	return ""
+}
+
+// verbatimRun returns the first run of n consecutive words in s that also appears, as a contiguous
+// word sequence, in any of refs (case-insensitive, numbers kept as words) — or "" when s copies no
+// such run. n is the shortest run that signals lifted phrasing rather than unavoidable shared-noun
+// overlap; a longer copied run necessarily contains an n-word one, so checking n-grams suffices.
+func verbatimRun(s string, refs []string, n int) string {
+	if n < 1 {
+		return ""
+	}
+	var refTokens [][]string
+	for _, r := range refs {
+		refTokens = append(refTokens, runTokens(r))
 	}
 	words := runTokens(s)
-	for i := 0; i+3 <= len(words); i++ {
-		tri := words[i : i+3]
-		for _, ref := range refs {
-			for j := 0; j+3 <= len(ref); j++ {
-				if ref[j] == tri[0] && ref[j+1] == tri[1] && ref[j+2] == tri[2] {
-					return strings.Join(tri, " ")
+	for i := 0; i+n <= len(words); i++ {
+		run := words[i : i+n]
+		for _, ref := range refTokens {
+			for j := 0; j+n <= len(ref); j++ {
+				if slices.Equal(ref[j:j+n], run) {
+					return strings.Join(run, " ")
 				}
 			}
 		}
@@ -1607,14 +1636,17 @@ body), "other", or "none" (benign narrowing; use for "faithful").
 REPORT_SAYS and SOURCE_SAYS — two plain restatements the reader compares side by side, each <=12
 words, in ordinary words. report_says is the impression the SUMMARY CLAIM gives; source_says is what
 the PASSAGES actually support. Rephrase them in everyday words,
-as if to someone who hasn't read the report. Three rules: no "reader", no "would"; no word longer
-than three syllables unless it already appears in the claim or a quote; and
-NEVER copy a run of three or more words straight from the claim or a quote — say it your own way.
-Leave both "" only when the verdict is "faithful"; for "absent" give report_says, source_says "".
+as if to someone who hasn't read the report. Rules: no "reader", no "would"; no word longer than
+three syllables unless it already appears in the claim or a quote; report_says must NOT copy a run of
+three or more words straight from the claim (say the summary's point your own way — a source phrase
+like "based in Victoria" is fine here). source_says states only what the source says, so it may reuse
+the source's own short phrases but must NOT contrast or negate — no "not", "only", "just", "rather
+than", "instead", "but" (the reader sees the contrast framed for them). Leave both "" only when the
+verdict is "faithful"; for "absent" give report_says, source_says "".
 Worked example — claim "...52 internal projects with the majority of production in Victoria",
 quote "52 internal productions based in Victoria":
-  report_says: most of those 52 shows were mainly made in Victoria
-  source_says: those shows were only located in Victoria
+  report_says: most of the work on those 52 projects was done in Victoria
+  source_says: the projects were based in Victoria
 REASON: <=40 words, why this verdict.`
 
 const evidenceSys = `You are the Evidence Grounder. Decide whether the CLAIM is TRUE, using web
