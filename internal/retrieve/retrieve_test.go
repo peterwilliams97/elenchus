@@ -175,6 +175,22 @@ func TestRetrieveFloorAbsent(t *testing.T) {
 	}
 }
 
+// TestByIDsOracle pins that ByIDs returns exactly the requested passages in order and skips an id not
+// in the corpus — the oracle retrieval mode's contract.
+func TestByIDsOracle(t *testing.T) {
+	ix := loadCorpus(t)
+	want := []string{"2025-02-27/1_yarra-city-council#t17", "2025-02-27/1_yarra-city-council#t14"}
+	got := ix.ByIDs(append(want, "no-such/passage#t999"))
+	if len(got) != 2 {
+		t.Fatalf("want 2 passages (unknown id skipped), got %d", len(got))
+	}
+	for i, p := range got {
+		if p.ID != want[i] {
+			t.Errorf("order not preserved: pos %d want %s got %s", i, want[i], p.ID)
+		}
+	}
+}
+
 // ── test helpers ───────────────────────────────────────────────────────────────
 
 func idsOf(ps []Passage) string {

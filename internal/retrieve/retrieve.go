@@ -395,6 +395,23 @@ func Format(ps []Passage) string {
 	return strings.TrimRight(b.String(), "\n")
 }
 
+// ByIDs returns the passages with the given ids, in the order requested, skipping any id not in the
+// corpus. It backs the oracle retrieval mode — feeding the judge a fixed, hand-specified passage set
+// (the gold evidence) instead of a ranked one, to isolate judge quality from retrieval quality.
+func (ix *Index) ByIDs(ids []string) []Passage {
+	byID := make(map[string]Passage, len(ix.Passages))
+	for _, p := range ix.Passages {
+		byID[p.ID] = p
+	}
+	out := make([]Passage, 0, len(ids))
+	for _, id := range ids {
+		if p, ok := byID[id]; ok {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
 // IDs returns the passage ids in order, for the chain record.
 func IDs(ps []Passage) []string {
 	out := make([]string, len(ps))

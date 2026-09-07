@@ -55,16 +55,17 @@ type cfg struct {
 	showProgress bool
 	quiet        bool
 	usageOut     string
-	chainFile    string          // Tier-2 JSONL destination; set by runners before case loop
-	renderMode   string          // stdout renderer: "brief" (default), "full", or "tree"
-	treeAll      bool            // -tree=full: expand every node rather than only Needs-you branches
-	retrieveMode string          // "bm25" (default) retrieves per-claim passages; "none" sends the full corpus
-	maxTokens    int             // -max-tokens: retrieval token budget per claim (fused bm25+embed ranking)
-	floor        float64         // -floor: top-passage cosine below this ⇒ absent from code, no model call
-	embed        bool            // -embed: add the nomic-embed-text ranker, fused with BM25 by RRF
-	index        *retrieve.Index // built once from the source corpus when retrieveMode != "none"
-	auditPath    string          // full-table sink; every run writes it, whichever renderer stdout gets
-	treeHTMLPath string          // eval/<stamp>/tree.html sink, written alongside audit.md
+	chainFile    string              // Tier-2 JSONL destination; set by runners before case loop
+	renderMode   string              // stdout renderer: "brief" (default), "full", or "tree"
+	treeAll      bool                // -tree=full: expand every node rather than only Needs-you branches
+	retrieveMode string              // "bm25" (default) retrieves per-claim passages; "none" sends the full corpus
+	maxTokens    int                 // -max-tokens: retrieval token budget per claim (fused bm25+embed ranking)
+	floor        float64             // -floor: top-passage cosine below this ⇒ absent from code, no model call
+	embed        bool                // -embed: add the nomic-embed-text ranker, fused with BM25 by RRF
+	oracle       map[string][]string // -retrieve=oracle: claim-id → fixed gold passage ids
+	index        *retrieve.Index     // built once from the source corpus when retrieveMode != "none"
+	auditPath    string              // full-table sink; every run writes it, whichever renderer stdout gets
+	treeHTMLPath string              // eval/<stamp>/tree.html sink, written alongside audit.md
 	usage        *usageCounters
 	tally        *runTally
 	// cachedSource is the stable prefix (e.g. the source transcript) placed in a Request's Cached
@@ -136,8 +137,9 @@ func main() {
 	flag.StringVar(&ollamaURL, "ollama-url", envOr("OLLAMA_HOST", ollama.DefaultBaseURL), "ollama server base URL")
 	flag.BoolVar(&think, "think", false, "ollama: emit the model's reasoning block (default off; on needs a higher token cap)")
 	var speakers bool
-	var embedModel string
-	flag.StringVar(&c.retrieveMode, "retrieve", "bm25", "per-claim passage retrieval: bm25|none (none sends the full corpus)")
+	var embedModel, oracleFile string
+	flag.StringVar(&c.retrieveMode, "retrieve", "bm25", "per-claim passage retrieval: bm25|none|oracle (none sends the full corpus; oracle reads -oracle)")
+	flag.StringVar(&oracleFile, "oracle", "", "oracle retrieval: JSON map of claim-id → [passage-id]; the judge sees exactly those passages")
 	flag.IntVar(&c.maxTokens, "max-tokens", retrieveTokenCap, "retrieval token budget per claim (fused bm25+embed ranking)")
 	flag.Float64Var(&c.floor, "floor", 0, "retrieval floor: top passage cosine below this ⇒ verdict absent, no model call (0=off)")
 	flag.BoolVar(&c.embed, "embed", true, "add the nomic-embed-text ranker fused with BM25 by RRF (needs local ollama or a committed cache)")
@@ -252,6 +254,16 @@ func main() {
 	// Build the retrieval index once from the source corpus, so every claim retrieves from the same
 	// passage set. On failure (e.g. a source with no speaker turns) fall back to full-corpus rather
 	// than aborting — retrieval is an optimisation, not a precondition.
+	if c.retrieveMode == "oracle" {
+		if oracleFile == "" {
+			fatal("-retrieve=oracle needs -oracle FILE (claim-id → passage-id map)")
+		}
+		m, err := loadOracle(oracleFile)
+		if err != nil {
+			fatal("load oracle: " + err.Error())
+		}
+		c.oracle = m
+	}
 	if c.retrieveMode != "none" && src != "" {
 		ix, err := retrieve.Load(src)
 		if err != nil {
@@ -259,17 +271,18 @@ func main() {
 			c.retrieveMode = "none"
 		} else {
 			c.index = ix
-			// Attach the semantic ranker. An embedder is passed only when -embed is on; with it off,
-			// or when the embedder cannot reach ollama, retrieval stays BM25-only rather than aborting.
-			if c.embed {
+			// Attach the semantic ranker for bm25 mode only (oracle uses a fixed passage set, so it
+			// needs no ranker). An embedder is passed only when -embed is on; with it off, or when the
+			// embedder cannot reach ollama, retrieval stays BM25-only rather than aborting.
+			if c.embed && c.retrieveMode == "bm25" {
 				var emb retrieve.Embedder = embed.New(embedModel, ollamaURL, nil)
 				if err := ix.AttachEmbeddings(emb, embedCacheDir(src)); err != nil {
 					fmt.Fprintf(os.Stderr, "warning: embeddings disabled (%v); BM25-only retrieval\n", err)
 				}
 			}
 			if c.verbose {
-				fmt.Fprintf(os.Stderr, "[retrieve] %d passages, max-tokens=%d, embeddings=%v\n",
-					len(ix.Passages), c.maxTokens, ix.HasEmbeddings())
+				fmt.Fprintf(os.Stderr, "[retrieve] mode=%s %d passages, max-tokens=%d, embeddings=%v\n",
+					c.retrieveMode, len(ix.Passages), c.maxTokens, ix.HasEmbeddings())
 			}
 		}
 	}
@@ -443,7 +456,7 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 			id = fmt.Sprintf("c%d", i+1)
 		}
 		parsed[i] = claimLine{id: id, path: path, text: text}
-		claimPassages[i], below[i] = c.passagesForClaim(text, path, srcPath, &fullSrc)
+		claimPassages[i], below[i] = c.passagesForClaim(id, text, path, srcPath, &fullSrc)
 		if !below[i] {
 			eligible = append(eligible, i)
 		}
@@ -562,7 +575,11 @@ const retrieveTokenCap = 10000
 // "corpus" passage (loaded once into *fullSrc); with retrieval on it is the fused bm25+embed top
 // passages up to the token budget for the claim text plus its §-heading hint. When `below` is true
 // nothing cleared -floor and the caller records "absent" from code without a model call.
-func (c cfg) passagesForClaim(text, path, srcPath string, fullSrc *[]retrieve.Passage) (ps []retrieve.Passage, below bool) {
+func (c cfg) passagesForClaim(id, text, path, srcPath string, fullSrc *[]retrieve.Passage) (ps []retrieve.Passage, below bool) {
+	if c.retrieveMode == "oracle" {
+		// Oracle: the judge sees exactly the gold passages mapped to this claim id (no ranking).
+		return c.index.ByIDs(c.oracle[id]), false
+	}
 	if c.index == nil {
 		if len(*fullSrc) == 0 {
 			*fullSrc = []retrieve.Passage{{ID: "corpus", Text: readCorpus(srcPath)}}
@@ -575,6 +592,22 @@ func (c cfg) passagesForClaim(text, path, srcPath string, fullSrc *[]retrieve.Pa
 		return nil, true
 	}
 	return res.Passages, false
+}
+
+// loadOracle reads the -retrieve=oracle map: a JSON object of claim-id → list of passage-id.
+func loadOracle(path string) (map[string][]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var m map[string][]string
+	if err := json.Unmarshal(data, &m); err != nil {
+		return nil, err
+	}
+	if len(m) == 0 {
+		return nil, fmt.Errorf("oracle file %s has no entries", path)
+	}
+	return m, nil
 }
 
 // claimQuery builds the retrieval query for a claim: its text, the §-heading labels as a hint, and —
