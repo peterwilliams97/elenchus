@@ -1,9 +1,11 @@
 # STATUS — LCEIC faithfulness baseline (2026-09-07)
 
 **First complete tree.** All 69 report findings are judged in one uniform run —
-`evidence/2026-09-08-full/` (Sonnet, retrieved, N=3, final corpus, judge + rules, $5.42): 23
-faithful · 26 partial · 13 absent · 2 overstated · 2 contradicted · 1 unsupported · 2 unverifiable.
-`current/` points at it (`spec/TREE.md` specifies the tree).
+`evidence/2026-09-09-full/` (Sonnet, retrieved, N=3, final corpus, HEAD judge, $8.12): 27
+faithful · 24 partial · 11 absent · 1 overstated · 1 contradicted · 3 unsupported · 2 unverifiable.
+`current/` points at it (`spec/TREE.md` specifies the tree); it re-runs `evidence/2026-09-08-full/`
+(23 · 26 · 13 · 2 · 2 · 1 · 2) after the route source of truth was folded into `claims-machine.txt`,
+and 19 of the 69 leaves shifted verdict (N=3 spread + the §-heading retrieval hint, not a judge change).
 
 **What's run.** The LCEIC final-report findings are assayed for faithfulness against a real corpus of
 15 hearing transcripts + 42 written submissions + 2 responses to questions on notice + 1 submission
@@ -27,3 +29,7 @@ York/Sweden/UK) and the five new scope-risk claims — carry a blank "who's righ
 per-finding `cites` column across `claims-machine.txt` is not yet written (only the scope scoring set
 is annotated); and the few Qwen before/after wobbles in the scope run are N=3 temperature spread, not
 a prompt effect.
+
+**Retired (superseded by `claims-machine.txt` as the single route source of truth; kept, not deleted):**
+`routes-prep.md`, `routes-model.jsonl`, `routes-model.md`, `routes.md`, `claims-machine-full.txt` —
+their routes are now folded into `claims-machine.txt` with a `route_src=<model|regex>` tag per line.

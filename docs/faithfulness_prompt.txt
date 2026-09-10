@@ -1,0 +1,68 @@
+You are a careful assistant. Answer ONLY using facts stated in the CONTEXT below. If the
+answer is not stated in the context, reply exactly "NOT STATED IN CONTEXT" for that item. Do
+not use outside knowledge. Be concise.
+
+CONTEXT
+=======
+The Meridian Transit Authority (MTA-North) operates a regional light-rail network across four
+municipalities: Aldergrove, Brentmoor, Calderon, and Dunmore. The network opened its first line,
+the Green Line, in 1998, connecting Aldergrove Central to Brentmoor Junction over 14 stations and
+21.6 kilometres of track. A second line, the Amber Line, opened in 2006 and added 9 stations
+between Brentmoor Junction and Calderon Docks. The most recent addition, the Slate Line, entered
+revenue service in March 2019 and runs from Calderon Docks to Dunmore Heights across 11 stations.
+
+Rolling stock is drawn from two fleets. The original fleet, designated Series 40, comprises 32
+three-car units built by Kessler Rail between 1996 and 1999. Each Series 40 unit seats 96
+passengers and has a maximum service speed of 80 km/h. Beginning in 2017, MTA-North took delivery
+of the Series 70 fleet: 24 four-car units built by Ostmann Traction, each seating 140 passengers
+with a maximum service speed of 100 km/h and regenerative braking that returns roughly 18 percent
+of traction energy to the supply. The Series 70 units are assigned exclusively to the Slate Line
+and to peak-hour Amber Line services; the Green Line runs Series 40 units at all times.
+
+Fares are zone-based. The network is divided into three fare zones: Zone 1 covers Aldergrove and
+Brentmoor, Zone 2 covers Calderon, and Zone 3 covers Dunmore. A single adult journey within one
+zone costs 2.40 credits; a two-zone journey costs 3.60 credits; a three-zone journey costs 4.80
+credits. Concession fares — available to riders under 18, riders over 65, and registered students
+— are set at 50 percent of the adult fare, rounded down to the nearest 0.10 credit. A daily cap of
+9.60 credits applies to adult fares regardless of the number of journeys; the concession daily cap
+is 4.80 credits. Contactless bank cards and the reloadable MeridianGo smartcard are both accepted;
+paper tickets were withdrawn in January 2021.
+
+Service frequency varies by line and time of day. On weekdays, the Green Line runs every 6 minutes
+during peak periods (07:00–09:30 and 16:30–18:30) and every 12 minutes off-peak. The Amber Line
+runs every 10 minutes at peak and every 15 minutes off-peak. The Slate Line, the least busy, runs
+every 15 minutes at peak and every 20 minutes off-peak. All three lines share a common operating
+span of 05:15 to 00:30, except on Sundays, when service begins at 06:30. There is no overnight
+service on any line.
+
+Depot and maintenance facilities are concentrated at two sites. The Brentmoor Depot, adjacent to
+Brentmoor Junction, houses the Series 40 fleet and performs light maintenance and daily cleaning.
+Heavy overhaul and the Series 70 fleet are based at the Dunmore Works, which opened alongside the
+Slate Line in 2019 and includes a wheel lathe, a bogie drop, and an automated train wash. MTA-North
+targets a fleet availability of 92 percent each morning peak; in the 2022 financial year it reported
+an average morning availability of 93.4 percent, its best result on record.
+
+Governance sits with a seven-member board appointed by the four municipal councils, with Aldergrove
+and Brentmoor each appointing two members and Calderon and Dunmore each appointing one; the seventh
+member is an independent chair nominated by the state transport ministry. The board meets monthly.
+Operating revenue in FY2022 was 84.2 million credits, of which 61 percent came from fares and the
+remainder from a municipal operating subsidy and advertising concessions. Patronage in FY2022 was
+41.7 million journeys, a recovery to 88 percent of the pre-2020 peak of 47.4 million.
+
+Accessibility works completed in 2020 brought every station to step-free status except for two
+Green Line stations, Aldergrove West and Millfield, where platform-to-street lifts are scheduled
+for installation but not yet funded. All Series 70 units are fully wheelchair accessible with
+level boarding; Series 40 units require a manual ramp deployed by the conductor.
+
+QUESTIONS
+=========
+1. How many stations does the Green Line have, and over what track length?
+2. Which fleet is assigned to the Slate Line, and what is that fleet's seated capacity per unit?
+3. What does a two-zone adult single journey cost, and what is the concession daily cap?
+4. What is the peak off-peak Green Line frequency on weekdays?
+5. Who manufactures the Series 70 units, and in what year did the first ones arrive?
+6. What was FY2022 patronage, and what fraction of the pre-2020 peak does it represent?
+7. Which two stations are not yet step-free, and why?
+8. What is the projected patronage for FY2025?
+9. How much does a monthly season ticket cost for Zone 1?
+10. On which line do Series 40 units run at all times?

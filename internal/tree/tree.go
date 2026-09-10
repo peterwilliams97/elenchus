@@ -123,26 +123,7 @@ func RenderHTML(rows []brief.Row, details map[string]Leaf, header, rootBlock str
 // child count; a leaf's summary ends in its verdict, and its body carries the revealed detail.
 func renderHTML(b *strings.Builder, n *node, details map[string]Leaf) {
 	if n.leaf() {
-		r := *n.row
-		verd := html.EscapeString(leafVerdict(r))
-		if brief.IsOpinion(r) {
-			verd = `<span class="op">` + verd + `</span>`
-		}
-		fmt.Fprintf(b, "<details open><summary>%s  %s  %s</summary>\n",
-			html.EscapeString(r.ID), html.EscapeString(truncate(r.Text, 60)), verd)
-		b.WriteString(`<div class="d">`)
-		if r.SoWhat != "" {
-			fmt.Fprintf(b, "so what: %s\n", html.EscapeString(r.SoWhat))
-		}
-		fmt.Fprintf(b, "claim: %s\n", html.EscapeString(r.Text))
-		d := details[r.ID]
-		if d.Reason != "" {
-			fmt.Fprintf(b, "reason: %s\n", html.EscapeString(d.Reason))
-		}
-		for _, q := range d.Quotes {
-			fmt.Fprintf(b, "&gt; %s\n", html.EscapeString(q))
-		}
-		b.WriteString("</div></details>\n")
+		renderLeafHTML(b, n.row, details)
 		return
 	}
 	fmt.Fprintf(b, "<details open><summary>%s  %s  [%d]</summary>\n",
@@ -151,6 +132,34 @@ func renderHTML(b *strings.Builder, n *node, details map[string]Leaf) {
 		renderHTML(b, c, details)
 	}
 	b.WriteString("</details>\n")
+}
+
+// renderLeafHTML writes one atomic-claim leaf as an open <details> block: a summary ending in the
+// verdict (grey for an opinion) and a body revealing the claim text, the judge's reason, and the
+// quoted source lines from `details`. Both the section-path tree (renderHTML) and the argument tree
+// (renderArgHTML in argument.go) call it, so a leaf renders identically in both — spec/ARGUMENT.md's
+// "leaves unchanged" contract lives here.
+func renderLeafHTML(b *strings.Builder, row *brief.Row, details map[string]Leaf) {
+	r := *row
+	verd := html.EscapeString(leafVerdict(r))
+	if brief.IsOpinion(r) {
+		verd = `<span class="op">` + verd + `</span>`
+	}
+	fmt.Fprintf(b, "<details open><summary>%s  %s  %s</summary>\n",
+		html.EscapeString(r.ID), html.EscapeString(truncate(r.Text, 60)), verd)
+	b.WriteString(`<div class="d">`)
+	if r.SoWhat != "" {
+		fmt.Fprintf(b, "so what: %s\n", html.EscapeString(r.SoWhat))
+	}
+	fmt.Fprintf(b, "claim: %s\n", html.EscapeString(r.Text))
+	d := details[r.ID]
+	if d.Reason != "" {
+		fmt.Fprintf(b, "reason: %s\n", html.EscapeString(d.Reason))
+	}
+	for _, q := range d.Quotes {
+		fmt.Fprintf(b, "&gt; %s\n", html.EscapeString(q))
+	}
+	b.WriteString("</div></details>\n")
 }
 
 // build groups rows under a synthetic root by their Path segments, in path order, with the row

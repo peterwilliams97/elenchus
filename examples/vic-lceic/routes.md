@@ -11,18 +11,18 @@ A `data-gap` finding (a claim about a dataset's own limits) is a fourth kind; no
 if that is what a row is. When the filled column disagrees with `current route`, that route is the
 one to fix in `claims-machine.txt` before the next full run.
 
-| id | finding | current route | witness said / committee concluded / fact about world |
-|---|---|---|---|
-| F1 | Victorian cultural & creative industries contributed $40.5 billion to the Victorian economy in 2022–23. | evidence |  |
+| id  | finding | current route | witness said / committee concluded / fact about world |
+|-----|---|---|---|
+| F1  | Victorian cultural & creative industries contributed $40.5 billion to the Victorian economy in 2022–23. | evidence |  |
 | F2a | The industries employ more than 320,000 Victorians. | evidence |  |
 | F2b | That is almost 9% of total employment in the state. | evidence |  |
-| F3 | The industries provide significant economic stimulus by attracting visitation and tourism. | source |  |
-| F4 | Victoria rated higher for cultural participation than all other jurisdictions surveyed, including New York, Sweden and the UK. | evidence |  |
-| F5 | Engagement with the industries brings communities together, breaks down barriers between groups, and encourages cohesion. | source |  |
-| F6 | A growing body of evidence recognises the role arts and creativity play in positive mental health and wellbeing outcomes. | evidence |  |
-| F7 | COVID-19 severely damaged the industries, limiting opportunities to present/engage publicly and restricting practitioners' income. | source |  |
-| F8 | COVID-19 took away critical training opportunities from those looking to enter the industries. | source |  |
-| F9 | Exclusion from COVID-19 financial support programs exacerbated financial issues and created ongoing skill gaps. | source |  |
+| F3  | The industries provide significant economic stimulus by attracting visitation and tourism. | source |  |
+| F4  | Victoria rated higher for cultural participation than all other jurisdictions surveyed, including New York, Sweden and the UK. | evidence |  |
+| F5  | Engagement with the industries brings communities together, breaks down barriers between groups, and encourages cohesion. | source |  |
+| F6  | A growing body of evidence recognises the role arts and creativity play in positive mental health and wellbeing outcomes. | evidence |  |
+| F7  | COVID-19 severely damaged the industries, limiting opportunities to present/engage publicly and restricting practitioners' income. | source |  |
+| F8  | COVID-19 took away critical training opportunities from those looking to enter the industries. | source |  |
+| F9  | Exclusion from COVID-19 financial support programs exacerbated financial issues and created ongoing skill gaps. | source |  |
 | F10 | Children's and young people's creative participation and attendance declined significantly between 2017–18 and 2021–22. | evidence |  |
 | F11 | Several live music venues have closed following COVID-19 due to pressures such as rising costs and inconsistent financial support. | source |  |
 | F12 | COVID-19 led to worsening mental health in the industries, particularly among children and young people. | source |  |

@@ -26,3 +26,9 @@ examples/vic-lceic/sources/*
 # Local API key export — never commit (holds a live ANTHROPIC_API_KEY)
 /setkey.sh
 /demo-dan.log
+
+# Scratch outputs from ad-hoc eval/diff runs at the repo root (throwaway; tracked
+# evidence stderr lives under examples/*/evidence/ and is force-added there)
+/diff.txt
+/eval-value.tree
+/eval-value.stderr

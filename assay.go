@@ -71,6 +71,8 @@ type cfg struct {
 	index        *retrieve.Index     // built once from the source corpus when retrieveMode != "none"
 	auditPath    string              // full-table sink; every run writes it, whichever renderer stdout gets
 	treeHTMLPath string              // eval/<stamp>/tree.html sink, written alongside audit.md
+	argumentFile string              // -argument: argument.txt path; when set, -from renders the argument tree
+	argHTMLPath  string              // argument.html sink, alongside audit.md, when -argument is set
 	rootTitle    string              // report title for the root block's line 1, from the claims file "# title:" header
 	rootDate     string              // report date for the root block's line 1, from the claims file "# date:" header
 	sourceDocs   int                 // M: documents held per the manifest; the root block's "checked against M" figure
@@ -175,6 +177,7 @@ func main() {
 	flag.BoolVar(&full, "full", false, "print the full table to stdout instead of the brief report")
 	flag.Var(&treeF, "tree", "print the tree report to stdout; -tree=full expands every node")
 	flag.StringVar(&fromChain, "from", "", "render brief/tree/audit from a saved chain JSONL (no model calls); a comma-list of chains merges them leaf-by-leaf")
+	flag.StringVar(&c.argumentFile, "argument", "", "with -from: render the argument tree keyed by this argument.txt (spec/ARGUMENT.md) into argument.html, instead of the section-path tree")
 	flag.Parse()
 
 	// -full and -tree select different stdout renderers; refuse to guess which the caller meant.
@@ -2862,6 +2865,11 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 	dir := filepath.Dir(chainPaths[0])
 	c.auditPath = filepath.Join(dir, "audit.md")
 	c.treeHTMLPath = filepath.Join(dir, "tree.html")
+	if c.argumentFile != "" {
+		// The argument tree replaces the section-path tree; it writes argument.html, not tree.html.
+		c.treeHTMLPath = ""
+		c.argHTMLPath = filepath.Join(dir, "argument.html")
+	}
 
 	rows := make([]brief.Row, len(recs))
 	details := make(map[string]tree.Leaf, len(recs))
@@ -2967,7 +2975,39 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 			rows[i].Split = splitDescriptor(recordSamples(recs[i])) // "" unless the pool tied — then "a/b"
 		}
 	}
+	if c.argumentFile != "" {
+		c.presentArgument(rows, details, mdTable)
+		return
+	}
 	c.present(rows, counts, mdTable, termTable, details)
+}
+
+// presentArgument renders the argument tree (spec/ARGUMENT.md) in place of the section-path tree: it
+// writes the flat verdict table to auditPath (unchanged), then builds the tree from the argument file,
+// hangs the merged rows on its leaves, derives each node's judgement bottom-up, and writes argument.html.
+// The root block — root proposition + judgement, then one line per recommendation — is also printed to
+// stdout, so a reader sees the top-level verdict without opening the page.
+func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, mdTable string) {
+	if c.auditPath != "" {
+		if err := os.WriteFile(c.auditPath, []byte(mdTable), 0o644); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.auditPath, err)
+		}
+	}
+	root, err := tree.BuildArgument(mustRead(c.argumentFile), rows)
+	if err != nil {
+		fatal("argument tree: " + err.Error())
+	}
+	// The argument tree only ever renders under -from, where the calls/$/wall header is all zeros
+	// (no model call was made), so it is omitted here rather than stamped on every argument render.
+	page, rootBlock := tree.ArgumentPage(root, details, "")
+	if c.argHTMLPath != "" {
+		if err := os.WriteFile(c.argHTMLPath, []byte(page), 0o644); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.argHTMLPath, err)
+		} else {
+			fmt.Fprintf(os.Stderr, "argument (html): %s\n", c.argHTMLPath)
+		}
+	}
+	fmt.Print(rootBlock)
 }
 
 // ── usage accounting ─────────────────────────────────────────────────────────

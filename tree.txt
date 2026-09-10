@@ -1,0 +1,480 @@
+.
+├── assay
+├── assay_test.go
+├── assay.go
+├── BACKGROUND.md
+├── build.sh
+├── CLAUDE.md
+├── demo-dan.log
+├── diff.txt
+├── docs
+│   ├── faithfulness_prompt.txt
+│   ├── ollama.md
+│   └── VALUE.md
+├── eval
+│   ├── cache-after
+│   │   ├── audit.md
+│   │   ├── claims-faith-refuter.faithfulness.jsonl
+│   │   └── tree.html
+│   ├── demo-dan
+│   │   ├── audit.md
+│   │   └── dan_summary.faithfulness.jsonl
+│   ├── n3
+│   │   ├── audit.md
+│   │   ├── claims-faith-refuter.faithfulness.jsonl
+│   │   └── tree.html
+│   ├── ollama-demo
+│   │   ├── audit.md
+│   │   ├── dan_summary.faithfulness.jsonl
+│   │   └── tree.html
+│   ├── refuter-ollama
+│   │   ├── audit.md
+│   │   ├── claims-faith-refuter.faithfulness.jsonl
+│   │   └── tree.html
+│   └── value
+│       ├── audit.md
+│       ├── claims-faith-refuter.faithfulness.jsonl
+│       ├── run.stderr
+│       ├── tree-full.txt
+│       └── tree.html
+├── eval-value.stderr
+├── eval-value.tree
+├── examples
+│   ├── dan_shipper
+│   │   ├── dan_shipper.txt
+│   │   ├── dan_summary.txt
+│   │   └── README.md
+│   ├── destructive
+│   │   ├── axis-gaps
+│   │   │   ├── claim.txt
+│   │   │   ├── DEFECT.md
+│   │   │   ├── EXPECTED.md
+│   │   │   └── results
+│   │   │       ├── 2026-06-10-claude-haiku-4-5-20251001.md
+│   │   │       └── 2026-06-11-claude-haiku-4-5-20251001.md
+│   │   ├── bare-vs-contextualized
+│   │   │   ├── bare.txt
+│   │   │   ├── contextual.txt
+│   │   │   ├── DEFECT.md
+│   │   │   ├── EXPECTED.md
+│   │   │   └── results
+│   │   │       └── 2026-06-11-claude-haiku-4-5-20251001.md
+│   │   ├── causal-narrative
+│   │   │   ├── claim.txt
+│   │   │   ├── DEFECT.md
+│   │   │   ├── EXPECTED.md
+│   │   │   └── results
+│   │   │       ├── 2026-06-10-claude-haiku-4-5-20251001.md
+│   │   │       └── 2026-06-11-claude-haiku-4-5-20251001.md
+│   │   ├── hidden-premise
+│   │   │   ├── claim.txt
+│   │   │   ├── DEFECT.md
+│   │   │   ├── EXPECTED.md
+│   │   │   └── results
+│   │   │       ├── 2026-06-10-claude-haiku-4-5-20251001.md
+│   │   │       └── 2026-06-11-claude-haiku-4-5-20251001.md
+│   │   ├── laundering
+│   │   │   ├── claim.txt
+│   │   │   ├── DEFECT.md
+│   │   │   ├── EXPECTED.md
+│   │   │   ├── PROVENANCE.md
+│   │   │   ├── results
+│   │   │   │   └── 2026-06-10-claude-haiku-4-5-20251001.md
+│   │   │   └── summary.txt
+│   │   ├── motte-and-bailey
+│   │   │   ├── claim.txt
+│   │   │   ├── DEFECT.md
+│   │   │   ├── EXPECTED.md
+│   │   │   └── results
+│   │   │       ├── 2026-06-10-claude-haiku-4-5-20251001.md
+│   │   │       └── 2026-06-11-claude-haiku-4-5-20251001.md
+│   │   ├── README.md
+│   │   ├── reference-class
+│   │   │   ├── claim.txt
+│   │   │   ├── DEFECT.md
+│   │   │   ├── EXPECTED.md
+│   │   │   └── results
+│   │   │       └── 2026-06-10-claude-haiku-4-5-20251001.md
+│   │   ├── run.sh
+│   │   └── unfalsifiable-dress
+│   │       ├── claim.txt
+│   │       ├── DEFECT.md
+│   │       ├── EXPECTED.md
+│   │       └── results
+│   │           └── 2026-06-10-claude-haiku-4-5-20251001.md
+│   ├── reflexive
+│   │   ├── claims.txt
+│   │   ├── headline.txt
+│   │   ├── README.md
+│   │   └── results
+│   │       └── 2026-06-11-claude-haiku-4-5-20251001.md
+│   ├── url-length
+│   │   ├── claim.txt
+│   │   └── README.md
+│   └── vic-lceic
+│       ├── build-full-claims.py
+│       ├── build-routes-model.py
+│       ├── build-routes-prep.py
+│       ├── claims-faith-5.txt
+│       ├── claims-faith-f17.txt
+│       ├── claims-faith-refuter.txt
+│       ├── claims-faith-scope.txt
+│       ├── claims-faith.txt
+│       ├── claims-machine-full.txt
+│       ├── claims-machine.txt
+│       ├── CLAUDE_VS_OLLAMA.md
+│       ├── current
+│       │   ├── audit.md
+│       │   ├── build-current.py
+│       │   ├── claims.txt
+│       │   ├── current.faithfulness.jsonl
+│       │   ├── PROVENANCE.md
+│       │   ├── root-block-tree.txt
+│       │   └── tree.html
+│       ├── eval-5
+│       │   ├── audit.md
+│       │   └── claims-faith-5.faithfulness.jsonl
+│       ├── eval-f17v
+│       │   ├── audit.md
+│       │   └── claims-faith-f17.faithfulness.jsonl
+│       ├── eval-f46b
+│       │   ├── audit.md
+│       │   ├── claims-f46b.faithfulness.jsonl
+│       │   ├── claims-f46b.txt
+│       │   ├── README.md
+│       │   ├── run.sh
+│       │   ├── run.stderr
+│       │   ├── tree.html
+│       │   └── usage.jsonl
+│       ├── eval-refuter
+│       │   ├── audit.md
+│       │   └── claims-faith-refuter.faithfulness.jsonl
+│       ├── evidence
+│       │   ├── 2026-09-07-compare
+│       │   │   ├── adjudication.md
+│       │   │   ├── COMPARE.md
+│       │   │   ├── compare.py
+│       │   │   ├── qwen-oracle
+│       │   │   │   ├── audit.md
+│       │   │   │   ├── claims-faith-refuter.faithfulness.jsonl
+│       │   │   │   ├── config.json
+│       │   │   │   ├── run.stderr
+│       │   │   │   ├── tree.html
+│       │   │   │   ├── tree.txt
+│       │   │   │   └── usage.jsonl
+│       │   │   ├── qwen-retrieved
+│       │   │   │   ├── audit.md
+│       │   │   │   ├── claims-faith-refuter.faithfulness.jsonl
+│       │   │   │   ├── config.json
+│       │   │   │   ├── run.stderr
+│       │   │   │   ├── tree.html
+│       │   │   │   ├── tree.txt
+│       │   │   │   └── usage.jsonl
+│       │   │   ├── REPORT.md
+│       │   │   ├── run.sh
+│       │   │   ├── sonnet-full
+│       │   │   │   ├── audit.md
+│       │   │   │   ├── claims-faith-refuter.faithfulness.jsonl
+│       │   │   │   ├── config.json
+│       │   │   │   ├── run.stderr
+│       │   │   │   ├── tree.html
+│       │   │   │   ├── tree.txt
+│       │   │   │   └── usage.jsonl
+│       │   │   └── sonnet-retrieved
+│       │   │       ├── audit.md
+│       │   │       ├── claims-faith-refuter.faithfulness.jsonl
+│       │   │       ├── config.json
+│       │   │       ├── run.stderr
+│       │   │       ├── tree.html
+│       │   │       ├── tree.txt
+│       │   │       └── usage.jsonl
+│       │   ├── 2026-09-07-scope
+│       │   │   ├── absent-diagnosis.md
+│       │   │   ├── adjudication.md
+│       │   │   ├── after-fetch-sonnet
+│       │   │   │   ├── audit.md
+│       │   │   │   ├── claims-3.faithfulness.jsonl
+│       │   │   │   ├── claims-3.txt
+│       │   │   │   ├── config.json
+│       │   │   │   ├── REPORT.md
+│       │   │   │   ├── run.stderr
+│       │   │   │   ├── tree.html
+│       │   │   │   ├── tree.txt
+│       │   │   │   └── usage.jsonl
+│       │   │   ├── after-qwen
+│       │   │   │   ├── audit.md
+│       │   │   │   ├── claims-faith-scope.faithfulness.jsonl
+│       │   │   │   ├── config.json
+│       │   │   │   ├── run.stderr
+│       │   │   │   ├── tree.html
+│       │   │   │   ├── tree.txt
+│       │   │   │   └── usage.jsonl
+│       │   │   ├── after-sonnet
+│       │   │   │   ├── audit.md
+│       │   │   │   ├── claims-faith-scope.faithfulness.jsonl
+│       │   │   │   ├── config.json
+│       │   │   │   ├── run.stderr
+│       │   │   │   ├── tree.html
+│       │   │   │   ├── tree.txt
+│       │   │   │   └── usage.jsonl
+│       │   │   ├── before-qwen
+│       │   │   │   ├── audit.md
+│       │   │   │   ├── claims-faith-scope.faithfulness.jsonl
+│       │   │   │   ├── config.json
+│       │   │   │   ├── run.stderr
+│       │   │   │   ├── tree.html
+│       │   │   │   ├── tree.txt
+│       │   │   │   └── usage.jsonl
+│       │   │   ├── before-sonnet
+│       │   │   │   ├── audit.md
+│       │   │   │   ├── claims-faith-scope.faithfulness.jsonl
+│       │   │   │   ├── config.json
+│       │   │   │   ├── run.stderr
+│       │   │   │   ├── tree.html
+│       │   │   │   ├── tree.txt
+│       │   │   │   └── usage.jsonl
+│       │   │   ├── COMPARE.md
+│       │   │   ├── compare.py
+│       │   │   ├── f10-after-attachment
+│       │   │   │   ├── audit.md
+│       │   │   │   ├── claims-f10.faithfulness.jsonl
+│       │   │   │   ├── claims-f10.txt
+│       │   │   │   ├── config.json
+│       │   │   │   ├── run.stderr
+│       │   │   │   ├── tree.html
+│       │   │   │   ├── tree.txt
+│       │   │   │   └── usage.jsonl
+│       │   │   └── REPORT.md
+│       │   ├── 2026-09-07-submissions
+│       │   │   ├── COMPARE.md
+│       │   │   ├── compare.py
+│       │   │   └── sonnet-retrieved
+│       │   │       ├── audit.md
+│       │   │       ├── claims-faith-5.faithfulness.jsonl
+│       │   │       ├── config.json
+│       │   │       ├── run.stderr
+│       │   │       ├── tree.html
+│       │   │       ├── tree.txt
+│       │   │       └── usage.jsonl
+│       │   └── 2026-09-08-full
+│       │       └── sonnet-retrieved
+│       │           ├── audit.md
+│       │           ├── claims-machine-full.faithfulness.jsonl
+│       │           ├── claims-machine-full.txt
+│       │           ├── config.json
+│       │           ├── run.stderr
+│       │           ├── tree.html
+│       │           ├── tree.txt
+│       │           └── usage.jsonl
+│       ├── f17-verbose.log
+│       ├── f17-verbose.txt
+│       ├── oracle-18-spans.json
+│       ├── PROVENANCE.md
+│       ├── report-summary.md
+│       ├── REPORT.md
+│       ├── RETRIEVAL_REFUTER.md
+│       ├── routes-model-input.jsonl
+│       ├── routes-model.jsonl
+│       ├── routes-model.md
+│       ├── routes-prep.md
+│       ├── routes.md
+│       ├── section-headings.txt
+│       ├── sources
+│       │   ├── hearings
+│       │   │   ├── 2025-02-27
+│       │   │   │   ├── 1_yarra-city-council.pdf
+│       │   │   │   ├── 1_yarra-city-council.txt
+│       │   │   │   ├── 2_regional-arts-victoria.pdf
+│       │   │   │   ├── 2_regional-arts-victoria.txt
+│       │   │   │   ├── 3_multicultural-arts-victoria.pdf
+│       │   │   │   ├── 3_multicultural-arts-victoria.txt
+│       │   │   │   ├── 4_abc.pdf
+│       │   │   │   └── 4_abc.txt
+│       │   │   ├── 2025-03-12
+│       │   │   │   ├── 1_creative-victoria-and-vicscreen.pdf
+│       │   │   │   ├── 1_creative-victoria-and-vicscreen.txt
+│       │   │   │   ├── 2_community-music-victoria.pdf
+│       │   │   │   ├── 2_community-music-victoria.txt
+│       │   │   │   ├── 3_theatre-network-australia.pdf
+│       │   │   │   ├── 3_theatre-network-australia.txt
+│       │   │   │   ├── 4_association-of-artist-managers-and-music-victoria.pdf
+│       │   │   │   ├── 4_association-of-artist-managers-and-music-victoria.txt
+│       │   │   │   ├── 5_sbs.pdf
+│       │   │   │   └── 5_sbs.txt
+│       │   │   └── 2025-03-13
+│       │   │       ├── 1_st-martins-and-theatre-works.pdf
+│       │   │       ├── 1_st-martins-and-theatre-works.txt
+│       │   │       ├── 2_arena-rawcus-lamama.pdf
+│       │   │       ├── 2_arena-rawcus-lamama.txt
+│       │   │       ├── 3_a-new-approach.pdf
+│       │   │       ├── 3_a-new-approach.txt
+│       │   │       ├── 4_public-galleries-association-of-victoria.pdf
+│       │   │       ├── 4_public-galleries-association-of-victoria.txt
+│       │   │       ├── 5_australian-museums-and-galleries-association-victoria.pdf
+│       │   │       ├── 5_australian-museums-and-galleries-association-victoria.txt
+│       │   │       ├── 6_bendigo-theatre-company-and-sertori-consulting.pdf
+│       │   │       └── 6_bendigo-theatre-company-and-sertori-consulting.txt
+│       │   ├── hearings-all.txt
+│       │   ├── MANIFEST.md
+│       │   ├── qon
+│       │   │   ├── abc-2025-03-21.pdf
+│       │   │   ├── abc-2025-03-21.txt
+│       │   │   ├── sbs-2025-04-10.pdf
+│       │   │   └── sbs-2025-04-10.txt
+│       │   └── submissions
+│       │       ├── 01.-coalition-against-duck-shooting.pdf
+│       │       ├── 01.-coalition-against-duck-shooting.txt
+│       │       ├── 01.1-coalition-against-duck-shooting.pdf
+│       │       ├── 01.1-coalition-against-duck-shooting.txt
+│       │       ├── 02.-name-withheld.pdf
+│       │       ├── 02.-name-withheld.txt
+│       │       ├── 03.-craig-coulson.pdf
+│       │       ├── 03.-craig-coulson.txt
+│       │       ├── 04.-robert-heron_redacted.pdf
+│       │       ├── 04.-robert-heron_redacted.txt
+│       │       ├── 05.-name-withheld.pdf
+│       │       ├── 05.-name-withheld.txt
+│       │       ├── 06.-bo-kitty_redacted.pdf
+│       │       ├── 06.-bo-kitty_redacted.txt
+│       │       ├── 07.-sophie-travers.pdf
+│       │       ├── 07.-sophie-travers.txt
+│       │       ├── 08.-australian-publishers-association_redacted.pdf
+│       │       ├── 08.-australian-publishers-association_redacted.txt
+│       │       ├── 09.-ana-a-new-approach-redacted.pdf
+│       │       ├── 09.-ana-a-new-approach-redacted.txt
+│       │       ├── 09.1-ana-a-new-approach-redacted.pdf
+│       │       ├── 09.1-ana-a-new-approach-redacted.txt
+│       │       ├── 10.-interactive-games-and-entertainment-association-redacted.pdf
+│       │       ├── 10.-interactive-games-and-entertainment-association-redacted.txt
+│       │       ├── 11.-desmond-beer.pdf
+│       │       ├── 11.-desmond-beer.txt
+│       │       ├── 12.-melbourne-fringe.pdf
+│       │       ├── 12.-melbourne-fringe.txt
+│       │       ├── 13.-kate-larsen-redacted.pdf
+│       │       ├── 13.-kate-larsen-redacted.txt
+│       │       ├── 14.-parliamentary-budget-office_redacted.pdf
+│       │       ├── 14.-parliamentary-budget-office_redacted.txt
+│       │       ├── 15.-regional-arts-victoria.pdf
+│       │       ├── 15.-regional-arts-victoria.txt
+│       │       ├── 16.-stonnington-council_redacted.pdf
+│       │       ├── 16.-stonnington-council_redacted.txt
+│       │       ├── 17.-sir-zelman-cowen-school-of-music-and-performance.pdf
+│       │       ├── 17.-sir-zelman-cowen-school-of-music-and-performance.txt
+│       │       ├── 18.-city-of-yarra-redacted.pdf
+│       │       ├── 18.-city-of-yarra-redacted.txt
+│       │       ├── 19.-theatre-network-australia.pdf
+│       │       ├── 19.-theatre-network-australia.txt
+│       │       ├── 19.1-theatre-network-australia.pdf
+│       │       ├── 19.1-theatre-network-australia.txt
+│       │       ├── 20.-victorian-major-arts-festivals-alliance_redacted.pdf
+│       │       ├── 20.-victorian-major-arts-festivals-alliance_redacted.txt
+│       │       ├── 21.-test-pattern_redacted.pdf
+│       │       ├── 21.-test-pattern_redacted.txt
+│       │       ├── 22.-awg-and-awgacs.pdf
+│       │       ├── 22.-awg-and-awgacs.txt
+│       │       ├── 23.-mva.pdf
+│       │       ├── 23.-mva.txt
+│       │       ├── 25.-arena-theatre-co_redacted.pdf
+│       │       ├── 25.-arena-theatre-co_redacted.txt
+│       │       ├── 26.-victorian-independent-and-youth-theatre-organisations.pdf
+│       │       ├── 26.-victorian-independent-and-youth-theatre-organisations.txt
+│       │       ├── 27.-ausdance-vic.pdf
+│       │       ├── 27.-ausdance-vic.txt
+│       │       ├── 28.-nets-victoria.pdf
+│       │       ├── 28.-nets-victoria.txt
+│       │       ├── 31.-community-music-victoria.pdf
+│       │       ├── 31.-community-music-victoria.txt
+│       │       ├── 32.-la-mama-theatre.pdf
+│       │       ├── 32.-la-mama-theatre.txt
+│       │       ├── 33.-public-galleries-association-of-victoria-redacted.pdf
+│       │       ├── 33.-public-galleries-association-of-victoria-redacted.txt
+│       │       ├── 33.1-public-galleries-association-of-victoria_redacted.pdf
+│       │       ├── 33.1-public-galleries-association-of-victoria_redacted.txt
+│       │       ├── 34.-university-of-melbourne_redacted.pdf
+│       │       ├── 34.-university-of-melbourne_redacted.txt
+│       │       ├── 35.-amaga-victoria.pdf
+│       │       ├── 35.-amaga-victoria.txt
+│       │       ├── 36.-martin-jackson.pdf
+│       │       ├── 36.-martin-jackson.txt
+│       │       ├── 37.-sense-and-centsability_redacted.pdf
+│       │       ├── 37.-sense-and-centsability_redacted.txt
+│       │       ├── 38.-nirmidha-sankar_redacted.pdf
+│       │       ├── 38.-nirmidha-sankar_redacted.txt
+│       │       ├── 39.-live-performance-australia_redacted.pdf
+│       │       ├── 39.-live-performance-australia_redacted.txt
+│       │       ├── 40.-association-of-artist-managers.pdf
+│       │       ├── 40.-association-of-artist-managers.txt
+│       │       ├── 41.-abc.pdf
+│       │       ├── 41.-abc.txt
+│       │       ├── 42.-sbs.pdf
+│       │       └── 42.-sbs.txt
+│       ├── STATUS.md
+│       ├── submissions-index.md
+│       ├── SURVEY.md
+│       ├── to-faith-claims.pl
+│       ├── tree-2026-09-06.log
+│       ├── tree-2026-09-06.txt
+│       ├── tree-ollama-refuter.txt
+│       ├── tree-refuter-2026-09-06.log
+│       └── tree-refuter-2026-09-06.txt
+├── FIXTURE_REPORT.md
+├── go.mod
+├── internal
+│   ├── backend
+│   │   ├── anthropic
+│   │   │   ├── anthropic_test.go
+│   │   │   └── anthropic.go
+│   │   ├── backend.go
+│   │   ├── fake
+│   │   │   └── fake.go
+│   │   └── ollama
+│   │       ├── ollama_test.go
+│   │       └── ollama.go
+│   ├── brief
+│   │   ├── brief_test.go
+│   │   └── brief.go
+│   ├── embed
+│   │   └── embed.go
+│   ├── manifest
+│   │   ├── manifest_test.go
+│   │   └── manifest.go
+│   ├── retrieve
+│   │   ├── rank.go
+│   │   ├── retrieve_test.go
+│   │   └── retrieve.go
+│   └── tree
+│       ├── root_test.go
+│       ├── root.go
+│       ├── tree_test.go
+│       └── tree.go
+├── judge_test.go
+├── LICENSE
+├── oracle_gen_test.go
+├── prompts
+│   └── 2026-09-07-ollama-model-select-handoff.md
+├── README.md
+├── refuter_b_test.go
+├── rigour-map
+│   ├── decision_log_schema.md
+│   ├── decision_log.jsonl
+│   ├── RUBRIC.md
+│   └── run_eval.sh
+├── scripts
+│   └── merged_branches.sh
+├── SESSION.md
+├── setkey.sh
+├── setup.sh.example
+├── spec
+│   ├── CLI.md
+│   └── TREE.md
+├── testdata
+│   ├── web_search_error.json
+│   └── web_search_live.json
+├── testing
+│   ├── calibration_log.jsonl
+│   └── SCHEMA.md
+├── TESTING.md
+├── TODO.md
+└── tree.txt
+
+77 directories, 401 files
