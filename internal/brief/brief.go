@@ -27,6 +27,24 @@ type Row struct {
 	SoWhat                                     string // assembled stakes line for a needs-you leaf ("The report says X. …")
 	Route                                      string // what can settle the claim: evidence|source|evaluative|data-gap
 	Class                                      string // multi-run stability: settled|wobble|contested; "" for a single-chain render
+	Split                                      string // tied top verdicts ("a/b") when a merged pool had no majority; "" otherwise — always a contested leaf
+	SchemaFail                                 bool   // the judge's reason was empty or carried a raw tag; verdict forced to unverifiable
+}
+
+// schemaTagRe matches a raw markup tag stranded in a judge reason — the fingerprint of a truncated or
+// malformed structured response, such as a leaked "</antml_parameter>". Its presence, or an empty
+// reason, means the schema did not hold, so the verdict rests on nothing checkable. spec/TREE.md § The
+// rules that gate a verdict is the contract.
+var schemaTagRe = regexp.MustCompile(`<\/?[A-Za-z][^>]*>`)
+
+// SchemaFailed reports a judge reason that fails the schema gate: empty after trimming, or carrying a
+// raw markup tag. The caller forces such a leaf's verdict to unverifiable — a fluent-looking verdict
+// whose reason did not survive the schema cannot be trusted, whatever the verdict string says.
+func SchemaFailed(reason string) bool {
+	if strings.TrimSpace(reason) == "" {
+		return true
+	}
+	return schemaTagRe.MatchString(reason)
 }
 
 // IsOpinion reports a claim the tool does not judge: a Committee value judgment (`route=evaluative`)

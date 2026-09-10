@@ -2642,9 +2642,10 @@ func recordSamples(r chainRecord) []string {
 }
 
 // stabilityClass names how the pooled verdicts for one leaf spread across the merged runs: settled
-// (one verdict throughout), wobble (several verdicts, all on one side of the support divide), or
-// contested (the verdicts cross the divide — a run backs the claim and a run does not, or one could
-// not check). spec/TREE.md § Merging runs is the contract.
+// (one verdict throughout), wobble (several verdicts on one side of the support divide, with a clear
+// majority), or contested (the verdicts cross the divide — a run backs the claim and a run does not,
+// or one could not check — or there is no majority at all, a tie the merge cannot resolve into one
+// verdict). spec/TREE.md § Merging runs is the contract.
 func stabilityClass(samples []string) string {
 	if len(samples) == 0 {
 		return ""
@@ -2658,11 +2659,90 @@ func stabilityClass(samples []string) string {
 	switch {
 	case len(distinct) == 1:
 		return "settled"
+	case isModalTie(samples):
+		// No majority verdict, so the merge cannot name one — the sources do not settle this even when
+		// every draw sits on one side. It reads as contested and renders "split a/b", never a verdict.
+		return "contested"
 	case len(sides) == 1:
 		return "wobble"
 	default:
 		return "contested"
 	}
+}
+
+// isModalTie reports a pool whose top verdict count is shared by two or more distinct verdicts — a
+// merge with no majority. modalVerdict would still return one (worst-first), but that pick is an
+// artifact of the tie-break, not a verdict the runs agreed on.
+func isModalTie(samples []string) bool {
+	_, tie := modalTie(samples)
+	return tie
+}
+
+// modalTie returns the tied top verdicts (worst-first, by faithVerdictOrder) when the pool's highest
+// count is shared, and reports whether such a tie exists. A single distinct verdict, or one clear
+// winner, is not a tie.
+func modalTie(samples []string) (tied []string, isTie bool) {
+	counts := map[string]int{}
+	for _, v := range samples {
+		counts[v]++
+	}
+	top := 0
+	for _, n := range counts {
+		if n > top {
+			top = n
+		}
+	}
+	for v, n := range counts {
+		if n == top {
+			tied = append(tied, v)
+		}
+	}
+	if len(tied) < 2 {
+		return nil, false
+	}
+	rank := func(v string) int {
+		for i, o := range faithVerdictOrder {
+			if o == v {
+				return i
+			}
+		}
+		return len(faithVerdictOrder)
+	}
+	sort.SliceStable(tied, func(i, j int) bool { return rank(tied[i]) < rank(tied[j]) })
+	return tied, true
+}
+
+// splitDescriptor is the "a/b" line a tied contested leaf shows instead of a verdict — the tied top
+// verdicts joined worst-first. It is "" when the pool has a clear majority, so only a genuine tie
+// carries one.
+func splitDescriptor(samples []string) string {
+	tied, tie := modalTie(samples)
+	if !tie {
+		return ""
+	}
+	return strings.Join(tied, "/")
+}
+
+// applySchemaGate forces a leaf's faithfulness verdict to unverifiable when the judge's reason failed
+// the schema (empty or a raw tag), marking the row so the root block files it under schema failure and
+// the brief surfaces it. Opinions are exempt: they are never judged, so their empty reason is expected,
+// not a failure. Reports whether the gate fired. spec/TREE.md § The rules that gate a verdict.
+func applySchemaGate(r *brief.Row, reason string) bool {
+	if brief.IsOpinion(*r) || !brief.SchemaFailed(reason) {
+		return false
+	}
+	r.Faith = "unverifiable"
+	r.SchemaFail = true
+	return true
+}
+
+// schemaLeafFlag is the reason line a schema-failed leaf shows in place of the unusable judge output:
+// which failure it was, with the stranded tag quoted so a reader can see what leaked.
+func schemaLeafFlag(reason string) string {
+	if strings.TrimSpace(reason) == "" {
+		return "schema failure: the judge returned no reason"
+	}
+	return "schema failure: the judge reason carried a raw tag (" + strings.TrimSpace(reason) + ")"
 }
 
 // verdictSide places a faithfulness verdict on the support divide the stability class turns on:
@@ -2804,8 +2884,12 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
 				Faith: r.Verdict, FaithReason: det.CriticFinding, Spread: spread, Dissent: dissent,
 				Gap: det.Gap, SoWhat: det.SoWhat, Route: routeOr(r.Route, routes[i])}
-			details[ids[i]] = tree.Leaf{Reason: det.CriticFinding, Quotes: det.Quotes}
-			vs[i] = r.Verdict
+			leaf := tree.Leaf{Reason: det.CriticFinding, Quotes: det.Quotes}
+			if applySchemaGate(&rows[i], det.CriticFinding) {
+				leaf.Reason = schemaLeafFlag(det.CriticFinding)
+			}
+			details[ids[i]] = leaf
+			vs[i] = rows[i].Faith // reflects the schema-gate override in the rollup, not just the tree
 		}
 		counts, mdTable, termTable = tally(vs), mdFaith(fr), func() { c.termFaith(fr) }
 	case "substance":
@@ -2863,7 +2947,12 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 				Faith: fv, Substance: sv, Grounding: evv,
 				FaithReason: det.Faith.CriticFinding, GroundReason: det.Evidence.Finding,
 				Gap: det.Faith.Gap, SoWhat: det.Faith.SoWhat, Route: routeOr(r.Route, routes[i])}
-			details[ids[i]] = tree.Leaf{Reason: det.Faith.CriticFinding, Quotes: det.Faith.Quotes}
+			leaf := tree.Leaf{Reason: det.Faith.CriticFinding, Quotes: det.Faith.Quotes}
+			if applySchemaGate(&rows[i], det.Faith.CriticFinding) {
+				leaf.Reason = schemaLeafFlag(det.Faith.CriticFinding)
+				fv = rows[i].Faith
+			}
+			details[ids[i]] = leaf
 			fvs[i], svs[i], evs[i] = fv, sv, evv
 		}
 		counts = fmt.Sprintf("faith[%s] · sub[%s] · ground[%s]", tally(fvs), tally(svs), tally(evs))
@@ -2874,6 +2963,9 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 
 	for i := range rows {
 		rows[i].Class = classes[i] // "" under a single chain; settled/wobble/contested when merged
+		if classes[i] == "contested" {
+			rows[i].Split = splitDescriptor(recordSamples(recs[i])) // "" unless the pool tied — then "a/b"
+		}
 	}
 	c.present(rows, counts, mdTable, termTable, details)
 }

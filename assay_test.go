@@ -1184,25 +1184,49 @@ func TestSpreadForRecord(t *testing.T) {
 	}
 }
 
-// TestStabilityClass pins the merged-run classifier: settled when every sample agrees, wobble when
-// the verdict moves within one side of the support divide, contested when it crosses (or mixes a
-// decided verdict with unverifiable). spec/TREE.md § Merging runs is the contract.
+// TestStabilityClass pins the merged-run classifier: settled when every sample agrees, wobble when the
+// verdict moves within one side of the support divide *and a majority still holds*, contested when it
+// crosses the divide, mixes a decided verdict with unverifiable, or has no majority at all (a tie the
+// merge cannot resolve into one verdict). spec/TREE.md § Merging runs is the contract.
 func TestStabilityClass(t *testing.T) {
 	cases := []struct {
 		samples []string
 		want    string
 	}{
 		{[]string{"faithful", "faithful", "faithful"}, "settled"},
-		{[]string{"partial", "faithful", "faithful"}, "wobble"},         // both supported side
-		{[]string{"absent", "contradicted", "unsupported"}, "wobble"},   // all not-supported side
-		{[]string{"faithful", "faithful", "contradicted"}, "contested"}, // crosses the divide
-		{[]string{"faithful", "unverifiable"}, "contested"},             // decided vs can't-check
+		{[]string{"partial", "faithful", "faithful"}, "wobble"},               // one side, majority faithful
+		{[]string{"absent", "contradicted", "unsupported"}, "contested"},      // one side, but no majority — a 3-way tie
+		{[]string{"absent", "absent", "contradicted"}, "wobble"},              // one side, majority absent
+		{[]string{"faithful", "faithful", "partial", "partial"}, "contested"}, // one side, 2/2 tie → split faithful/partial
+		{[]string{"faithful", "faithful", "contradicted"}, "contested"},       // crosses the divide
+		{[]string{"faithful", "unverifiable"}, "contested"},                   // decided vs can't-check
 		{[]string{"unverifiable", "unverifiable"}, "settled"},
 		{nil, ""},
 	}
 	for _, c := range cases {
 		if got := stabilityClass(c.samples); got != c.want {
 			t.Errorf("stabilityClass(%v) = %q, want %q", c.samples, got, c.want)
+		}
+	}
+}
+
+// TestSplitDescriptor pins the tie renderer: a pool with no majority yields its tied top verdicts
+// worst-first as "a/b", and a pool with a clear winner yields "" (there is a verdict, so no split). A
+// two-way even split and a three-way one-each split both tie; a majority does not.
+func TestSplitDescriptor(t *testing.T) {
+	cases := []struct {
+		samples []string
+		want    string
+	}{
+		{[]string{"faithful", "faithful", "partial", "partial"}, "partial/faithful"}, // worst-first
+		{[]string{"absent", "contradicted", "unsupported"}, "unsupported/contradicted/absent"},
+		{[]string{"faithful", "faithful", "partial"}, ""}, // majority faithful — not a tie
+		{[]string{"faithful"}, ""},
+		{nil, ""},
+	}
+	for _, c := range cases {
+		if got := splitDescriptor(c.samples); got != c.want {
+			t.Errorf("splitDescriptor(%v) = %q, want %q", c.samples, got, c.want)
 		}
 	}
 }

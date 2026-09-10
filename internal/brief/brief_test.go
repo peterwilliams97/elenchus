@@ -10,6 +10,35 @@ import (
 	"testing"
 )
 
+// TestSchemaFailed is the schema-gate refuter: a reason that is empty or carries a raw markup tag
+// fails, and only those two shapes fail — a plain judge finding, one that merely mentions "<" or ">"
+// arithmetically, and one with punctuation all pass, so the gate cannot swallow a legitimate reason.
+func TestSchemaFailed(t *testing.T) {
+	fail := []string{
+		"",
+		"   ",
+		"</antml_parameter>\n",
+		"</antml :parameter>",
+		"the judge said <thinking>oops</thinking>",
+		"<tool_use>",
+	}
+	for _, r := range fail {
+		if !SchemaFailed(r) {
+			t.Errorf("SchemaFailed(%q) = false, want true (empty or a raw tag is a schema failure)", r)
+		}
+	}
+	pass := []string{
+		"The source supports the 256-venue figure but not the statewide scope.",
+		"Attendance fell where 2 < 5 held over the period.", // "<" without a tag must not trip the gate
+		"No passage states this; retrieval floor reached.",
+	}
+	for _, r := range pass {
+		if SchemaFailed(r) {
+			t.Errorf("SchemaFailed(%q) = true, want false (a well-formed reason must pass)", r)
+		}
+	}
+}
+
 func TestQualifyTiers(t *testing.T) {
 	for _, tc := range qualifyCases {
 		gotTier, gotOK := Qualify(tc.faith, tc.substance, tc.grounding, tc.gap, tc.text)

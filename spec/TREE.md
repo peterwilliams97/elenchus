@@ -51,16 +51,22 @@ reader sees not one judge pass but the agreement across several full runs of the
 - **Agreement.** The `k/N` fraction is recomputed over the pool (`N` = total samples across all
   chains) and the minority verdicts are named as the dissent — identically to a single `-n>1` run, so
   `partial 4/6 ≠ faithful` reads the same whether the six draws came from one run or three.
+- **Verdict, no majority (a tie).** When the pool's highest sample count is shared by two or more
+  verdicts, there is no majority the merge can name. `modalVerdict` would still return one (worst-first),
+  but that pick is an artifact of the tie-break, not agreement — so a tie is **not** rendered as a
+  verdict. The leaf carries a **split descriptor** (the tied verdicts, worst-first) and its class is
+  **contested**, whether or not the tie crosses the support divide. A 2/2 same-side split
+  (`faithful`/`partial`) and a three-way one-each split are both ties.
 - **Class.** Each merged leaf is one of three **stability classes**, from the spread of verdicts in
   its pool:
   - **settled** — every sample is the same verdict.
   - **wobble** — the verdict moves but stays on one side of the support divide (supported =
     `faithful`/`partial`; not-supported = `overstated`/`absent`/`contradicted`/`unsupported`;
-    `unverifiable` is its own side). Instability that does not change *whether the source backs the
-    claim*.
-  - **contested** — the verdicts **cross** the divide: at least one run says the source backs the
-    claim and at least one says it does not (or could not check). The judge disagrees with itself
-    about the very thing the tree exists to settle.
+    `unverifiable` is its own side) **and a majority still holds**. Instability that does not change
+    *whether the source backs the claim* and still resolves to one verdict.
+  - **contested** — the verdicts **cross** the divide (at least one run says the source backs the
+    claim and at least one says it does not, or could not check), **or the pool has no majority at
+    all** (a tie). Either way the judge does not settle the very thing the tree exists to settle.
 
 A **contested** leaf enters Needs-you at **tier 0** and, within tier 0, ranks **ahead of** the
 settled red verdicts (a unanimous `contradicted` included): an unstable finding is the one a reader
@@ -71,8 +77,11 @@ The root block gains one line beneath the class partition when more than one run
 
     Across <R> runs: <s> settled, <w> wobble, <c> contested.
 
-The three counts partition the findings (they sum to `N`), so the reader sees at a glance how much of
-the report the judges agreed on. A single-chain `-from` prints no such line.
+The three counts partition the **judged** findings. Opinions (`route=evaluative` and recommendations)
+are never judged, so a stability class on one is a category error: they are excluded from this line and
+reported under *Committee opinions* instead, and the three counts plus that opinion count sum to `N`.
+The `contested` figure here therefore equals the top group's count below — both are the judged findings
+the runs could not settle. A single-chain `-from` prints no such line.
 
 The support divide above is the **faithfulness** axis. A merge of substance or grounding chains pools
 the verdict and fraction the same way, but each distinct verdict counts as its own side, so any
@@ -81,9 +90,11 @@ three axes) and a multi-chain `-from` over an audit chain is rejected.
 
 **Refuters.** A 3-chain fixture with three leaves — one where all runs agree, one where the verdict
 moves within a side, one where it crosses — yields exactly one `settled`, one `wobble`, one
-`contested` (`assay_test.go`). And in `internal/brief`, a contested leaf whose modal verdict is
-`faithful` sorts **ahead of** a settled `contradicted` leaf, proving the contested-first tiebreak —
-not id order — decides the head of tier 0.
+`contested` (`assay_test.go` `TestMergeChainsThreeClasses`). `TestStabilityClass` additionally pins a
+same-side 3-way split and a 2/2 same-side split as `contested` (no majority), and `TestSplitDescriptor`
+pins the tied-verdict line (worst-first `a/b`, `""` when a majority exists). And in `internal/brief`, a
+contested leaf whose modal verdict is `faithful` sorts **ahead of** a settled `contradicted` leaf,
+proving the contested-first tiebreak — not id order — decides the head of tier 0.
 
 ### `current/`
 
@@ -147,18 +158,23 @@ chain written before `route` existed still renders correctly once the claims fil
    (`-manifest`, else a `# sources:` header). The "checked against M source documents" clause is
    dropped when `M` is unknown (0).
 2. A blank line, then one line per **class** below, each omitted when its count is 0, in this order.
-   `route=evaluative` is resolved to the opinion class *first*, before any verdict-based class, so a
-   claim's verdict never places it once it is an opinion.
+   Placement runs in a fixed precedence, so each finding lands in exactly one class: **opinion first**
+   (`route=evaluative` or a recommendation — its verdict never places it once it is an opinion), then
+   the **stability partition** (a `contested` leaf is filed by disagreement, not by verdict, and so is
+   excluded from every verdict class), then the **schema gate** (a malformed judge reason forces the
+   verdict to unverifiable), then the **verdict** itself.
 
 | class line | membership | detail shown |
 |---|---|---|
-| `Holds: <n> findings say what their sources say.` | verdict `faithful`, non-opinion | none |
-| `Contradicted by their own sources: <n>` | verdict `contradicted`, non-opinion | one indented line per claim: id, then `so_what` (≤ 20 words) |
-| `Overstated: <n>` | verdict `overstated`, non-opinion | ids + `so_what` |
-| `Unsupported by any held source: <n>` | verdict `unsupported`, or verdict `absent` on a non-opinion claim (route `source`/`evidence`/`data-gap`) | ids, `so_what` where present |
+| `Sources don't settle these: <n>` | class `contested` (the runs crossed the divide or had no majority), non-opinion — **the top group** | one plain line per claim: `id: split a/b` for a tie, else `id: <modal> <spread> ≠ <dissent>` (the crossing verdicts). No `so_what`. |
+| `Holds: <n> findings say what their sources say.` | verdict `faithful`, non-opinion, non-contested | none |
+| `Contradicted by their own sources: <n>` | verdict `contradicted`, non-opinion, non-contested | one indented line per claim: id, then `so_what` (≤ 20 words) |
+| `Overstated: <n>` | verdict `overstated`, non-opinion, non-contested | ids + `so_what` |
+| `Unsupported by any held source: <n>` | verdict `unsupported`, or verdict `absent` on a non-opinion claim (route `source`/`evidence`/`data-gap`), non-contested | ids, `so_what` where present |
 | `Committee opinions, not checked: <n>` | opinions (`route=evaluative` and recommendations) | none (no ids) |
-| `Unverifiable, document not held: <n>` | verdict `unverifiable` | ids + the missing document name (from `so_what`, "fetch X" → X) |
-| `Generalised from narrower evidence: <n>` | verdict `partial` | up to **2** indented lines for partials with a non-`none` gap **and** a number or place name in the claim text, ranked by spread (`3/3` before `2/3`), id + `so_what` |
+| `Unverifiable, document not held: <n>` | verdict `unverifiable` from a cited document not in the corpus | ids + the missing document name (from `so_what`, "fetch X" → X) |
+| `Unverifiable, judge output malformed: <n>` | the schema gate fired — verdict forced to `unverifiable` because the judge's reason was empty or carried a raw tag (see § The rules that gate a verdict) | one plain line per claim: `id: judge output malformed` |
+| `Generalised from narrower evidence: <n>` | verdict `partial`, non-contested | up to **2** indented lines for partials with a non-`none` gap **and** a number or place name in the claim text, ranked by spread (`3/3` before `2/3`), id + `so_what` |
 
 3. A blank line, then the value line: `Changes <s> summary lines across <c> chapters.` — `s` is the
    number of distinct §-heading sections (a claim's full heading path) holding a Needs-you leaf, `c`
@@ -174,13 +190,22 @@ sentence-initial capital and an all-caps acronym like `ABC` do not).
 block body (the class region) stays within 15 lines. `so_what` text is used verbatim from the chain,
 truncated to 20 words; a leaf with none prints the id alone.
 
-### Refuter
+### Refuters
 
-`internal/tree` `TestRootBlock` builds a hand-made chain of 12 records covering every class and checks
-the block line for line against a golden string. A companion mutation flips one `route=evaluative`
-record to `route=source`; because that record's verdict is `absent`, the flip must move it out of
-*Committee opinions* and into *Unsupported by any held source*, changing that count — the test that
-`route` actually gates the partition, not just decorates it.
+`internal/tree` `TestRootBlock` builds a hand-made chain of 12 records covering the verdict classes and
+checks the block line for line against a golden string. `TestRootBlockRouteGates` flips one
+`route=evaluative` record to `route=source`; because that record's verdict is `absent`, the flip must
+move it out of *Committee opinions* and into *Unsupported by any held source*, changing that count — the
+test that `route` actually gates the partition, not just decorates it.
+
+`TestRootBlockContestedFirst` is the stability-partition refuter: two contested leaves — one that
+crossed the divide with a modal `faithful`, one that tied — must appear together under *Sources don't
+settle these* (the tie reading `split a/b`) and be kept out of the verdict classes; were the crossing
+leaf filed by verdict it would inflate *Holds*. The mutation clears its `contested` class and it must
+then move into *Holds*, proving stability is partitioned first. `TestRootBlockSchemaFailure` is the
+schema-gate refuter: a leaf marked `SchemaFail` must file under *Unverifiable, judge output malformed*
+(flagged by id) and stay out of *Holds* even though its stored verdict still reads `faithful`; clearing
+the flag returns it to *Holds*.
 
 ## The rules that gate a verdict
 
@@ -196,6 +221,15 @@ model and the tree (`spec/CLI.md` § Faithfulness judge and § Retrieval carry t
    `unverifiable` (reason names the missing document, so-what "fetch X"), decided before any model
    call. This reserves `absent` for cited-document-present, claim-not-found.
 4. **Retrieval floor.** When nothing clears `-floor`, the finding is `absent` from code, retrieved=0.
+5. **Schema gate.** A leaf whose judge reason is empty or carries a raw markup tag (e.g. a leaked
+   `</antml_parameter>`, the fingerprint of a truncated or malformed structured response) is a schema
+   failure: its verdict is forced to `unverifiable` and the leaf is flagged, because a verdict whose
+   reason did not survive the schema rests on nothing checkable, whatever the verdict string claims.
+   Opinions are exempt — they are never judged, so an empty reason on one is expected. In the root block
+   these leaves form the *Unverifiable, judge output malformed* class, distinct from the missing-document
+   `unverifiable`. Refuters: `brief.SchemaFailed` (empty and raw-tag reasons fail; a plain finding, a
+   reason containing `<` used arithmetically, and ordinary punctuation pass) and the root-block
+   `TestRootBlockSchemaFailure` above.
 
 Faithfulness itself is scope-disciplined: `faithful` requires the source to state the claim's subject,
 scope, and direction; an adjacent or broader statement is `partial` at best (`gap=scope`).

@@ -24,12 +24,14 @@ type RootMeta struct {
 type class int
 
 const (
-	clHolds class = iota
+	clContested class = iota // the stability partition, taken first: sources that disagree across runs
+	clHolds
 	clContradicted
 	clOverstated
 	clUnsupported
 	clOpinion
 	clUnverifiable
+	clSchemaFail // verdict unverifiable because the judge's reason failed the schema, not a missing document
 	clGeneralised
 	numClasses
 )
@@ -39,11 +41,21 @@ const (
 	rootWordCap = 34 // words of the stakes line shown on a detail line — fits both ≤12-word halves whole
 )
 
-// classify places a row in exactly one class. Opinion resolution runs first, so an opinion's
-// faithfulness verdict — even contradicted or absent — never lands it in a verdict-based class.
+// classify places a row in exactly one class, in this precedence: opinion (never judged), then the
+// stability partition (a contested leaf is filed by disagreement, not by verdict — spec/TREE.md § Root
+// node rendering), then the schema gate (a malformed judge reason overrides the verdict), then the
+// verdict itself. Opinion runs first so an opinion's verdict — even contradicted or absent — never
+// lands it in a verdict-based class; contested runs before the verdict so it is excluded from every
+// verdict group.
 func classify(r brief.Row) class {
 	if brief.IsOpinion(r) {
 		return clOpinion
+	}
+	if r.Class == "contested" {
+		return clContested
+	}
+	if r.SchemaFail {
+		return clSchemaFail
 	}
 	switch verdictOf(r) {
 	case "faithful":
@@ -76,6 +88,9 @@ func RootBlock(rows []brief.Row, meta RootMeta) string {
 	fmt.Fprintln(&b, titleLine(meta, len(rows)))
 	fmt.Fprintln(&b)
 
+	// The stability partition is taken first: the findings the runs could not agree on are the ones a
+	// reader most needs, and they are excluded from every verdict class below.
+	writeIDClass(&b, "Sources don't settle these", buckets[clContested], contestedDetail)
 	if n := len(buckets[clHolds]); n > 0 {
 		fmt.Fprintf(&b, "Holds: %d findings say what their sources say.\n", n)
 	}
@@ -86,10 +101,14 @@ func RootBlock(rows []brief.Row, meta RootMeta) string {
 		fmt.Fprintf(&b, "Committee opinions, not checked: %d\n", n)
 	}
 	writeIDClass(&b, "Unverifiable, document not held", buckets[clUnverifiable], missingDocDetail)
+	writeIDClass(&b, "Unverifiable, judge output malformed", buckets[clSchemaFail], schemaFailDetail)
 	writeGeneralised(&b, buckets[clGeneralised])
 
 	// When -from merged several runs, report how stable the verdicts were across them. The three
-	// classes partition the findings, so they sum to N — the same discipline as the class lines above.
+	// classes partition the *judged* findings; opinions are not judged, so they sit outside this line
+	// (counted under Committee opinions above) and the three plus that count sum to N. The contested
+	// figure here therefore equals the top group's count — both are the judged findings the runs could
+	// not settle.
 	if meta.Runs > 1 {
 		settled, wobble, contested := stabilityCounts(rows)
 		fmt.Fprintln(&b)
@@ -103,10 +122,15 @@ func RootBlock(rows []brief.Row, meta RootMeta) string {
 	return b.String()
 }
 
-// stabilityCounts tallies the merged-run stability classes carried on the rows. A row with no Class
-// (a single-chain render never sets one) counts as settled, so the three always sum to len(rows).
+// stabilityCounts tallies the merged-run stability classes carried on the judged rows. Opinions are
+// skipped — they are never judged, so a stability class on one is a category error, and counting them
+// here would make the contested figure disagree with the top group, which excludes them. A judged row
+// with no Class (a single-chain render never sets one) counts as settled.
 func stabilityCounts(rows []brief.Row) (settled, wobble, contested int) {
 	for _, r := range rows {
+		if brief.IsOpinion(r) {
+			continue
+		}
 		switch r.Class {
 		case "wobble":
 			wobble++
@@ -181,6 +205,31 @@ func writeGeneralised(b *strings.Builder, rows []brief.Row) {
 	for _, r := range hi {
 		fmt.Fprintf(b, "  %s\n", soWhatDetail(r))
 	}
+}
+
+// contestedDetail is the one plain line a contested leaf shows: "id: split a/b" when the pool tied and
+// no verdict can be named, else "id: <modal> <spread> ≠ <dissent>" — the disagreement stated as the
+// verdicts that crossed the divide. It never shows a so-what, because a contested leaf has no settled
+// verdict for one to summarise.
+func contestedDetail(r brief.Row) string {
+	if r.Split != "" {
+		return r.ID + ": split " + r.Split
+	}
+	v := verdictOf(r)
+	if r.Spread != "" {
+		v += " " + r.Spread
+	}
+	if r.Dissent != "" {
+		v += " ≠ " + r.Dissent
+	}
+	return r.ID + ": " + v
+}
+
+// schemaFailDetail is "id: judge output malformed" — the flag for a leaf whose verdict was forced to
+// unverifiable because the judge's reason was empty or carried a raw tag. The full malformed reason is
+// preserved on the tree leaf itself (schemaLeafFlag); the block only names the failure.
+func schemaFailDetail(r brief.Row) string {
+	return r.ID + ": judge output malformed"
 }
 
 // soWhatDetail is "id: so-what (≤20 words)", or the id alone when the leaf carries no so-what.
