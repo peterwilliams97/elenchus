@@ -1,0 +1,152 @@
+model claude-sonnet-4-6 · backend anthropic · calls 389 · $8.1195 (rates 2026-06-01) · wall 59m5s
+69 findings checked against 60 source documents
+
+Holds: 26 findings say what their sources say.
+Unsupported by any held source: 11
+  F3: The report says The creative industries draw visitors and tourists, boosting the economy.. No held source says this.
+  F5: The report says Taking part in creative industries unites people and builds social cohesion. No held source says this.
+  F19: The report says COVID made things worse for women and gender-diverse people, especially those with caring duties, causing lasting money troubles. No held source says this.
+  and 8 more
+Committee opinions, not checked: 9
+Unverifiable, document not held: 2
+  F38a: qon:abc/2025-02-27
+  F38b: qon:abc/2025-02-27
+Generalised from narrower evidence: 21
+  F8: The report says COVID removed training chances for people trying to break into creative fields. The source only says Training and entry-level chances are shrinking for emerging artists and graduates due to financial pressures…
+  F9: The report says Being left out of COVID support programs made money problems worse and left lasting skill gaps.. The source only says Being left out of COVID support programs worsened financial hardship and…
+
+Changes 18 summary lines across 3 chapters.
+
+tree — depth 4, max width 7, score 18.0 (target ≤20) ok
+
+  2  Chapter 2 — Overview of Victoria's cultural and creative industries  [2]
+    2.1.1–2.2.5  2.1.1–2.2.5  [7]
+      2.1.1  Economic significance  [5]
+        F1  Victorian cultural & creative industries contributed $40.5 …  faithful 3/3
+        F2a  The industries employ more than 320,000 Victorians.  faithful 3/3
+        F2b  That is almost 9% of total employment in the state.  faithful 3/3
+        F3  The industries provide significant economic stimulus by att…  absent 2/3
+            ↳ so what: The report says The creative industries draw visitors and tourists, boosting the economy.. No held source says this.
+        F4  Victoria rated higher for cultural participation than all o…  faithful 3/3
+      2.1.2  Social significance  [2]
+        F5  Engagement with the industries brings communities together,…  absent 3/3
+            ↳ so what: The report says Taking part in creative industries unites people and builds social cohesion. No held source says this.
+        F6  A growing body of evidence recognises the role arts and cre…  faithful 3/3
+      2.2.1  Loss of audiences and income  [5]
+        F7  COVID-19 severely damaged the industries, limiting opportun…  faithful 3/3
+        F8  COVID-19 took away critical training opportunities from tho…  partial 3/3
+            ↳ so what: The report says COVID removed training chances for people trying to break into creative fields. The source only says Training and entry-level chances are shrinking for emerging artists and graduates due to financial pressures and industry contraction following COVID-19.
+        F9  Exclusion from COVID-19 financial support programs exacerba…  partial 3/3
+            ↳ so what: The report says Being left out of COVID support programs made money problems worse and left lasting skill gaps.. The source only says Being left out of COVID support programs worsened financial hardship and contributed to loss of casual staff and technical workers from the sector..
+        F10  Children's and young people's creative participation and at…  partial 3/3
+            ↳ so what: The report says Both kids' arts attendance and young people's creative activity fell sharply over that period. The source only says Kids' attendance at performing arts events dropped from 40% to 31%; adult attendance at cultural venues fell from 86% to 69%.
+        F11  Several live music venues have closed following COVID-19 du…  partial 3/3
+            ↳ so what: The report says Some live music venues shut down after COVID due to rising costs and patchy support. The source only says 256 venues in Victoria and 1300 across Australia closed since COVID-19 began.
+      2.2.2  Negative mental health impacts  [1]
+        F12  COVID-19 led to worsening mental health in the industries, …  partial 3/3
+            ↳ so what: The report says COVID made mental health worse in the arts, especially for kids and young people. The source only says COVID hit young theatre members hard emotionally; artists suffered mental health harm; culturally diverse creatives faced depression and wellbeing issues.
+      2.2.3  Significant cost increases  [1]
+      2.2.4  Harder to make a living  [2]
+        F14  It has never been harder for Victorians to make a living in…  opinion
+        F15  Insecure or low wages impact retention and discourage peopl…  partial 2/3
+            ↳ so what: The report says Low pay and job insecurity put people off staying in or joining the creative industries. The source only says Many arts workers are leaving or considering leaving, citing burnout, lack of work, and desire for better pay among several reasons.
+      2.2.5  Broader cost of living crisis  [3]
+        F16  Many who want to engage with the industries cannot afford t…  faithful 3/3
+        F17  Ticket prices are a key barrier for people wanting to engag…  faithful 3/3
+        F18  COVID-19 and the cost-of-living crisis have accelerated the…  partial 3/3
+            ↳ so what: The report says Both COVID and the high cost of living sped up the fall in volunteer numbers across the arts.. The source only says COVID caused a big drop in gallery volunteers that has not bounced back; cost-of-living pressures are also straining sectors that depend on volunteers..
+    2.2.6–2.2.6  2.2.6–2.2.6  [1]
+      2.2.6  Exacerbation of long-term issues  [1]
+        F19  COVID-19 exposed and intensified systemic issues in the ind…  absent 3/3
+            ↳ so what: The report says COVID made things worse for women and gender-diverse people, especially those with caring duties, causing lasting money troubles. No held source says this.
+  3  Chapter 3 — Government investment in Victoria's cultural and creative industries  [2]
+    3.2.1–3.2.7  3.2.1–3.2.7  [7]
+      3.2.1  Funding has not been indexed  [1]
+      3.2.2  Grant and reporting requirements are onerous  [1]
+      3.2.3  Grant programs are unpredictable  [1]
+        F22  Unpredictable grant programs cause instability and prevent …  partial 3/3
+            ↳ so what: The report says unclear grant timing blocks long-term planning and bigger investment decisions. The source only says grant calendar gaps block careful, forward-looking planning by arts groups.
+      3.2.4  Grant opportunities are limited  [1]
+        F23  Infrequent grant programs leave greater numbers of applican…  partial 2/3
+            ↳ so what: The report says fewer grant rounds mean more artists go unsupported for longer stretches. The source only says since 2020 only three rounds of one specific grant program have run, and a witness called this halting.
+      3.2.5  Grant caps are too low  [1]
+        F24  A low $20,000 max grant cap in some programs limits what re…  absent 3/3
+            ↳ so what: The report says A $20,000 ceiling on some grants holds back recipients and forces them to apply multiple times. No held source says this.
+      3.2.6  Focus on infrastructure rather than artists  [1]
+      3.2.7  Grants programs don't cover the ideation process  [1]
+        F26  By requiring a developed concept/project, grant programs ex…  partial 3/3
+            ↳ so what: The report says Grant rules shut out people who cannot afford to do free planning work upfront. The source only says The unpaid planning work before a grant starts means some artists end up working for free on their own projects.
+    3.2.8–3.3.6  3.2.8–3.3.6  [4]
+      3.2.8  Confusion around what level of government funds what  [1]
+      3.2.9  Lack of focus on creative investment in regional Victoria  [1]
+      3.3.5  Does Victoria get its fair share of federal funding?  [2]
+        F29  Victoria receives its fair share of funding from Creative A…  partial 3/3
+            ↳ so what: The report says Victoria gets its proper portion of Creative Australia money. The source only says Victoria as a whole gets its per-capita share, but regional areas across Australia get far less than their share.
+        F30  It is difficult to determine Victoria's fair share of other…  faithful 2/3
+      3.3.6  Regional Victoria is not getting its fair share  [2]
+        F31  Regional Victoria does not receive its fair share of fundin…  partial 3/3
+            ↳ so what: The report says Regional Victoria gets less than its due share from Creative Australia. The source only says Regional Australia as a whole gets far less than its share from Creative Australia; regional Victoria's per-capita spend is lower than regional peers elsewhere.
+        F32  It is difficult to determine regional Victoria's fair share…  faithful 3/3
+  4  Chapter 4 — National broadcasters  [6]
+    4.3.1  ABC headcount in Victoria  [7]
+      F33  No state/territory has an ABC headcount that accurately ref…  absent 3/3
+          ↳ so what: The report says Every state and territory has an ABC workforce share that mismatches its population size. No held source says this.
+      F34a  The ABC Ultimo→Parramatta relocation was influenced by lega…  faithful 3/3
+      F34b  ...and by budget constraints that made NSW the most cost-ef…  absent 3/3
+          ↳ so what: The report says Budget limits made NSW the cheapest and most practical choice.. No held source says this.
+      F34c  ...and by the Parramatta office's proximity to key state de…  faithful 2/3
+      F34d  ...and by a strategic goal to better reflect NSW's populati…  faithful 3/3
+      F35  It is disappointing that both the ABC and SBS expanded thei…  opinion
+      F36  The ABC's ability to culturally represent a state goes beyo…  faithful 3/3
+    4.3.2  ABC spending on content production in Victoria  [6]
+      F37  The Committee calls for continued advocacy for the return o…  opinion
+      F38a  ABC spending is unevenly distributed across states/territor…  unverifiable manifest
+          ↳ so what: fetch qon:abc/2025-02-27
+      F38b  No state/territory receives ABC funding proportionate to it…  unverifiable manifest
+          ↳ so what: fetch qon:abc/2025-02-27
+      F39a  ABC content-production decisions are shaped by state screen…  partial 3/3
+          ↳ so what: The report says ABC decides what content to make based on state agency rules and money. The source only says State agency funding and tools help close finance on ABC productions, and agency budget size matters to the ABC.
+      F39b  The ABC's budget is, in real terms, 14% less than it was a …  partial 2/3
+          ↳ so what: The report says the ABC gets about $1.2bn a year, which is 14% below its budget ten years ago. The source only says the ABC's money, in real terms, is 14% lower than a decade ago.
+      F39c  Rising production costs and the budget reduction have const…  partial 3/3
+          ↳ so what: The report says Rising costs and budget cuts have limited ABC's content output and growth. The source only says Rising costs and a real-terms budget fall mean tough choices; Geelong expansion possible if resources allow.
+    4.4.1  SBS headcount in Victoria  [4]
+      F40  No state/territory reflects an SBS FTE number proportionate…  absent 3/3
+          ↳ so what: The report says No state or territory gets an SBS FTE share matching its population share. No held source says this.
+      F41  SBS staff distribution doesn't reflect content availability…  partial 3/3
+          ↳ so what: The report says SBS staff skew to NSW but content is national so everyone can access it. The source only says Clare O'Neil said SBS content is national and platform-agnostic so all Australians benefit; the 83% figure for Sydney staff came from the questioner, not O'Neil.
+      F42  SBS's decision to relocate to Western Sydney was determined…  partial 3/3
+          ↳ so what: The report says SBS chose western Sydney because federal funding required it. The source only says Federal funding was for western Sydney; the board still decides whether to move; the hub proposal came from the board in response to a minister's invitation.
+      F43  It is unclear why Victoria was not considered in the Federa…  opinion
+    4.4.2  §4.4.2  [2]
+    4.5.1  How ABC represents Victorian stories and talent  [2]
+      F46a–F49b  F46a–F49b  [7]
+        F46a  Between 2020–21 and Jan 2025, the ABC commissioned 75 exter…  faithful 3/3
+        F46b  ...and produced 52 internal projects with the majority of p…  partial 3/3
+            ↳ so what: The report says the ABC made 52 internal projects where most production happened in Victoria. The source only says the 52 internal projects were based in Victoria.
+        F46c  ...demonstrating the ABC's vital role in supporting the sta…  opinion
+        F47  The ABC partners with major Victorian cultural institutions…  faithful 3/3
+        F48  Through VicScreen internships and Indigenous placements, th…  unsupported 2/3
+            ↳ so what: The report says ABC builds Victoria's creative workforce via VicScreen placements and Indigenous programs. No held source says this.
+        F49a  The ABC delivers 16 unique regional local-radio programs in…  unsupported 2/3
+            ↳ so what: The report says ABC puts out 16 distinct local radio programs for regional Victoria. No held source says this.
+        F49b  ...producing over 112 hours (6,751 minutes) of local conten…  unsupported 3/3
+            ↳ so what: The report says ABC Victoria produces over 112 hours of local content every week. No held source says this.
+      F49c–F52  F49c–F52  [4]
+        F49c  ...across 9 local radio stations/services.  partial 2/3
+            ↳ so what: The report says the ABC runs 9 local radio stations or services. The source only says the ABC provides nine local radio services in Victoria.
+        F50  A main challenge for ABC regional-Victoria content is the l…  faithful 3/3
+        F51  The cost of producing content in regional Victoria requires…  opinion
+        F52  Producing content in regional areas delivers significant so…  partial 3/3
+            ↳ so what: The report says Making content in regional areas brings big social and money gains for those places.. The source only says Passages show jobs and money gains from ABC content made across Victoria broadly, with regional benefits noted more loosely..
+    4.5.2  How SBS represents Victorian stories and talent  [6]
+      F53a  SBS receives about one-third of the ABC's funding.  faithful 3/3
+      F53b  ...which restricts its ability to produce and commission co…  absent 3/3
+          ↳ so what: The report says SBS's finances limit how much content it can make or commission in Victoria. No held source says this.
+      F54a  SBS sustains substantial Melbourne-based operations produci…  faithful 3/3
+      F54b  ...reaching 3.42 million Victorian viewers monthly (~49% of…  faithful 3/3
+      F54c  ...while supporting diverse communities through partnership…  partial 3/3
+          ↳ so what: The report says SBS backs diverse communities by teaming up with VicScreen and local creatives. The source only says SBS partners with VicScreen on productions and works with Victorian cast, crew and creative industry broadly.
+      F55  SBS deeply engages Victoria's multilingual/multicultural co…  faithful 3/3
+
+Full table: examples/vic-lceic/evidence/2026-09-09-full/audit.md

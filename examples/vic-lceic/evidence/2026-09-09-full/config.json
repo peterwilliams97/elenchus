@@ -1,0 +1,3 @@
+{"cell":"sonnet-retrieved-full","backend":"anthropic","model":"claude-sonnet-4-6","retrieve":"bm25","n":3,
+ "max_tokens":10000,"floor":0,"embed":true,"manifest":"sources/MANIFEST.md","claims":"claims-machine-full.txt (69 findings)",
+ "corpus":"hearings+submissions+qon","git_sha":"aad89f9","date":"2026-09-09","note":"full re-run after route_src provenance folded into claims-machine.txt"}

@@ -40,6 +40,28 @@ func TestSelectedOrder(t *testing.T) {
 	}
 }
 
+// TestContestedOutranksContradicted is the merge Needs-you refuter: a contested leaf whose modal
+// verdict is `faithful` (which alone would not qualify) must select at tier 0 AND sort ahead of a
+// settled `contradicted` leaf with a lower id — proving the contested-first tiebreak, not id order,
+// heads tier 0. spec/TREE.md § Merging runs is the contract.
+func TestContestedOutranksContradicted(t *testing.T) {
+	rows := []Row{
+		{ID: "F1", Text: "a unanimous reversal", Faith: "contradicted", Class: "settled"},
+		{ID: "F9", Text: "the judges disagreed", Faith: "faithful", Class: "contested"},
+	}
+	sels := Selected(rows)
+	if len(sels) != 2 {
+		t.Fatalf("both must select (contested pulls the faithful leaf in): got %d", len(sels))
+	}
+	if sels[0].Row.ID != "F9" {
+		t.Errorf("contested F9 must head tier 0 ahead of settled contradicted F1; got order %s,%s",
+			sels[0].Row.ID, sels[1].Row.ID)
+	}
+	if sels[0].Tier != 0 {
+		t.Errorf("contested leaf must select at tier 0, got %d", sels[0].Tier)
+	}
+}
+
 func TestBriefReport(t *testing.T) {
 	rows := []Row{
 		{ID: "F1", Text: "supported claim", Faith: "faithful"},

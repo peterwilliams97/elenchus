@@ -1,0 +1,2 @@
+{"model":"claude-sonnet-4-6","calls":201,"input_tokens":0,"output_tokens":0,"cache_read_tokens":0,"cache_create_tokens":0,"web_searches":0,"wall_seconds":40.352255041,"est_usd":"$0.0000 (rates 2026-06-01)"}
+{"model":"claude-sonnet-4-6","calls":389,"input_tokens":29429,"output_tokens":140062,"cache_read_tokens":13836222,"cache_create_tokens":474514,"web_searches":0,"wall_seconds":3545.414909666,"est_usd":"$8.1195 (rates 2026-06-01)"}

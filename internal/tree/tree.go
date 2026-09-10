@@ -310,7 +310,10 @@ func leafVerdict(r brief.Row) string {
 	}
 	v := verdictOf(r)
 	if r.Spread != "" {
-		return v + " " + r.Spread
+		v += " " + r.Spread
+	}
+	if r.Dissent != "" {
+		v += " ≠ " + r.Dissent // name the minority verdict(s) behind a split, e.g. "partial 2/3 ≠ faithful"
 	}
 	return v
 }

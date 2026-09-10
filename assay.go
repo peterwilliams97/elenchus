@@ -74,6 +74,7 @@ type cfg struct {
 	rootTitle    string              // report title for the root block's line 1, from the claims file "# title:" header
 	rootDate     string              // report date for the root block's line 1, from the claims file "# date:" header
 	sourceDocs   int                 // M: documents held per the manifest; the root block's "checked against M" figure
+	runs         int                 // chains merged under -from; >1 adds the root block's stability line. 0/1 = single run
 	usage        *usageCounters
 	tally        *runTally
 	// cachedSource is the stable prefix (e.g. the source transcript) placed in a Request's Cached
@@ -173,7 +174,7 @@ func main() {
 	flag.StringVar(&chainDir, "chain-dir", "", "directory for Tier-2 JSONL verification chain (default: eval/<stamp>/)")
 	flag.BoolVar(&full, "full", false, "print the full table to stdout instead of the brief report")
 	flag.Var(&treeF, "tree", "print the tree report to stdout; -tree=full expands every node")
-	flag.StringVar(&fromChain, "from", "", "render brief/tree/audit from a saved chain JSONL (no model calls)")
+	flag.StringVar(&fromChain, "from", "", "render brief/tree/audit from a saved chain JSONL (no model calls); a comma-list of chains merges them leaf-by-leaf")
 	flag.Parse()
 
 	// -full and -tree select different stdout renderers; refuse to guess which the caller meant.
@@ -512,16 +513,18 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 		}
 	}
 
-	emit := func(i int, chosen faith, spread string, pids []string, t time.Time) {
+	emit := func(i int, chosen faith, spread string, samples, pids []string, t time.Time) {
 		results[i] = chosen
 		rec := faithChainRecord(i, len(raw), parsed[i].text, chosen, t)
 		rec.Spread = spread
+		rec.Samples = samples
 		rec.Passages = pids
 		rec.Route = parsed[i].route
 		c.appendChain(rec)
 		c.progressDone(i, len(raw), chosen.Verdict, parsed[i].text, t)
+		_, dissent := spreadFromSamples(samples)
 		rows[i] = brief.Row{ID: parsed[i].id, Path: parsed[i].path, Text: parsed[i].text,
-			Faith: chosen.Verdict, FaithReason: chosen.Evidence, Spread: spread,
+			Faith: chosen.Verdict, FaithReason: chosen.Evidence, Spread: spread, Dissent: dissent,
 			Gap: chosen.Gap, SoWhat: chosen.SoWhat, Route: parsed[i].route}
 		details[parsed[i].id] = tree.Leaf{Reason: chosen.Evidence, Quotes: chosen.Quotes}
 		vs[i] = chosen.Verdict
@@ -538,9 +541,10 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 		if c.tally != nil {
 			c.tally.record(rec.Verdict)
 		}
+		spread, dissent := spreadForRecord(rec)
 		rows[i] = brief.Row{ID: parsed[i].id, Path: parsed[i].path, Text: parsed[i].text,
-			Faith: rec.Verdict, FaithReason: fd.CriticFinding, Spread: rec.Spread, Gap: fd.Gap,
-			SoWhat: fd.SoWhat, Route: routeOr(rec.Route, parsed[i].route)}
+			Faith: rec.Verdict, FaithReason: fd.CriticFinding, Spread: spread, Dissent: dissent,
+			Gap: fd.Gap, SoWhat: fd.SoWhat, Route: routeOr(rec.Route, parsed[i].route)}
 		details[parsed[i].id] = tree.Leaf{Reason: fd.CriticFinding, Quotes: fd.Quotes}
 		vs[i] = rec.Verdict
 	}
@@ -572,7 +576,7 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 			list := strings.Join(miss, ", ")
 			emit(i, faith{Verdict: "unverifiable",
 				Evidence: "cited document(s) not in corpus: " + list, SoWhat: "fetch " + list},
-				"manifest", nil, time.Now())
+				"manifest", nil, nil, time.Now())
 		}
 	}
 
@@ -580,7 +584,7 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 	for i, isBelow := range below {
 		if isBelow && !done[i] {
 			emit(i, faith{Verdict: "absent", Evidence: "no passage cleared the retrieval floor (retrieved=0)"},
-				"floor", nil, time.Now())
+				"floor", nil, nil, time.Now())
 		}
 	}
 
@@ -594,8 +598,8 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 				continue
 			}
 			t := c.progressStart(i, len(raw), "faithfulness")
-			chosen, spread := c.faithJudgeRepeat(parsed[i].text, shared)
-			emit(i, chosen, spread, pids, t)
+			chosen, spread, samples := c.faithJudgeRepeat(parsed[i].text, shared)
+			emit(i, chosen, spread, samples, pids, t)
 		}
 	}
 	c.present(rows, tally(vs), mdFaith(results), func() { c.termFaith(results) }, details)
@@ -1277,30 +1281,71 @@ func (c cfg) groundVerdict(verdict string, verified []string) string {
 	return verdict
 }
 
-// faithJudgeRepeat runs faithJudge c.repeat times and returns the modal result plus a "k/N" agreement
-// string ("" when N=1). N=1 is deterministic (temperature 0); N>1 samples at judgeSampleTemp so the
-// spread reflects real judge instability, with the cached passage prefix reused across the repeats.
-func (c cfg) faithJudgeRepeat(claim string, passages []retrieve.Passage) (faith, string) {
+// faithJudgeRepeat runs faithJudge c.repeat times and returns the modal result, a "k/N" agreement
+// string ("" when N=1), and every sample's verdict in draw order (nil when N=1). N=1 is deterministic
+// (temperature 0); N>1 samples at judgeSampleTemp so the spread reflects real judge instability, with
+// the cached passage prefix reused across the repeats. The ordered list is what the chain persists so
+// -from can rebuild the spread and name the dissent without re-running the judge.
+func (c cfg) faithJudgeRepeat(claim string, passages []retrieve.Passage) (faith, string, []string) {
 	n := c.repeat
 	if n < 1 {
 		n = 1
 	}
 	if n == 1 {
 		zero := 0.0
-		return c.faithJudge(claim, passages, &zero), ""
+		return c.faithJudge(claim, passages, &zero), "", nil
 	}
 	t := judgeSampleTemp
 	counts := make(map[string]int, n)
 	rep := make(map[string]faith, n)
+	samples := make([]string, 0, n)
 	for k := 0; k < n; k++ {
 		r := c.faithJudge(claim, passages, &t)
 		counts[r.Verdict]++
+		samples = append(samples, r.Verdict)
 		if _, seen := rep[r.Verdict]; !seen {
 			rep[r.Verdict] = r
 		}
 	}
 	modal := modalVerdict(counts)
-	return rep[modal], fmt.Sprintf("%d/%d", counts[modal], n)
+	return rep[modal], fmt.Sprintf("%d/%d", counts[modal], n), samples
+}
+
+// spreadFromSamples derives the "k/N" agreement fraction for the modal verdict and the dissent — the
+// minority verdicts in first-seen order, comma-joined, "" when unanimous — from the recorded list of
+// sample verdicts. It reads the stored list rather than any pre-baked spread string, so -from renders
+// exactly what the live run drew. A list shorter than 2 has no spread to show.
+func spreadFromSamples(samples []string) (spread, dissent string) {
+	if len(samples) < 2 {
+		return "", ""
+	}
+	counts := make(map[string]int, len(samples))
+	order := make([]string, 0, len(samples))
+	for _, v := range samples {
+		if _, seen := counts[v]; !seen {
+			order = append(order, v)
+		}
+		counts[v]++
+	}
+	modal := modalVerdict(counts)
+	var d []string
+	for _, v := range order {
+		if v != modal {
+			d = append(d, v)
+		}
+	}
+	return fmt.Sprintf("%d/%d", counts[modal], len(samples)), strings.Join(d, ", ")
+}
+
+// spreadForRecord gives the spread fraction and dissent a rendered row should show for a saved chain
+// record. It rebuilds both from the recorded `samples` list when present, so -from names the dissent
+// behind a split; a record written before `samples` existed falls back to the pre-baked `spread`
+// string with no dissent — the back-compat path.
+func spreadForRecord(rec chainRecord) (spread, dissent string) {
+	if len(rec.Samples) > 0 {
+		return spreadFromSamples(rec.Samples)
+	}
+	return rec.Spread, ""
 }
 
 // quoteInPassage reports whether quote appears verbatim in the passage the judge cited — checked over
@@ -2270,7 +2315,8 @@ func (c *cfg) present(rows []brief.Row, counts, mdTable string, termTable func()
 		}
 	}
 	// The root summary block sits above the tree in both stdout (tree mode) and tree.html.
-	rootBlock := tree.RootBlock(rows, tree.RootMeta{Title: c.rootTitle, Date: c.rootDate, SourceDocs: c.sourceDocs})
+	rootBlock := tree.RootBlock(rows, tree.RootMeta{
+		Title: c.rootTitle, Date: c.rootDate, SourceDocs: c.sourceDocs, Runs: c.runs})
 	if c.treeHTMLPath != "" {
 		htmlDoc := tree.RenderHTML(rows, details, c.headerLine(), rootBlock)
 		if err := os.WriteFile(c.treeHTMLPath, []byte(htmlDoc), 0o644); err != nil {
@@ -2344,6 +2390,7 @@ type chainRecord struct {
 	Verdict  string          `json:"verdict"`
 	Route    string          `json:"route,omitempty"`    // what settles the claim: evidence|source|evaluative|data-gap
 	Spread   string          `json:"spread,omitempty"`   // "k/N" agreement when -n>1, else ""
+	Samples  []string        `json:"samples,omitempty"`  // every -n>1 sample's verdict, in draw order; -from reads spread and dissent from this
 	Passages []string        `json:"passages,omitempty"` // retrieved passage ids the judge saw (bm25 mode)
 	ElapsedS float64         `json:"elapsed_s"`
 	Detail   json.RawMessage `json:"detail"`
@@ -2549,6 +2596,91 @@ func readChain(path string) ([]chainRecord, string, error) {
 	return recs, mode, nil
 }
 
+// mergeChains pools, per claim index, the sample verdicts from every chain and returns one record per
+// index carrying the modal verdict over the pool, the pooled samples (so spreadForRecord recomputes
+// the k/N fraction and dissent for free), and the detail of a chain that drew that modal verdict. It
+// also returns each index's stability class (settled/wobble/contested) — the axis the multi-run root
+// block and the contested Needs-you tier read. Every chain shares length and per-index claim text
+// (the caller checks each chain against the claims file). Single-chain -from never reaches here.
+func mergeChains(chains [][]chainRecord) (merged []chainRecord, classes []string) {
+	n := len(chains[0])
+	merged = make([]chainRecord, n)
+	classes = make([]string, n)
+	for i := 0; i < n; i++ {
+		var pool []string
+		counts := map[string]int{}
+		for _, ch := range chains {
+			for _, v := range recordSamples(ch[i]) {
+				pool = append(pool, v)
+				counts[v]++
+			}
+		}
+		modal := modalVerdict(counts)
+		rep := chains[0][i] // representative detail: the first chain that drew the modal verdict
+		for _, ch := range chains {
+			if ch[i].Verdict == modal {
+				rep = ch[i]
+				break
+			}
+		}
+		rep.Verdict = modal
+		rep.Samples = pool // drive spreadForRecord off the pool, not any one chain's pre-baked spread
+		rep.Spread = ""
+		merged[i] = rep
+		classes[i] = stabilityClass(pool)
+	}
+	return merged, classes
+}
+
+// recordSamples is the sample verdicts one chain record contributes to the merge pool: its recorded
+// per-sample list when it ran -n>1, else its single verdict counted once.
+func recordSamples(r chainRecord) []string {
+	if len(r.Samples) > 0 {
+		return r.Samples
+	}
+	return []string{r.Verdict}
+}
+
+// stabilityClass names how the pooled verdicts for one leaf spread across the merged runs: settled
+// (one verdict throughout), wobble (several verdicts, all on one side of the support divide), or
+// contested (the verdicts cross the divide — a run backs the claim and a run does not, or one could
+// not check). spec/TREE.md § Merging runs is the contract.
+func stabilityClass(samples []string) string {
+	if len(samples) == 0 {
+		return ""
+	}
+	distinct := map[string]bool{}
+	sides := map[string]bool{}
+	for _, v := range samples {
+		distinct[v] = true
+		sides[verdictSide(v)] = true
+	}
+	switch {
+	case len(distinct) == 1:
+		return "settled"
+	case len(sides) == 1:
+		return "wobble"
+	default:
+		return "contested"
+	}
+}
+
+// verdictSide places a faithfulness verdict on the support divide the stability class turns on:
+// "supported" (the source backs the claim) vs "not-supported" (it does not). unverifiable is its own
+// side — "can't check" is neither support nor its refusal — so mixing it with a decided verdict reads
+// as contested. Any other string (a substance/grounding verdict under a cross-mode merge, or "error")
+// is its own side too, so a bare disagreement there reads as contested rather than being mislabelled.
+func verdictSide(v string) string {
+	switch v {
+	case "faithful", "partial":
+		return "supported"
+	case "overstated", "absent", "contradicted", "unsupported":
+		return "not-supported"
+	default:
+		return v
+	}
+}
+
 // parseAuditVerdict splits an audit record's "faith=X sub=Y ev=Z" verdict string back into its three
 // component verdicts. auditChainRecord is the sole writer of that format.
 func parseAuditVerdict(s string) (f, sub, ev string) {
@@ -2569,22 +2701,52 @@ func parseAuditVerdict(s string) (f, sub, ev string) {
 	return f, sub, ev
 }
 
-// runFromChain reconstructs the verdict rows from a saved chain and renders them through the same
-// stdout renderers a live run uses (brief / -tree / -full), making no model call. The claims file is
-// required: it supplies the ids and heading paths the tree needs, and cross-checking each record's
-// claim text against it catches a chain paired with the wrong claims file.
-func (c *cfg) runFromChain(chainPath, claimsPath string) {
+// runFromChain reconstructs the verdict rows from one or more saved chains and renders them through
+// the same stdout renderers a live run uses (brief / -tree / -full), making no model call. `chainSpec`
+// is one path or a comma-list; several paths are merged leaf-by-leaf (mergeChains) so the render
+// reports the agreement across full runs. The claims file is required: it supplies the ids and heading
+// paths the tree needs, and cross-checking each record's claim text against it catches a chain paired
+// with the wrong claims file.
+func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 	if claimsPath == "" {
 		fatal("-from needs the claims file as INPUT (its claims are checked against the chain)")
 	}
-	recs, mode, err := readChain(chainPath)
-	if err != nil {
-		fatal("read chain " + chainPath + ": " + err.Error())
+	var chainPaths []string
+	for _, p := range strings.Split(chainSpec, ",") {
+		if p = strings.TrimSpace(p); p != "" {
+			chainPaths = append(chainPaths, p)
+		}
 	}
+	if len(chainPaths) == 0 {
+		fatal("-from needs at least one chain path")
+	}
+
+	chains := make([][]chainRecord, len(chainPaths))
+	mode := ""
+	for k, p := range chainPaths {
+		recs, m, err := readChain(p)
+		if err != nil {
+			fatal("read chain " + p + ": " + err.Error())
+		}
+		if k == 0 {
+			mode = m
+		} else if m != mode {
+			fatal(fmt.Sprintf("chains disagree on mode: %q is %q, %q is %q", chainPaths[0], mode, p, m))
+		}
+		if len(recs) != len(chains[0]) && k > 0 {
+			fatal(fmt.Sprintf("chains disagree on length: %q has %d, %q has %d",
+				chainPaths[0], len(chains[0]), p, len(recs)))
+		}
+		chains[k] = recs
+	}
+	if len(chainPaths) > 1 && mode == "audit" {
+		fatal("-from cannot merge audit chains: the verdict is a composite of three axes")
+	}
+
 	title, date, items := loadClaimsFile(claimsPath)
 	c.rootTitle, c.rootDate = title, date
-	if len(recs) != len(items) {
-		fatal(fmt.Sprintf("chain has %d records but %s has %d claims", len(recs), claimsPath, len(items)))
+	if len(chains[0]) != len(items) {
+		fatal(fmt.Sprintf("chain has %d records but %s has %d claims", len(chains[0]), claimsPath, len(items)))
 	}
 	ids := make([]string, len(items))
 	paths := make([]string, len(items))
@@ -2597,14 +2759,27 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 		}
 		ids[i], paths[i], texts[i], routes[i] = id, path, text, route
 	}
-	for i, r := range recs {
-		if strings.TrimSpace(r.Claim) != strings.TrimSpace(texts[i]) {
-			fatal(fmt.Sprintf("claim %d in the chain does not match %s:\n  chain:  %q\n  claims: %q",
-				i+1, claimsPath, r.Claim, texts[i]))
+	// Every chain's claim text must match the claims file, so a merge cannot silently pool two runs
+	// that were judging different claims.
+	for k, recs := range chains {
+		for i, r := range recs {
+			if strings.TrimSpace(r.Claim) != strings.TrimSpace(texts[i]) {
+				fatal(fmt.Sprintf("claim %d in %s does not match %s:\n  chain:  %q\n  claims: %q",
+					i+1, chainPaths[k], claimsPath, r.Claim, texts[i]))
+			}
 		}
 	}
 
-	dir := filepath.Dir(chainPath)
+	// One chain replays unchanged (no classes). Several merge leaf-by-leaf into one record set plus a
+	// per-leaf stability class, and the root block reports the settled/wobble/contested split.
+	recs := chains[0]
+	classes := make([]string, len(recs))
+	c.runs = len(chainPaths)
+	if len(chainPaths) > 1 {
+		recs, classes = mergeChains(chains)
+	}
+
+	dir := filepath.Dir(chainPaths[0])
 	c.auditPath = filepath.Join(dir, "audit.md")
 	c.treeHTMLPath = filepath.Join(dir, "tree.html")
 
@@ -2612,6 +2787,11 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 	details := make(map[string]tree.Leaf, len(recs))
 	vs := make([]string, len(recs))
 
+	var (
+		counts    string
+		mdTable   string
+		termTable func()
+	)
 	switch mode {
 	case "faithfulness":
 		fr := make([]faith, len(recs))
@@ -2620,13 +2800,14 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 			_ = json.Unmarshal(r.Detail, &det)
 			fr[i] = faith{Claim: r.Claim, Verdict: r.Verdict, Evidence: det.CriticFinding,
 				SourceSays: det.SourceSays, Gap: det.Gap, SoWhat: det.SoWhat, Quotes: det.Quotes}
+			spread, dissent := spreadForRecord(r) // rebuild from the raw samples and name the dissent behind a split
 			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
-				Faith: r.Verdict, FaithReason: det.CriticFinding, Spread: r.Spread,
+				Faith: r.Verdict, FaithReason: det.CriticFinding, Spread: spread, Dissent: dissent,
 				Gap: det.Gap, SoWhat: det.SoWhat, Route: routeOr(r.Route, routes[i])}
 			details[ids[i]] = tree.Leaf{Reason: det.CriticFinding, Quotes: det.Quotes}
 			vs[i] = r.Verdict
 		}
-		c.present(rows, tally(vs), mdFaith(fr), func() { c.termFaith(fr) }, details)
+		counts, mdTable, termTable = tally(vs), mdFaith(fr), func() { c.termFaith(fr) }
 	case "substance":
 		sr := make([]substance, len(recs))
 		for i, r := range recs {
@@ -2643,7 +2824,7 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 			details[ids[i]] = tree.Leaf{Reason: reason}
 			vs[i] = r.Verdict
 		}
-		c.present(rows, tally(vs), mdSubstance(sr), func() { c.termSubstance(sr) }, details)
+		counts, mdTable, termTable = tally(vs), mdSubstance(sr), func() { c.termSubstance(sr) }
 	case "grounding":
 		er := make([]evidence, len(recs))
 		for i, r := range recs {
@@ -2658,7 +2839,7 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 			details[ids[i]] = tree.Leaf{Reason: det.Finding}
 			vs[i] = r.Verdict
 		}
-		c.present(rows, tally(vs), mdEvidence(er), func() { c.termEvidence(er) }, details)
+		counts, mdTable, termTable = tally(vs), mdEvidence(er), func() { c.termEvidence(er) }
 	case "audit":
 		fr := make([]faith, len(recs))
 		sr := make([]substance, len(recs))
@@ -2685,11 +2866,16 @@ func (c *cfg) runFromChain(chainPath, claimsPath string) {
 			details[ids[i]] = tree.Leaf{Reason: det.Faith.CriticFinding, Quotes: det.Faith.Quotes}
 			fvs[i], svs[i], evs[i] = fv, sv, evv
 		}
-		counts := fmt.Sprintf("faith[%s] · sub[%s] · ground[%s]", tally(fvs), tally(svs), tally(evs))
-		c.present(rows, counts, mdAudit(texts, fr, sr, er), func() { fmt.Print(mdAudit(texts, fr, sr, er)) }, details)
+		counts = fmt.Sprintf("faith[%s] · sub[%s] · ground[%s]", tally(fvs), tally(svs), tally(evs))
+		mdTable, termTable = mdAudit(texts, fr, sr, er), func() { fmt.Print(mdAudit(texts, fr, sr, er)) }
 	default:
 		fatal("unknown chain mode: " + mode)
 	}
+
+	for i := range rows {
+		rows[i].Class = classes[i] // "" under a single chain; settled/wobble/contested when merged
+	}
+	c.present(rows, counts, mdTable, termTable, details)
 }
 
 // ── usage accounting ─────────────────────────────────────────────────────────

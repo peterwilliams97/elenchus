@@ -165,6 +165,22 @@ func TestSpreadInLeaf(t *testing.T) {
 	}
 }
 
+// TestDissentInLeaf pins that a split leaf names the minority verdict after its fraction — the -from
+// dissent rendering — while a leaf with a spread but no recorded dissent stays back-compat unchanged.
+func TestDissentInLeaf(t *testing.T) {
+	split := []brief.Row{{ID: "F1", Text: "x", Faith: "partial", Spread: "2/3", Dissent: "faithful"}}
+	if txt := Render(split, true, ""); !strings.Contains(txt, "partial 2/3 ≠ faithful") {
+		t.Errorf("text tree missing dissent:\n%s", txt)
+	}
+	if h := RenderHTML(split, map[string]Leaf{}, "", ""); !strings.Contains(h, "partial 2/3 ≠ faithful") {
+		t.Errorf("html tree missing dissent:\n%s", h)
+	}
+	bare := []brief.Row{{ID: "F1", Text: "x", Faith: "partial", Spread: "2/3"}}
+	if txt := Render(bare, true, ""); strings.Contains(txt, "≠") {
+		t.Errorf("no-dissent leaf grew a dissent marker:\n%s", txt)
+	}
+}
+
 // TestSoWhatOnNeedsLeaf pins that a Needs-you leaf carries its one-line stakes in the text tree and
 // that the HTML body shows it, while a clean leaf gets no so-what line.
 func TestSoWhatOnNeedsLeaf(t *testing.T) {

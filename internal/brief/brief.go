@@ -22,9 +22,11 @@ type Row struct {
 	Faith, Substance, Grounding                string
 	FaithReason, SubstanceReason, GroundReason string
 	Spread                                     string // "k/N" verdict agreement under -n>1, else ""
+	Dissent                                    string // minority verdicts behind a split spread, comma-joined; "" when unanimous
 	Gap                                        string // judge's gap class; a non-"none" gap on a partial opens the branch
 	SoWhat                                     string // assembled stakes line for a needs-you leaf ("The report says X. …")
 	Route                                      string // what can settle the claim: evidence|source|evaluative|data-gap
+	Class                                      string // multi-run stability: settled|wobble|contested; "" for a single-chain render
 }
 
 // IsOpinion reports a claim the tool does not judge: a Committee value judgment (`route=evaluative`)
@@ -91,13 +93,24 @@ func Selected(rows []Row) []Sel {
 		if IsOpinion(r) {
 			continue // an opinion is never judged, so it never needs a reader's attention
 		}
-		if tier, ok := Qualify(r.Faith, r.Substance, r.Grounding, r.Gap, r.Text); ok {
+		tier, ok := Qualify(r.Faith, r.Substance, r.Grounding, r.Gap, r.Text)
+		// A contested merged leaf (the judges crossed the support divide across runs) always needs a
+		// reader, at the top tier, whatever its modal verdict would qualify as on its own.
+		if r.Class == "contested" {
+			tier, ok = 0, true
+		}
+		if ok {
 			sels = append(sels, Sel{Row: r, Tier: tier})
 		}
 	}
 	sort.SliceStable(sels, func(i, j int) bool {
 		if sels[i].Tier != sels[j].Tier {
 			return sels[i].Tier < sels[j].Tier
+		}
+		// Within a tier, a contested leaf outranks a settled one: an unstable verdict is the one to
+		// open first, ahead of even a unanimous contradicted, so this precedes the id key.
+		if ci, cj := sels[i].Row.Class == "contested", sels[j].Row.Class == "contested"; ci != cj {
+			return ci
 		}
 		if c := idLess(sels[i].Row.ID, sels[j].Row.ID); c != 0 {
 			return c < 0

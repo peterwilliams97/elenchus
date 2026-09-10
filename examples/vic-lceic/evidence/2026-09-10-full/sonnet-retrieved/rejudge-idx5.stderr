@@ -1,0 +1,11 @@
+[resume] 68/69 claims already in evidence/2026-09-10-full/sonnet-retrieved/claims-machine-full.faithfulness.jsonl; judging the rest
+[  6/69] ✓ absent        "Engagement with the industries brings communities togethe…"  38.8s
+tree (html): evidence/2026-09-10-full/sonnet-retrieved/tree.html
+
+SUMMARY claims-machine-full faithfulness
+  cases 69 · verified 69 · errored 0
+  unverifiable 2 · faithful 30 · partial 22 · overstated 1 · absent 11 · contradicted 1 · unsupported 2
+  wall 39s · est_usd $0.2673 (rates 2026-06-01) · cache_hit 84% (read 240130 / created 46052)
+  schema_retries 0 · quote_rejects 0 · no_quote_downgrades 0 · plain_retries 3
+  detail: evidence/2026-09-10-full/sonnet-retrieved/claims-machine-full.faithfulness.jsonl
+USAGE model=claude-sonnet-4-6 calls=6 in=483 out=1408 cache_read=240130 cache_create=46052 web_searches=0 wall=39s est_usd=$0.2673 (rates 2026-06-01)

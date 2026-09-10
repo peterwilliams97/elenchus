@@ -1147,6 +1147,109 @@ func TestFaithRepeatSpread(t *testing.T) {
 	}
 }
 
+// TestSpreadFromSamples pins the reconstruction of the fraction and the dissent from a recorded
+// sample list: a 2/3 split names its minority verdict, a unanimous run has no dissent, a lone sample
+// (N=1) has no spread at all, and the modal is chosen worst-first on a count tie.
+func TestSpreadFromSamples(t *testing.T) {
+	cases := []struct {
+		samples           []string
+		wantSpread, wantD string
+	}{
+		{[]string{"partial", "partial", "faithful"}, "2/3", "faithful"},
+		{[]string{"faithful", "faithful", "faithful"}, "3/3", ""},
+		{[]string{"partial"}, "", ""},
+		{nil, "", ""},
+		{[]string{"faithful", "partial"}, "1/2", "faithful"}, // count tie → modal is worse (partial), faithful dissents
+		{[]string{"faithful", "absent", "faithful"}, "2/3", "absent"},
+	}
+	for _, c := range cases {
+		s, d := spreadFromSamples(c.samples)
+		if s != c.wantSpread || d != c.wantD {
+			t.Errorf("spreadFromSamples(%v) = (%q,%q), want (%q,%q)", c.samples, s, d, c.wantSpread, c.wantD)
+		}
+	}
+}
+
+// TestSpreadForRecord pins the -from rendering rule: a record carrying a samples list rebuilds its
+// spread and dissent from that list, while a record written before samples existed falls back to the
+// stored spread string with no dissent — the back-compat path that keeps old chains renderable.
+func TestSpreadForRecord(t *testing.T) {
+	withSamples := chainRecord{Verdict: "partial", Spread: "9/9", Samples: []string{"partial", "partial", "faithful"}}
+	if s, d := spreadForRecord(withSamples); s != "2/3" || d != "faithful" {
+		t.Errorf("record with samples: got (%q,%q), want (2/3,faithful) — spread must come from the list, not the stored %q", s, d, withSamples.Spread)
+	}
+	legacy := chainRecord{Verdict: "partial", Spread: "2/3"} // no Samples field
+	if s, d := spreadForRecord(legacy); s != "2/3" || d != "" {
+		t.Errorf("legacy record: got (%q,%q), want (2/3,\"\")", s, d)
+	}
+}
+
+// TestStabilityClass pins the merged-run classifier: settled when every sample agrees, wobble when
+// the verdict moves within one side of the support divide, contested when it crosses (or mixes a
+// decided verdict with unverifiable). spec/TREE.md § Merging runs is the contract.
+func TestStabilityClass(t *testing.T) {
+	cases := []struct {
+		samples []string
+		want    string
+	}{
+		{[]string{"faithful", "faithful", "faithful"}, "settled"},
+		{[]string{"partial", "faithful", "faithful"}, "wobble"},         // both supported side
+		{[]string{"absent", "contradicted", "unsupported"}, "wobble"},   // all not-supported side
+		{[]string{"faithful", "faithful", "contradicted"}, "contested"}, // crosses the divide
+		{[]string{"faithful", "unverifiable"}, "contested"},             // decided vs can't-check
+		{[]string{"unverifiable", "unverifiable"}, "settled"},
+		{nil, ""},
+	}
+	for _, c := range cases {
+		if got := stabilityClass(c.samples); got != c.want {
+			t.Errorf("stabilityClass(%v) = %q, want %q", c.samples, got, c.want)
+		}
+	}
+}
+
+// TestMergeChainsThreeClasses is the merge refuter: three chains over three leaves must produce
+// exactly one settled, one wobble, one contested class, and each merged leaf's verdict must be the
+// modal over the whole pool. It proves the merge distinguishes the three stability classes rather
+// than collapsing them.
+func TestMergeChainsThreeClasses(t *testing.T) {
+	// Leaf 0 agrees across runs (settled); leaf 1 moves faithful↔partial, one side (wobble); leaf 2
+	// crosses faithful↔contradicted (contested). N=1 chains, so each record contributes one sample.
+	rec := func(idx int, claim, verdict string) chainRecord {
+		return chainRecord{Idx: idx, Total: 3, Mode: "faithfulness", Claim: claim, Verdict: verdict, Detail: json.RawMessage(`{}`)}
+	}
+	chains := [][]chainRecord{
+		{rec(0, "a", "faithful"), rec(1, "b", "faithful"), rec(2, "c", "faithful")},
+		{rec(0, "a", "faithful"), rec(1, "b", "partial"), rec(2, "c", "faithful")},
+		{rec(0, "a", "faithful"), rec(1, "b", "faithful"), rec(2, "c", "contradicted")},
+	}
+	merged, classes := mergeChains(chains)
+
+	wantClass := []string{"settled", "wobble", "contested"}
+	if strings.Join(classes, ",") != strings.Join(wantClass, ",") {
+		t.Fatalf("classes = %v, want %v", classes, wantClass)
+	}
+	got := map[string]int{}
+	for _, cl := range classes {
+		got[cl]++
+	}
+	for _, want := range wantClass {
+		if got[want] != 1 {
+			t.Errorf("class %q appeared %d times, want exactly 1", want, got[want])
+		}
+	}
+	// Modal verdict per leaf: faithful (3/3), faithful (2/3 over the pool), faithful (2/3 over the pool).
+	wantVerdict := []string{"faithful", "faithful", "faithful"}
+	for i, m := range merged {
+		if m.Verdict != wantVerdict[i] {
+			t.Errorf("leaf %d modal verdict = %q, want %q", i, m.Verdict, wantVerdict[i])
+		}
+		// The merged record carries the pooled samples so spreadForRecord recomputes the fraction.
+		if s, _ := spreadForRecord(m); s != "2/3" && s != "3/3" {
+			t.Errorf("leaf %d spread = %q, want a 3-sample fraction", i, s)
+		}
+	}
+}
+
 // TestFaithCriticSysGapAndSoWhat confirms the value-model additions (docs/VALUE.md) are in the
 // faithfulness critic prompt: the structured gap field with all five gap classes plus none, and the
 // so-what stakes line.

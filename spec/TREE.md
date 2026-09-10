@@ -27,14 +27,63 @@ The complete tree is one uniform run over the whole report:
           -tree  examples/vic-lceic/claims-machine-full.txt
 
 All 69 findings, Sonnet, retrieved, N=3, on the final corpus, under the judge and rules below. The run
-writes a **Tier-2 chain** (one JSON record per finding: verdict, N=3 spread, retrieved passage ids,
-verified quotes and their source type, reason) plus `tree.html` and `audit.md` in the chain directory.
+writes a **Tier-2 chain** (one JSON record per finding: verdict, N=3 spread, the full `samples` list —
+every one of the N sample verdicts in the order they were drawn, so the dissent behind a `2/3` is
+recoverable — retrieved passage ids, verified quotes and their source type, reason) plus `tree.html`
+and `audit.md` in the chain directory.
 
 Rendering is separable from judging. `assay -from <chain.jsonl> <claims.txt>` re-renders the brief,
 the tree, and `tree.html` from a saved chain with **no model calls** — so a tree can be rebuilt,
 restyled, or merged for free. A run is also **resumable**: rerun the same command and every finding
 already in the chain is reused (grouping completes findings out of index order, so the partial chain
 may have gaps; the reader tolerates them). `-fresh` re-judges everything.
+
+### Merging runs — `-from a.jsonl,b.jsonl,…`
+
+`-from` takes a comma-separated list of chain paths. **One** path replays a single run and behaves
+exactly as before — byte-for-byte unchanged. **Two or more** merge the runs leaf by leaf, so the
+reader sees not one judge pass but the agreement across several full runs of the same corpus.
+
+- **Verdict.** Each run contributes its sample verdicts — the `samples` list when it sampled `-n>1`,
+  else its single `verdict` as one sample. The merged leaf's verdict is the **majority (modal)** over
+  the whole pool of every sample from every chain; an even split breaks toward the worse verdict
+  (`faithVerdictOrder`, worst-first), the same tie-rule a single `-n>1` run uses.
+- **Agreement.** The `k/N` fraction is recomputed over the pool (`N` = total samples across all
+  chains) and the minority verdicts are named as the dissent — identically to a single `-n>1` run, so
+  `partial 4/6 ≠ faithful` reads the same whether the six draws came from one run or three.
+- **Class.** Each merged leaf is one of three **stability classes**, from the spread of verdicts in
+  its pool:
+  - **settled** — every sample is the same verdict.
+  - **wobble** — the verdict moves but stays on one side of the support divide (supported =
+    `faithful`/`partial`; not-supported = `overstated`/`absent`/`contradicted`/`unsupported`;
+    `unverifiable` is its own side). Instability that does not change *whether the source backs the
+    claim*.
+  - **contested** — the verdicts **cross** the divide: at least one run says the source backs the
+    claim and at least one says it does not (or could not check). The judge disagrees with itself
+    about the very thing the tree exists to settle.
+
+A **contested** leaf enters Needs-you at **tier 0** and, within tier 0, ranks **ahead of** the
+settled red verdicts (a unanimous `contradicted` included): an unstable finding is the one a reader
+most needs to open, because no single run's verdict on it can be trusted. This is a class-based
+tiebreak inside tier 0, not id order.
+
+The root block gains one line beneath the class partition when more than one run is merged:
+
+    Across <R> runs: <s> settled, <w> wobble, <c> contested.
+
+The three counts partition the findings (they sum to `N`), so the reader sees at a glance how much of
+the report the judges agreed on. A single-chain `-from` prints no such line.
+
+The support divide above is the **faithfulness** axis. A merge of substance or grounding chains pools
+the verdict and fraction the same way, but each distinct verdict counts as its own side, so any
+disagreement reads as contested. **Audit chains are not mergeable** (their verdict is a composite of
+three axes) and a multi-chain `-from` over an audit chain is rejected.
+
+**Refuters.** A 3-chain fixture with three leaves — one where all runs agree, one where the verdict
+moves within a side, one where it crosses — yields exactly one `settled`, one `wobble`, one
+`contested` (`assay_test.go`). And in `internal/brief`, a contested leaf whose modal verdict is
+`faithful` sorts **ahead of** a settled `contradicted` leaf, proving the contested-first tiebreak —
+not id order — decides the head of tier 0.
 
 ### `current/`
 
@@ -55,7 +104,7 @@ at — chosen by `internal/brief`'s tier rule (`Qualify`), highest priority firs
 
 | tier | fires on | shown reason |
 |---|---|---|
-| 0 | `contradicted`, `absent`, or `unsupported` | faithfulness finding |
+| 0 | a **contested** merged leaf (ranked first within the tier), then `contradicted`, `absent`, or `unsupported` | faithfulness finding |
 | 1 | `faithful` **and** grounding `refuted` (the laundering signature) | grounding finding |
 | 2 | `overstated` **and** the claim contains a number | faithfulness finding |
 | 3 | `partial` **and** a non-`none` gap (scope/denominator/timerange/attribution/other) | faithfulness finding |
@@ -159,3 +208,9 @@ plus its N=3 spread — so `partial 2/3` reads as "look here, the judge was not 
 tagged `qon` reads as "this rests on a response to questions on notice." The evidence origin and the
 manifest together make the tree auditable: what the finding rests on, whether that document is held,
 and whether the words are actually there.
+
+Because the chain also stores the `samples` list, `-from` reconstructs the spread from those raw
+verdicts rather than the pre-baked `spread` string, and can name the dissent: a `2/3` leaf renders
+`partial 2/3 ≠ faithful`, the minority verdict spelled out. A chain written before `samples` existed
+lacks the field and still renders — the spread falls back to the stored `spread` string, with no
+dissent shown.

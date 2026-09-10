@@ -17,6 +17,7 @@ import (
 type RootMeta struct {
 	Title, Date string
 	SourceDocs  int // M: documents in the manifest; 0 drops the "checked against M source documents" clause
+	Runs        int // chains merged by -from; >1 adds the stability line (settled/wobble/contested)
 }
 
 // class is a finding's bucket in the block. The iota order is the print order.
@@ -87,10 +88,35 @@ func RootBlock(rows []brief.Row, meta RootMeta) string {
 	writeIDClass(&b, "Unverifiable, document not held", buckets[clUnverifiable], missingDocDetail)
 	writeGeneralised(&b, buckets[clGeneralised])
 
+	// When -from merged several runs, report how stable the verdicts were across them. The three
+	// classes partition the findings, so they sum to N — the same discipline as the class lines above.
+	if meta.Runs > 1 {
+		settled, wobble, contested := stabilityCounts(rows)
+		fmt.Fprintln(&b)
+		fmt.Fprintf(&b, "Across %d runs: %d settled, %d wobble, %d contested.\n",
+			meta.Runs, settled, wobble, contested)
+	}
+
 	fmt.Fprintln(&b)
 	fmt.Fprintf(&b, "Changes %d summary lines across %d chapters.\n",
 		brief.OpenedSections(rows), brief.OpenedBranches(rows))
 	return b.String()
+}
+
+// stabilityCounts tallies the merged-run stability classes carried on the rows. A row with no Class
+// (a single-chain render never sets one) counts as settled, so the three always sum to len(rows).
+func stabilityCounts(rows []brief.Row) (settled, wobble, contested int) {
+	for _, r := range rows {
+		switch r.Class {
+		case "wobble":
+			wobble++
+		case "contested":
+			contested++
+		default:
+			settled++
+		}
+	}
+	return settled, wobble, contested
 }
 
 // titleLine is line 1. The "checked against M source documents" clause is dropped when M is unknown;
