@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"unicode"
 
 	"assay/internal/brief"
 )
@@ -39,6 +40,7 @@ const (
 const (
 	rootIDCap   = 3  // ids shown per id-listing class before "and N more"
 	rootWordCap = 34 // words of the stakes line shown on a detail line — fits both ≤12-word halves whole
+	noCap       = 0  // writeIDClass cap for a class that shows every line — the contested group only
 )
 
 // classify places a row in exactly one class, in this precedence: opinion (never judged), then the
@@ -89,19 +91,21 @@ func RootBlock(rows []brief.Row, meta RootMeta) string {
 	fmt.Fprintln(&b)
 
 	// The stability partition is taken first: the findings the runs could not agree on are the ones a
-	// reader most needs, and they are excluded from every verdict class below.
-	writeIDClass(&b, "Sources don't settle these", buckets[clContested], contestedDetail)
+	// reader most needs, and they are excluded from every verdict class below. It shows every contested
+	// line (noCap) — a reader must see the whole disagreement, not a sample of it — where the verdict
+	// classes below stay capped at rootIDCap.
+	writeIDClass(&b, "Sources don't settle these", buckets[clContested], contestedDetail, noCap)
 	if n := len(buckets[clHolds]); n > 0 {
 		fmt.Fprintf(&b, "Holds: %d findings say what their sources say.\n", n)
 	}
-	writeIDClass(&b, "Contradicted by their own sources", buckets[clContradicted], soWhatDetail)
-	writeIDClass(&b, "Overstated", buckets[clOverstated], soWhatDetail)
-	writeIDClass(&b, "Unsupported by any held source", buckets[clUnsupported], soWhatDetail)
+	writeIDClass(&b, "Contradicted by their own sources", buckets[clContradicted], soWhatDetail, rootIDCap)
+	writeIDClass(&b, "Overstated", buckets[clOverstated], soWhatDetail, rootIDCap)
+	writeIDClass(&b, "Unsupported by any held source", buckets[clUnsupported], soWhatDetail, rootIDCap)
 	if n := len(buckets[clOpinion]); n > 0 {
 		fmt.Fprintf(&b, "Committee opinions, not checked: %d\n", n)
 	}
-	writeIDClass(&b, "Unverifiable, document not held", buckets[clUnverifiable], missingDocDetail)
-	writeIDClass(&b, "Unverifiable, judge output malformed", buckets[clSchemaFail], schemaFailDetail)
+	writeIDClass(&b, "Unverifiable, document not held", buckets[clUnverifiable], missingDocDetail, rootIDCap)
+	writeIDClass(&b, "Unverifiable, judge output malformed", buckets[clSchemaFail], schemaFailDetail, rootIDCap)
 	writeGeneralised(&b, buckets[clGeneralised])
 
 	// When -from merged several runs, report how stable the verdicts were across them. The three
@@ -159,22 +163,24 @@ func titleLine(meta RootMeta, n int) string {
 	return fmt.Sprintf("%s%d findings", head, n)
 }
 
-// writeIDClass writes a class header and, indented under it, up to rootIDCap detail lines (one per row,
-// formatted by `detail`), then "and N more" when the class holds more. Nothing is written when empty.
-func writeIDClass(b *strings.Builder, label string, rows []brief.Row, detail func(brief.Row) string) {
+// writeIDClass writes a class header and, indented under it, up to `cap` detail lines (one per row,
+// formatted by `detail`), then "and N more" when the class holds more. A `cap` of noCap shows every
+// row with no "and N more" — the contested group takes that, the verdict classes pass rootIDCap.
+// Nothing is written when empty.
+func writeIDClass(b *strings.Builder, label string, rows []brief.Row, detail func(brief.Row) string, cap int) {
 	if len(rows) == 0 {
 		return
 	}
 	fmt.Fprintf(b, "%s: %d\n", label, len(rows))
 	shown := rows
-	if len(shown) > rootIDCap {
-		shown = shown[:rootIDCap]
+	if cap > 0 && len(shown) > cap {
+		shown = shown[:cap]
 	}
 	for _, r := range shown {
 		fmt.Fprintf(b, "  %s\n", detail(r))
 	}
-	if len(rows) > rootIDCap {
-		fmt.Fprintf(b, "  and %d more\n", len(rows)-rootIDCap)
+	if cap > 0 && len(rows) > cap {
+		fmt.Fprintf(b, "  and %d more\n", len(rows)-cap)
 	}
 }
 
@@ -207,22 +213,77 @@ func writeGeneralised(b *strings.Builder, rows []brief.Row) {
 	}
 }
 
-// contestedDetail is the one plain line a contested leaf shows: "id: split a/b" when the pool tied and
-// no verdict can be named, else "id: <modal> <spread> ≠ <dissent>" — the disagreement stated as the
-// verdicts that crossed the divide. It never shows a so-what, because a contested leaf has no settled
-// verdict for one to summarise.
+// contestedDetail is the one plain line a contested leaf shows: the claim sentence-joined to the
+// disagreement clause — "The report says <claim> Runs split a/b." when the pool tied and no verdict can
+// be named, else "The report says <claim> <modal> <spread> against <dissent>." (the verdicts that
+// crossed the divide). The claim head drops its trailing period and lower-cases its first word so the
+// two run on as one sentence. It reads as prose so the top group carries the claim, not just verdict
+// names — the refuter is `TestRootBlockContestedFirst`.
 func contestedDetail(r brief.Row) string {
+	head := reportSaysHead(r)
+	tail := contestedSplit(r)
+	if head == "" {
+		return r.ID + ": " + tail
+	}
+	return r.ID + ": " + head + " " + tail
+}
+
+// reportSaysHead is the "The report says <claim>" clause the contested line opens with — the claim
+// lower-cased at its first letter and stripped of its trailing period, so it sentence-joins to the
+// disagreement clause that follows rather than reading as a closed sentence. It reuses the leaf's
+// assembled so-what (the judge's plain restatement) where the modal chain produced one, and falls back
+// to the claim text when the modal verdict was faithful and left no so-what — either way the line
+// carries the claim rather than only verdict names.
+func reportSaysHead(r brief.Row) string {
+	if s := strings.TrimSpace(r.SoWhat); strings.HasPrefix(s, "The report says ") {
+		if i := strings.Index(s, ". "); i >= 0 {
+			s = s[:i+1] // just the report-says sentence; the settled tail is not this leaf's to claim
+		}
+		return sentenceJoin(s)
+	}
+	if t := truncWords(r.Text, rootWordCap); t != "" {
+		return sentenceJoin("The report says " + t + ".")
+	}
+	return ""
+}
+
+// sentenceJoin turns a closed "The report says X." head into a "The report says x" opener: it strips
+// the trailing period and lower-cases the claim's sentence-initial capital (the character after the
+// fixed "The report says " prefix), leaving a clause the contested line runs on into the disagreement.
+// An acronym opener is left alone — a claim beginning "COVID-19" or "ABC" has an upper-case second
+// letter, so lower-casing only the first would produce "cOVID-19"/"aBC" and defeat the join; the same
+// upper-case-run test isPlaceWord uses to tell an acronym from an ordinary word.
+func sentenceJoin(s string) string {
+	const prefix = "The report says "
+	s = strings.TrimSuffix(s, ".")
+	if !strings.HasPrefix(s, prefix) {
+		return s
+	}
+	r := []rune(s[len(prefix):])
+	if len(r) == 0 {
+		return s
+	}
+	if len(r) >= 2 && unicode.IsUpper(r[1]) {
+		return prefix + string(r) // acronym opener: keep the capital
+	}
+	r[0] = unicode.ToLower(r[0])
+	return prefix + string(r)
+}
+
+// contestedSplit is the second sentence: "Runs split a/b." for a tie (no majority to name), else the
+// crossing verdicts as "<modal> <spread> against <dissent>."
+func contestedSplit(r brief.Row) string {
 	if r.Split != "" {
-		return r.ID + ": split " + r.Split
+		return "Runs split " + r.Split + "."
 	}
 	v := verdictOf(r)
 	if r.Spread != "" {
 		v += " " + r.Spread
 	}
 	if r.Dissent != "" {
-		v += " ≠ " + r.Dissent
+		v += " against " + r.Dissent
 	}
-	return r.ID + ": " + v
+	return v + "."
 }
 
 // schemaFailDetail is "id: judge output malformed" — the flag for a leaf whose verdict was forced to

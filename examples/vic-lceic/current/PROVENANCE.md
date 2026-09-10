@@ -1,12 +1,22 @@
 # current/ — provenance
 
-`current/` points at the first complete tree of the report: **all 69 findings from
-`../evidence/2026-09-08-full/sonnet-retrieved/`**, one uniform run — Sonnet, retrieved, N=3, on the
-final corpus (hearings + submissions + QoN responses), under the manifest and the four verdict rules
-(`spec/TREE.md`). `assay -from current.faithfulness.jsonl claims.txt` renders `tree.html`.
+Merged from **two uniform runs of the same corpus** (Sonnet, retrieved, N=3, full corpus + manifest):
 
-Rollup (69): 23 faithful · 26 partial · 13 absent · 2 overstated · 2 contradicted · 1 unsupported ·
-2 unverifiable (F38a/b — cite the ABC QoN of 27 Feb 2025, which is not held). Spend $5.42.
+- `evidence/2026-09-09-full/sonnet-retrieved/` → `current.faithfulness.jsonl`
+- `evidence/2026-09-10-full/sonnet-retrieved/` → `current-2026-09-10.faithfulness.jsonl`
 
-Superseded the earlier heterogeneous per-claim merge (`build-current.py`), which stands as the $0
-stopgap builder for use between full runs.
+`assay -from current.faithfulness.jsonl,current-2026-09-10.faithfulness.jsonl claims.txt -tree` merges
+the two leaf-by-leaf (majority verdict over the pooled samples) and renders `tree.html`, `audit.md`,
+and `root-block-tree.txt` with no model calls.
+
+Stability across the two runs, over the **judged** findings (opinions excluded — they are never
+judged): **48 settled, 3 wobble, 9 contested** (60 judged + 9 Committee opinions = 69). The 9 contested
+findings — where the two runs cross the support divide or leave no majority — form the root block's top
+group *Sources don't settle these* and are surfaced first in Needs-you:
+
+F3, F5, F19, F23, F34d, F39c, F49a, F49b, F52 — of which F3, F23, F34d and F49b are ties (no majority),
+each rendered `split a/b` rather than a verdict.
+
+Three findings fail the schema gate — the judge's reason came back as a raw tag rather than prose — so
+their verdicts are forced to `unverifiable` and they form the *Unverifiable, judge output malformed*
+class: **F4, F34a, F34c**.

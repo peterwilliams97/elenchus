@@ -53,26 +53,35 @@ func TestRootBlockRouteGates(t *testing.T) {
 // TestRootBlockContestedFirst is the stability-partition refuter. Two contested leaves — one that
 // crossed the divide (modal faithful) and one that tied with no majority — must appear together in the
 // top "Sources don't settle these" group and NOT in any verdict class: the crossing leaf's modal is
-// faithful, so were it filed by verdict it would inflate Holds. The tie leaf must read "split a/b", not
-// a verdict. The mutation clears the crossing leaf's Class, and it must then leave the top group and
-// land in Holds — proving the partition is taken by stability first, ahead of the verdict.
+// faithful, so were it filed by verdict it would inflate Holds. Each line reads in the plain "The
+// report says X." form the verdict classes use, so the top group carries the claim text and not just
+// verdict names — the tie ends "Runs split a/b.", the crossing one "<modal> <spread> against <dissent>."
+// The mutation clears the crossing leaf's Class, and it must then leave the top group and land in
+// Holds — proving the partition is taken by stability first, ahead of the verdict.
 func TestRootBlockContestedFirst(t *testing.T) {
 	rows := []brief.Row{
 		{ID: "F1", Path: "2=Ch2/2.1=§2.1", Text: "A settled faithful finding.", Faith: "faithful"},
 		{ID: "F2", Path: "2=Ch2/2.1=§2.1", Text: "Runs cross the divide here.", Faith: "faithful",
-			Class: "contested", Spread: "3/5", Dissent: "contradicted, absent"},
+			Class: "contested", Spread: "3/5", Dissent: "contradicted, absent",
+			SoWhat: "The report says visitor spending lifts the local economy. No held source says this."},
 		{ID: "F3", Path: "2=Ch2/2.2=§2.2", Text: "Runs tie with no majority.", Faith: "partial",
-			Class: "contested", Split: "faithful/partial"},
+			Class: "contested", Split: "faithful/partial",
+			SoWhat: "The report says every venue closed after the pandemic. The source only says some closed."},
 	}
 	got := RootBlock(rows, RootMeta{Runs: 2})
 	if !strings.Contains(got, "Sources don't settle these: 2") {
 		t.Fatalf("contested leaves not filed under the top group:\n%s", got)
 	}
-	if !strings.Contains(got, "F2: faithful 3/5 ≠ contradicted, absent") {
-		t.Errorf("crossing contested leaf should state its divide-crossing verdicts:\n%s", got)
+	// The refuter: the contested line must carry the claim in plain words, not only the verdicts. The
+	// claim head sentence-joins to the disagreement — no period between them, claim lower-cased.
+	if !strings.Contains(got, "F2: The report says visitor spending lifts the local economy faithful 3/5 against contradicted, absent.") {
+		t.Errorf("crossing contested leaf should read the sentence-joined form with claim text and crossing verdicts:\n%s", got)
 	}
-	if !strings.Contains(got, "F3: split faithful/partial") {
-		t.Errorf("tie leaf should read 'split a/b', not a verdict:\n%s", got)
+	if !strings.Contains(got, "F3: The report says every venue closed after the pandemic Runs split faithful/partial.") {
+		t.Errorf("tie leaf should read the sentence-joined form ending 'Runs split a/b', not a bare verdict:\n%s", got)
+	}
+	if !strings.Contains(got, "visitor spending lifts the local economy") {
+		t.Errorf("a contested root line must contain the claim text, not just verdict names:\n%s", got)
 	}
 	if !strings.Contains(got, "Holds: 1 findings say what their sources say.") {
 		t.Errorf("only the settled F1 should hold; a contested leaf must be excluded from Holds:\n%s", got)
@@ -87,6 +96,35 @@ func TestRootBlockContestedFirst(t *testing.T) {
 	}
 	if !strings.Contains(got, "Holds: 2 findings say what their sources say.") {
 		t.Errorf("clearing F2's contested class must return it to Holds (2):\n%s", got)
+	}
+}
+
+// TestRootBlockContestedUncapped is the cap-lifting refuter. The contested group shows every line, not
+// a rootIDCap sample: a nine-contested fixture must print nine detail lines and no "and N more"
+// collapse, where a verdict class the same size would show three and "and 6 more". The verdict classes
+// keep the cap — that half is pinned by TestRootBlock's golden, whose Unsupported class holds 3 of a
+// larger set.
+func TestRootBlockContestedUncapped(t *testing.T) {
+	var rows []brief.Row
+	for _, id := range []string{"F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9"} {
+		rows = append(rows, brief.Row{ID: id, Path: "2=Ch2/2.1=§2.1", Text: id + " claim.",
+			Faith: "partial", Class: "contested", Split: "faithful/partial"})
+	}
+	got := RootBlock(rows, RootMeta{Runs: 2})
+	if !strings.Contains(got, "Sources don't settle these: 9") {
+		t.Fatalf("nine contested leaves not filed under the top group:\n%s", got)
+	}
+	var detail int
+	for _, line := range strings.Split(got, "\n") {
+		if strings.HasPrefix(line, "  F") {
+			detail++
+		}
+	}
+	if detail != 9 {
+		t.Errorf("contested group shows %d detail lines, want 9 (the cap must be lifted):\n%s", detail, got)
+	}
+	if strings.Contains(got, " more") {
+		t.Errorf("contested group must not collapse to 'and N more':\n%s", got)
 	}
 }
 

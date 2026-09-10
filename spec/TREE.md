@@ -166,7 +166,7 @@ chain written before `route` existed still renders correctly once the claims fil
 
 | class line | membership | detail shown |
 |---|---|---|
-| `Sources don't settle these: <n>` | class `contested` (the runs crossed the divide or had no majority), non-opinion — **the top group** | one plain line per claim: `id: split a/b` for a tie, else `id: <modal> <spread> ≠ <dissent>` (the crossing verdicts). No `so_what`. |
+| `Sources don't settle these: <n>` | class `contested` (the runs crossed the divide or had no majority), non-opinion — **the top group** | **every** contested claim (no 3-id cap — see Line budget), one plain line each, sentence-joined from the `The report says <claim>` opener (the claim in plain words — the leaf's `so_what` report-says sentence, or the claim text when the modal was faithful and left none — with its trailing period dropped and first letter lower-cased) into the disagreement clause: `Runs split a/b.` for a tie, else `<modal> <spread> against <dissent>.` (the crossing verdicts) |
 | `Holds: <n> findings say what their sources say.` | verdict `faithful`, non-opinion, non-contested | none |
 | `Contradicted by their own sources: <n>` | verdict `contradicted`, non-opinion, non-contested | one indented line per claim: id, then `so_what` (≤ 20 words) |
 | `Overstated: <n>` | verdict `overstated`, non-opinion, non-contested | ids + `so_what` |
@@ -186,9 +186,11 @@ a digit anywhere in the claim, or a mixed-case capitalised word (≥ 2 letters) 
 first word (so `New York`, `Victoria` mid-sentence, `NSW`-adjacent proper nouns qualify; a
 sentence-initial capital and an all-caps acronym like `ABC` do not).
 
-**Line budget.** Any class listing ids shows at most the first **3**, then `and <k> more`; the whole
-block body (the class region) stays within 15 lines. `so_what` text is used verbatim from the chain,
-truncated to 20 words; a leaf with none prints the id alone.
+**Line budget.** Every verdict class listing ids shows at most the first **3**, then `and <k> more`.
+The contested top group is the one exception — it shows **every** line, because a reader must see the
+whole disagreement rather than a sample of it, so the block body grows with the contested count and is
+no longer bounded to 15 lines. `so_what` text is used verbatim from the chain, truncated to 20 words; a
+leaf with none prints the id alone.
 
 ### Refuters
 
@@ -200,9 +202,13 @@ test that `route` actually gates the partition, not just decorates it.
 
 `TestRootBlockContestedFirst` is the stability-partition refuter: two contested leaves — one that
 crossed the divide with a modal `faithful`, one that tied — must appear together under *Sources don't
-settle these* (the tie reading `split a/b`) and be kept out of the verdict classes; were the crossing
-leaf filed by verdict it would inflate *Holds*. The mutation clears its `contested` class and it must
-then move into *Holds*, proving stability is partitioned first. `TestRootBlockSchemaFailure` is the
+settle these*, each in the sentence-joined `The report says <claim> …` form (the tie ending `Runs split
+a/b.`, the crossing one `<modal> <spread> against <dissent>.`) carrying the claim text and not just
+verdict names, and be kept out of the verdict classes; were the crossing leaf filed by verdict it would
+inflate *Holds*. The mutation clears its `contested` class and it must then move into *Holds*, proving
+stability is partitioned first. `TestRootBlockContestedUncapped` is the cap-lifting refuter: a
+nine-contested fixture must print nine detail lines with no `and <k> more` collapse, where a verdict
+class of the same size shows three. `TestRootBlockSchemaFailure` is the
 schema-gate refuter: a leaf marked `SchemaFail` must file under *Unverifiable, judge output malformed*
 (flagged by id) and stay out of *Holds* even though its stored verdict still reads `faithful`; clearing
 the flag returns it to *Holds*.
@@ -247,4 +253,5 @@ Because the chain also stores the `samples` list, `-from` reconstructs the sprea
 verdicts rather than the pre-baked `spread` string, and can name the dissent: a `2/3` leaf renders
 `partial 2/3 ≠ faithful`, the minority verdict spelled out. A chain written before `samples` existed
 lacks the field and still renders — the spread falls back to the stored `spread` string, with no
-dissent shown.
+dissent shown. A merged **tie** has no majority to name, so its leaf line ends in `split a/b` (the
+tied verdicts, worst-first) rather than a modal verdict with a `≠` dissent — refuter `TestSplitLeaf`.

@@ -302,11 +302,15 @@ func verdictOf(r brief.Row) string {
 }
 
 // leafVerdict is what a leaf line ends in: the verdict, plus the "k/N" agreement when a repeat run
-// (-n>1) recorded a spread — e.g. "partial 2/3". Both the text and HTML renderers use it so the two
-// agree on what a split verdict looks like.
+// (-n>1) recorded a spread — e.g. "partial 2/3". A merged tie carries no majority verdict, so it ends
+// in "split a/b" (the tied verdicts) instead. Both the text and HTML renderers use it so the two agree
+// on what a split verdict looks like.
 func leafVerdict(r brief.Row) string {
 	if brief.IsOpinion(r) {
 		return "opinion" // a Committee value judgment or recommendation: not judged, rendered grey in HTML
+	}
+	if r.Split != "" {
+		return "split " + r.Split // a merged tie has no majority verdict — name the tied verdicts, not one
 	}
 	v := verdictOf(r)
 	if r.Spread != "" {

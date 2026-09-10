@@ -181,6 +181,20 @@ func TestDissentInLeaf(t *testing.T) {
 	}
 }
 
+// TestSplitLeaf pins that a merged tie (Split set) ends its tree leaf line in "split a/b", not a modal
+// verdict with a dissent marker — a tie has no majority to name, and the counterpart is TestDissentInLeaf
+// (a non-tie split, which keeps the "modal k/N ≠ dissent" form). Both text and HTML renderers agree.
+func TestSplitLeaf(t *testing.T) {
+	tie := []brief.Row{{ID: "F1", Text: "x", Faith: "partial", Spread: "2/4",
+		Dissent: "faithful", Split: "faithful/partial"}}
+	if txt := Render(tie, true, ""); !strings.Contains(txt, "split faithful/partial") || strings.Contains(txt, "≠") {
+		t.Errorf("text tie leaf should read 'split a/b' and carry no dissent marker:\n%s", txt)
+	}
+	if h := RenderHTML(tie, map[string]Leaf{}, "", ""); !strings.Contains(h, "split faithful/partial") {
+		t.Errorf("html tie leaf missing split descriptor:\n%s", h)
+	}
+}
+
 // TestSoWhatOnNeedsLeaf pins that a Needs-you leaf carries its one-line stakes in the text tree and
 // that the HTML body shows it, while a clean leaf gets no so-what line.
 func TestSoWhatOnNeedsLeaf(t *testing.T) {

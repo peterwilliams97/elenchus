@@ -1,0 +1,164 @@
+model claude-sonnet-4-6 · backend — · calls 0 · $0.0000 (rates 2026-06-01) · wall 0s
+69 findings
+
+Sources don't settle these: 9
+  F3: The report says creative arts draws visitors and boosts tourism spending Runs split absent/partial.
+  F5: The report says arts and creative industries unite groups and build social cohesion absent 3/4 against partial.
+  F19: The report says COVID-19 made things harder for women and gender-diverse people, especially those with caring duties, and deepened long-term money problems absent 3/4 against partial.
+  F23: The report says fewer grant rounds mean more artists go without funding for longer Runs split absent/partial.
+  F34d: The report says the move to western Sydney was driven by a goal to mirror NSW population makeup Runs split partial/faithful.
+  F39c: The report says budget cuts and rising costs have limited ABC content creation and growth. partial 3/4 against absent.
+  F49a: The report says ABC has 16 distinct local radio shows for regional Victoria partial 2/4 against faithful, unsupported.
+  F49b: The report says the ABC produces over 112 hours of local content every week in Victoria Runs split unsupported/partial.
+  F52: The report says making content in regional areas brings big social and money benefits to those places partial 3/4 against absent.
+Holds: 25 findings say what their sources say.
+Unsupported by any held source: 6
+  F24: The report says a $20,000 ceiling on some grants holds back recipients and forces them to apply multiple times. No held source says this.
+  F33: The report says every state and territory has an ABC headcount that mismatches its population share. No held source says this.
+  F34b: The report says budget limits made NSW the cheapest and best choice. No held source says this.
+  and 3 more
+Committee opinions, not checked: 9
+Unverifiable, document not held: 2
+  F38a: qon:abc/2025-02-27
+  F38b: qon:abc/2025-02-27
+Unverifiable, judge output malformed: 3
+  F4: judge output malformed
+  F34a: judge output malformed
+  F34c: judge output malformed
+Generalised from narrower evidence: 15
+  F8: The report says COVID removed training chances for people trying to break into the sector. The source only says training chances are being lost for people already in or finishing study in the sector,…
+  F9: The report says Being left out of COVID money programs made money problems worse and left lasting skill gaps. The source only says Many creative workers could not access COVID support due to their…
+
+Across 2 runs: 48 settled, 3 wobble, 9 contested.
+
+Changes 17 summary lines across 3 chapters.
+
+tree — depth 4, max width 7, score 18.0 (target ≤20) ok
+
+  2  Chapter 2 — Overview of Victoria's cultural and creative industries  [2]
+    2.1.1–2.2.5  2.1.1–2.2.5  [7]
+      2.1.1  Economic significance  [5]
+        F1  Victorian cultural & creative industries contributed $40.5 …  faithful 4/4
+        F2a  The industries employ more than 320,000 Victorians.  faithful 4/4
+        F2b  That is almost 9% of total employment in the state.  faithful 4/4
+        F3  The industries provide significant economic stimulus by att…  split absent/partial
+            ↳ so what: The report says creative arts draws visitors and boosts tourism spending. No held source says this.
+        F4  Victoria rated higher for cultural participation than all o…  unverifiable 4/4
+      2.1.2  Social significance  [2]
+        F5  Engagement with the industries brings communities together,…  absent 3/4 ≠ partial
+            ↳ so what: The report says Arts and creative industries unite groups and build social cohesion. No held source says this.
+        F6  A growing body of evidence recognises the role arts and cre…  faithful 4/4
+      2.2.1  Loss of audiences and income  [5]
+        F7  COVID-19 severely damaged the industries, limiting opportun…  faithful 4/4
+        F8  COVID-19 took away critical training opportunities from tho…  partial 4/4
+            ↳ so what: The report says COVID removed training chances for people trying to break into the sector. The source only says training chances are being lost for people already in or finishing study in the sector, linked to post-COVID funding and workforce pressures.
+        F9  Exclusion from COVID-19 financial support programs exacerba…  partial 4/4
+            ↳ so what: The report says Being left out of COVID money programs made money problems worse and left lasting skill gaps. The source only says Many creative workers could not access COVID support due to their casual work patterns, and skill and staff losses followed the pandemic.
+        F10  Children's and young people's creative participation and at…  partial 4/4
+            ↳ so what: The report says Both kids and young people saw big drops in arts attendance and creative activity over that period. The source only says Children's attendance at performing arts events fell from 40% to 31%; the source covers children and adults, with no separate figure for young people or creative participation.
+        F11  Several live music venues have closed following COVID-19 du…  partial 4/4
+            ↳ so what: The report says some live music venues shut down after COVID due to costs and patchy support. The source only says 256 live music venues in Victoria closed since COVID began; venues cite huge insurance cost rises as a key reason they cannot keep operating.
+      2.2.2  Negative mental health impacts  [1]
+        F12  COVID-19 led to worsening mental health in the industries, …  partial 4/4
+            ↳ so what: The report says the pandemic made mental health worse across the arts sector, especially for kids and young people. The source only says witnesses described emotional harm to young people from cancelled productions and noted depression and wellbeing issues among culturally diverse creatives after lockdowns.
+      2.2.3  Significant cost increases  [1]
+      2.2.4  Harder to make a living  [2]
+      2.2.5  Broader cost of living crisis  [3]
+        F16  Many who want to engage with the industries cannot afford t…  faithful 4/4
+        F17  Ticket prices are a key barrier for people wanting to engag…  faithful 4/4
+        F18  COVID-19 and the cost-of-living crisis have accelerated the…  partial 4/4
+            ↳ so what: The report says Both COVID and the cost-of-living squeeze sped up a fall in volunteers across the industries. The source only says The public gallery sector saw a big drop in volunteers due to COVID, with cost of living also playing a part in people changing habits.
+    2.2.6–2.2.6  2.2.6–2.2.6  [1]
+      2.2.6  Exacerbation of long-term issues  [1]
+        F19  COVID-19 exposed and intensified systemic issues in the ind…  absent 3/4 ≠ partial
+            ↳ so what: The report says COVID-19 made things harder for women and gender-diverse people, especially those with caring duties, and deepened long-term money problems. No held source says this.
+  3  Chapter 3 — Government investment in Victoria's cultural and creative industries  [2]
+    3.2.1–3.2.7  3.2.1–3.2.7  [7]
+      3.2.1  Funding has not been indexed  [1]
+      3.2.2  Grant and reporting requirements are onerous  [1]
+      3.2.3  Grant programs are unpredictable  [1]
+        F22  Unpredictable grant programs cause instability and prevent …  partial 4/4
+            ↳ so what: The report says unpredictable grants stop groups from planning ahead and making long-term investments. The source only says Creative Victoria's uncertain grants calendar blocks careful, forward-looking planning.
+      3.2.4  Grant opportunities are limited  [1]
+        F23  Infrequent grant programs leave greater numbers of applican…  split absent/partial
+            ↳ so what: The report says fewer grant rounds mean more artists go without funding for longer. No held source says this.
+      3.2.5  Grant caps are too low  [1]
+        F24  A low $20,000 max grant cap in some programs limits what re…  absent 4/4
+            ↳ so what: The report says a $20,000 ceiling on some grants holds back recipients and forces them to apply multiple times. No held source says this.
+      3.2.6  Focus on infrastructure rather than artists  [1]
+      3.2.7  Grants programs don't cover the ideation process  [1]
+        F26  By requiring a developed concept/project, grant programs ex…  partial 4/4
+            ↳ so what: The report says Grant rules force creatives to do big unpaid idea work, locking out those who cannot afford it. The source only says The ideation work before a grant starts goes unpaid, leaving some creatives out of pocket.
+    3.2.8–3.3.6  3.2.8–3.3.6  [4]
+      3.2.8  Confusion around what level of government funds what  [1]
+      3.2.9  Lack of focus on creative investment in regional Victoria  [1]
+      3.3.5  Does Victoria get its fair share of federal funding?  [2]
+        F29  Victoria receives its fair share of funding from Creative A…  partial 4/4
+            ↳ so what: The report says Victoria as a whole gets its proper portion of Creative Australia money. The source only says The state overall gets its population share, but the regional part of Victoria gets far less than its share.
+        F30  It is difficult to determine Victoria's fair share of other…  faithful 4/4
+      3.3.6  Regional Victoria is not getting its fair share  [2]
+        F31  Regional Victoria does not receive its fair share of fundin…  partial 4/4
+            ↳ so what: The report says Regional Victoria is underfunded by Creative Australia specifically. The source only says Victoria overall gets its fair share from Creative Australia; regional areas across all of Australia get far less than their share.
+        F32  It is difficult to determine regional Victoria's fair share…  faithful 4/4
+  4  Chapter 4 — National broadcasters  [6]
+    4.3.1  ABC headcount in Victoria  [7]
+      F33  No state/territory has an ABC headcount that accurately ref…  absent 4/4
+          ↳ so what: The report says every state and territory has an ABC headcount that mismatches its population share. No held source says this.
+      F34a  The ABC Ultimo→Parramatta relocation was influenced by lega…  unverifiable 4/4
+      F34b  ...and by budget constraints that made NSW the most cost-ef…  absent 4/4
+          ↳ so what: The report says budget limits made NSW the cheapest and best choice. No held source says this.
+      F34c  ...and by the Parramatta office's proximity to key state de…  unverifiable 4/4
+      F34d  ...and by a strategic goal to better reflect NSW's populati…  split partial/faithful
+          ↳ so what: The report says The move to western Sydney was driven by a goal to mirror NSW population makeup. The source only says The move aimed to better connect with western Sydney, where roughly one in ten Australians live; cost savings from selling surplus land also enabled it.
+      F35  It is disappointing that both the ABC and SBS expanded thei…  opinion
+      F36  The ABC's ability to culturally represent a state goes beyo…  faithful 4/4
+    4.3.2  ABC spending on content production in Victoria  [6]
+      F37  The Committee calls for continued advocacy for the return o…  opinion
+      F38a  ABC spending is unevenly distributed across states/territor…  unverifiable 2/2
+          ↳ so what: fetch qon:abc/2025-02-27
+      F38b  No state/territory receives ABC funding proportionate to it…  unverifiable 2/2
+          ↳ so what: fetch qon:abc/2025-02-27
+      F39a  ABC content-production decisions are shaped by state screen…  partial 3/4 ≠ faithful
+          ↳ so what: The report says ABC choices about what content to make depend on state screen-agency rules and money. The source only says Screen agency funding and budgets are key to financing productions; agency budget limits affect what gets made.
+      F39b  The ABC's budget is, in real terms, 14% less than it was a …  partial 4/4
+          ↳ so what: The report says ABC budget is 14% lower in real terms than ten years ago, at about $1.2bn. The source only says ABC funding is 14% lower in real terms than ten years ago; no dollar figure stated.
+      F39c  Rising production costs and the budget reduction have const…  partial 3/4 ≠ absent
+          ↳ so what: The report says Budget cuts and rising costs have limited ABC content creation and growth.. The source only says ABC funding is 14% lower in real terms than a decade ago and costs are rising, forcing hard choices; more could be done if resources allowed..
+    4.4.1  SBS headcount in Victoria  [4]
+      F40  No state/territory reflects an SBS FTE number proportionate…  absent 4/4
+          ↳ so what: The report says No state or territory gets an SBS workforce share matching its population share. No held source says this.
+      F41  SBS staff distribution doesn't reflect content availability…  faithful 4/4
+      F42  SBS's decision to relocate to Western Sydney was determined…  partial 4/4
+          ↳ so what: The report says SBS chose to go to western Sydney because the government said it had to. The source only says The government made funds available for a western Sydney hub; the board still held the final say on whether to move.
+      F43  It is unclear why Victoria was not considered in the Federa…  opinion
+    4.4.2  §4.4.2  [2]
+    4.5.1  How ABC represents Victorian stories and talent  [2]
+      F46a–F49b  F46a–F49b  [7]
+        F46a  Between 2020–21 and Jan 2025, the ABC commissioned 75 exter…  faithful 4/4
+        F46b  ...and produced 52 internal projects with the majority of p…  partial 4/4
+            ↳ so what: The report says all 52 internal projects had most of their work done in Victoria. The source only says the 52 internal projects were based in Victoria, not described as having majority production there.
+        F46c  ...demonstrating the ABC's vital role in supporting the sta…  opinion
+        F47  The ABC partners with major Victorian cultural institutions…  faithful 4/4
+        F48  Through VicScreen internships and Indigenous placements, th…  unsupported 4/4
+            ↳ so what: The report says ABC programs grow Victoria's creative workforce broadly. No held source says this.
+        F49a  The ABC delivers 16 unique regional local-radio programs in…  partial 2/4 ≠ faithful, unsupported
+            ↳ so what: The report says ABC has 16 distinct local radio shows for regional Victoria. The source only says the written ABC submission states 16 unique regional local radio programs in Victoria.
+        F49b  ...producing over 112 hours (6,751 minutes) of local conten…  split unsupported/partial
+            ↳ so what: The report says the ABC produces over 112 hours of local content every week in Victoria. No held source says this.
+      F49c–F52  F49c–F52  [4]
+        F49c  ...across 9 local radio stations/services.  faithful 4/4
+        F50  A main challenge for ABC regional-Victoria content is the l…  faithful 4/4
+        F51  The cost of producing content in regional Victoria requires…  opinion
+        F52  Producing content in regional areas delivers significant so…  partial 3/4 ≠ absent
+            ↳ so what: The report says Making content in regional areas brings big social and money benefits to those places. The source only says Witnesses spoke about wanting more regional activity and noted some economic and community value from it, without firmly stating it delivers major proven benefits.
+    4.5.2  How SBS represents Victorian stories and talent  [6]
+      F53a  SBS receives about one-third of the ABC's funding.  faithful 4/4
+      F53b  ...which restricts its ability to produce and commission co…  absent 4/4
+          ↳ so what: The report says SBS faces limits that stop it making or buying content for Victoria. No held source says this.
+      F54a  SBS sustains substantial Melbourne-based operations produci…  faithful 4/4
+      F54b  ...reaching 3.42 million Victorian viewers monthly (~49% of…  faithful 4/4
+      F54c  ...while supporting diverse communities through partnership…  partial 4/4
+          ↳ so what: The report says both ABC and SBS back varied groups by teaming up with VicScreen and local creatives. The source only says ABC and SBS each have some VicScreen tie-ups focused on screen production and career programs.
+      F55  SBS deeply engages Victoria's multilingual/multicultural co…  faithful 3/4 ≠ partial
+
+Full table: audit.md
