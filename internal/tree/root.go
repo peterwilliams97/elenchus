@@ -213,24 +213,25 @@ func writeGeneralised(b *strings.Builder, rows []brief.Row) {
 	}
 }
 
-// contestedDetail is the one plain line a contested leaf shows: the claim sentence-joined to the
-// disagreement clause — "The report says <claim> Runs split a/b." when the pool tied and no verdict can
-// be named, else "The report says <claim> <modal> <spread> against <dissent>." (the verdicts that
-// crossed the divide). The claim head drops its trailing period and lower-cases its first word so the
-// two run on as one sentence. It reads as prose so the top group carries the claim, not just verdict
-// names — the refuter is `TestRootBlockContestedFirst`.
+// contestedDetail is the one plain line a contested leaf shows: the claim head then the disagreement
+// clause as a second sentence — "The report says <claim>. Runs split a/b." when the pool tied and no
+// verdict can be named, else "The report says <claim>. <modal> <spread> against <dissent>." (the
+// verdicts that crossed the divide). The join strips any trailing periods off the head — one from a
+// normal so-what, two when the so-what itself ended doubled — and re-adds exactly one before the split
+// clause, so the two never run together and never double the period. It reads as prose so the top group
+// carries the claim, not just verdict names — the refuter is `TestRootBlockContestedFirst`.
 func contestedDetail(r brief.Row) string {
 	head := reportSaysHead(r)
 	tail := contestedSplit(r)
 	if head == "" {
 		return r.ID + ": " + tail
 	}
-	return r.ID + ": " + head + " " + tail
+	return r.ID + ": " + strings.TrimRight(head, ".") + ". " + tail
 }
 
 // reportSaysHead is the "The report says <claim>" clause the contested line opens with — the claim
-// lower-cased at its first letter and stripped of its trailing period, so it sentence-joins to the
-// disagreement clause that follows rather than reading as a closed sentence. It reuses the leaf's
+// lower-cased at its first letter and stripped of its trailing period, so `contestedDetail` places
+// exactly one period before the disagreement clause that follows. It reuses the leaf's
 // assembled so-what (the judge's plain restatement) where the modal chain produced one, and falls back
 // to the claim text when the modal verdict was faithful and left no so-what — either way the line
 // carries the claim rather than only verdict names.
@@ -249,7 +250,7 @@ func reportSaysHead(r brief.Row) string {
 
 // sentenceJoin turns a closed "The report says X." head into a "The report says x" opener: it strips
 // the trailing period and lower-cases the claim's sentence-initial capital (the character after the
-// fixed "The report says " prefix), leaving a clause the contested line runs on into the disagreement.
+// fixed "The report says " prefix); `contestedDetail` re-adds one period before the disagreement clause.
 // An acronym opener is left alone — a claim beginning "COVID-19" or "ABC" has an upper-case second
 // letter, so lower-casing only the first would produce "cOVID-19"/"aBC" and defeat the join; the same
 // upper-case-run test isPlaceWord uses to tell an acronym from an ordinary word.

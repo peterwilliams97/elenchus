@@ -2,15 +2,15 @@ model claude-sonnet-4-6 · backend — · calls 0 · $0.0000 (rates 2026-06-01) 
 69 findings
 
 Sources don't settle these: 9
-  F3: The report says creative arts draws visitors and boosts tourism spending Runs split absent/partial.
-  F5: The report says arts and creative industries unite groups and build social cohesion absent 3/4 against partial.
-  F19: The report says COVID-19 made things harder for women and gender-diverse people, especially those with caring duties, and deepened long-term money problems absent 3/4 against partial.
-  F23: The report says fewer grant rounds mean more artists go without funding for longer Runs split absent/partial.
-  F34d: The report says the move to western Sydney was driven by a goal to mirror NSW population makeup Runs split partial/faithful.
+  F3: The report says creative arts draws visitors and boosts tourism spending. Runs split absent/partial.
+  F5: The report says arts and creative industries unite groups and build social cohesion. absent 3/4 against partial.
+  F19: The report says COVID-19 made things harder for women and gender-diverse people, especially those with caring duties, and deepened long-term money problems. absent 3/4 against partial.
+  F23: The report says fewer grant rounds mean more artists go without funding for longer. Runs split absent/partial.
+  F34d: The report says the move to western Sydney was driven by a goal to mirror NSW population makeup. Runs split partial/faithful.
   F39c: The report says budget cuts and rising costs have limited ABC content creation and growth. partial 3/4 against absent.
-  F49a: The report says ABC has 16 distinct local radio shows for regional Victoria partial 2/4 against faithful, unsupported.
-  F49b: The report says the ABC produces over 112 hours of local content every week in Victoria Runs split unsupported/partial.
-  F52: The report says making content in regional areas brings big social and money benefits to those places partial 3/4 against absent.
+  F49a: The report says ABC has 16 distinct local radio shows for regional Victoria. partial 2/4 against faithful, unsupported.
+  F49b: The report says the ABC produces over 112 hours of local content every week in Victoria. Runs split unsupported/partial.
+  F52: The report says making content in regional areas brings big social and money benefits to those places. partial 3/4 against absent.
 Holds: 25 findings say what their sources say.
 Unsupported by any held source: 6
   F24: The report says a $20,000 ceiling on some grants holds back recipients and forces them to apply multiple times. No held source says this.

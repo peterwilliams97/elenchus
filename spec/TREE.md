@@ -166,7 +166,7 @@ chain written before `route` existed still renders correctly once the claims fil
 
 | class line | membership | detail shown |
 |---|---|---|
-| `Sources don't settle these: <n>` | class `contested` (the runs crossed the divide or had no majority), non-opinion — **the top group** | **every** contested claim (no 3-id cap — see Line budget), one plain line each, sentence-joined from the `The report says <claim>` opener (the claim in plain words — the leaf's `so_what` report-says sentence, or the claim text when the modal was faithful and left none — with its trailing period dropped and first letter lower-cased) into the disagreement clause: `Runs split a/b.` for a tie, else `<modal> <spread> against <dissent>.` (the crossing verdicts) |
+| `Sources don't settle these: <n>` | class `contested` (the runs crossed the divide or had no majority), non-opinion — **the top group** | **every** contested claim (no 3-id cap — see Line budget), one plain line each, sentence-joined from the `The report says <claim>` opener (the claim in plain words — the leaf's `so_what` report-says sentence, or the claim text when the modal was faithful and left none — with its trailing period(s) dropped and first letter lower-cased), then exactly one period before the disagreement clause as a second sentence: `Runs split a/b.` for a tie, else `<modal> <spread> against <dissent>.` (the crossing verdicts) |
 | `Holds: <n> findings say what their sources say.` | verdict `faithful`, non-opinion, non-contested | none |
 | `Contradicted by their own sources: <n>` | verdict `contradicted`, non-opinion, non-contested | one indented line per claim: id, then `so_what` (≤ 20 words) |
 | `Overstated: <n>` | verdict `overstated`, non-opinion, non-contested | ids + `so_what` |
@@ -202,13 +202,13 @@ test that `route` actually gates the partition, not just decorates it.
 
 `TestRootBlockContestedFirst` is the stability-partition refuter: two contested leaves — one that
 crossed the divide with a modal `faithful`, one that tied — must appear together under *Sources don't
-settle these*, each in the sentence-joined `The report says <claim> …` form (the tie ending `Runs split
-a/b.`, the crossing one `<modal> <spread> against <dissent>.`) carrying the claim text and not just
-verdict names, and be kept out of the verdict classes; were the crossing leaf filed by verdict it would
-inflate *Holds*. The mutation clears its `contested` class and it must then move into *Holds*, proving
-stability is partitioned first. `TestRootBlockContestedUncapped` is the cap-lifting refuter: a
-nine-contested fixture must print nine detail lines with no `and <k> more` collapse, where a verdict
-class of the same size shows three. `TestRootBlockSchemaFailure` is the
+settle these*, each as the `The report says <claim>.` head then the disagreement as a second sentence
+(the tie ending `Runs split a/b.`, the crossing one `<modal> <spread> against <dissent>.`) carrying the
+claim text and not just verdict names, and be kept out of the verdict classes; were the crossing leaf
+filed by verdict it would inflate *Holds*. The mutation clears its `contested` class and it must then
+move into *Holds*, proving stability is partitioned first. `TestRootBlockContestedUncapped` is the
+cap-lifting refuter: a nine-contested fixture must print nine detail lines with no `and <k> more`
+collapse, where a verdict class of the same size shows three. `TestRootBlockSchemaFailure` is the
 schema-gate refuter: a leaf marked `SchemaFail` must file under *Unverifiable, judge output malformed*
 (flagged by id) and stay out of *Holds* even though its stored verdict still reads `faithful`; clearing
 the flag returns it to *Holds*.

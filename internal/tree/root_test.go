@@ -66,19 +66,22 @@ func TestRootBlockContestedFirst(t *testing.T) {
 			SoWhat: "The report says visitor spending lifts the local economy. No held source says this."},
 		{ID: "F3", Path: "2=Ch2/2.2=§2.2", Text: "Runs tie with no majority.", Faith: "partial",
 			Class: "contested", Split: "faithful/partial",
-			SoWhat: "The report says every venue closed after the pandemic. The source only says some closed."},
+			// The so-what ends with a doubled period on purpose: the join must collapse it to exactly one
+			// before "Runs split", never zero and never "pandemic.. Runs split".
+			SoWhat: "The report says every venue closed after the pandemic.. The source only says some closed."},
 	}
 	got := RootBlock(rows, RootMeta{Runs: 2})
 	if !strings.Contains(got, "Sources don't settle these: 2") {
 		t.Fatalf("contested leaves not filed under the top group:\n%s", got)
 	}
 	// The refuter: the contested line must carry the claim in plain words, not only the verdicts. The
-	// claim head sentence-joins to the disagreement — no period between them, claim lower-cased.
-	if !strings.Contains(got, "F2: The report says visitor spending lifts the local economy faithful 3/5 against contradicted, absent.") {
-		t.Errorf("crossing contested leaf should read the sentence-joined form with claim text and crossing verdicts:\n%s", got)
+	// claim head is lower-cased and the disagreement clause follows as a second sentence — exactly one
+	// period between them, never zero and never doubled.
+	if !strings.Contains(got, "F2: The report says visitor spending lifts the local economy. faithful 3/5 against contradicted, absent.") {
+		t.Errorf("crossing contested leaf should read the claim then the crossing verdicts as a second sentence:\n%s", got)
 	}
-	if !strings.Contains(got, "F3: The report says every venue closed after the pandemic Runs split faithful/partial.") {
-		t.Errorf("tie leaf should read the sentence-joined form ending 'Runs split a/b', not a bare verdict:\n%s", got)
+	if !strings.Contains(got, "F3: The report says every venue closed after the pandemic. Runs split faithful/partial.") {
+		t.Errorf("tie leaf should read the claim then 'Runs split a/b' as a second sentence, not a bare verdict:\n%s", got)
 	}
 	if !strings.Contains(got, "visitor spending lifts the local economy") {
 		t.Errorf("a contested root line must contain the claim text, not just verdict names:\n%s", got)
