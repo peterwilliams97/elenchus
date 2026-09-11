@@ -4,24 +4,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`assay.go` — a self-contained Go CLI that runs prose through a three-stage dialectical filter using
-the Claude API:
-**decompose** (extract atomic claims) →
-**dialectic** (producer↔critic loop per claim) →
-**filter** (surface the substantive residue).
-Build with `./build.sh` or `go build`.
+`assay` is a **report → argument-tree checker**: it takes a long report (the Victorian LCEIC report
+is the worked corpus) decomposed into atomic claims tagged with their §-heading trail, retrieves the
+source passages each claim is about (BM25 + local embeddings), runs a schema-enforced faithfulness
+judge per claim against only those passages, and lays the verdicts out as two trees —
 
-Three operating modes, plus Go-only extras:
+- the **report tree**: findings grouped by §-heading, one faithfulness verdict per leaf (`spec/TREE.md`);
+- the **argument tree**: the same leaves arranged by inferential structure — claim → finding →
+  recommendation → root thesis — with every internal node's judgement DERIVED bottom-up from its
+  children, never authored (`spec/ARGUMENT.md`).
 
-- **Dialectic** (default) — assay prose for logical integrity
-- **Faithfulness** (`-source`) — check whether a summary accurately represents a source transcript
-- **Evidence-grounding** (`-evidence`) — check each claim against external evidence via web search
-- **Audit** (`-audit -source`) — all three modes in one cross-tab (Go only)
-- **Markdown output** (`-md`) — emit markdown tables instead of terminal colour (Go only)
+`-review` then builds a self-contained, PDF-linked two-pane site and `assay serve` serves it over
+HTTP so the page's `#page=N` links land on the right page (`spec/SERVE.md`). The specs are the
+contract; code follows them. Build with `./build.sh` or `go build`.
 
-`assay.py` (the retired Python implementation) is archived at git SHA `469ebe4`.
+The tool's **older single-file modes** — dialectic (default), faithfulness (`-source`), evidence
+(`-evidence`), audit (`-audit`), over a single prose file — still ship and are specified in
+`spec/CLI.md`; `assay.py` (the retired Python original) is archived at git SHA `469ebe4`.
 
-**Docs roster:** `README.md` is the user-facing abstract; `BACKGROUND.md` is the design-rationale +
+**Docs roster:** `spec/` (`CLI.md`, `TREE.md`, `ARGUMENT.md`, `SERVE.md`) holds the authoritative
+specs that the code follows; `README.md` is the user-facing abstract; `BACKGROUND.md` is the design-rationale +
 failure-envelope / destructive-self-criticism doc (where verdicts can't be trusted, plus the
 destructive-test specs); `TESTING.md` is the testing program — the four-layer test taxonomy, what
 each layer's results are allowed to mean, and the live destructive-test status board; `SESSION.md` is
@@ -68,109 +70,39 @@ JSONL verification chain destination, default `eval/<stamp>/`); `-v`/`-verbose`;
 
 ## Architecture
 
-Everything lives in `assay.go`. The call graph by mode:
+The report → argument-tree path lives in `internal/`; `assay.go` is the CLI and the model/judge
+path. `assay.go` is large (~3,800 lines) and holds the parts that touch the network or `main`.
+**New code goes in `internal/`, not `assay.go`** — a package there per concern, each naming its spec
+in its doc comment.
 
-**Dialectic (default) — `runSubstance`**
-```
-main() → runSubstance(input)
-  decompose(input)       # → []string of atomic claims via callJSON()
-  for claim:
-    assayClaim(claim)
-      callJSON(producerSys, ...)   # steelman, blind to critique axes
-      callJSON(substanceCriticSys, ...)  # 7 fixed axes → verdict + surviving_claim
-                                         # + added_conditions + survives_only_by_conditioning
-      loop if NeedsAnother && !SurvivesOnlyByConditions && rounds < maxRounds
-      → downgrade to hollow at loop exit if SurvivesOnlyByConditions
-  termSubstance / mdSubstance
-```
+### `internal/` — one package per concern
 
-**Faithfulness — `runFaithfulness`** (single schema-enforced judge over retrieved passages)
-```
-main() → runFaithfulness(input, src)
-  splitSummary(input)                 # splits numbered/bulleted lists or lines
-  passagesForClaim per claim          # fused bm25+embed retrieval; floor ⇒ "absent" from code
-  groupBySharedPassages               # claims sharing ≥½ passages run consecutively over one
-                                      # union prefix, so the judge's cache prefix stays hot
-  for group, for claim:
-    faithJudgeRepeat → faithJudge(claim, passages, temp)
-      callSchema(faithJudgeSys, judgeSchema, ...)  # ONE call: verdict|partial|overstated|absent|
-                                      # contradicted + gap + evidence[{passage_id,quote}] + so_what
-                                      # + reason. Schema-enforced (Anthropic strict tool / Ollama
-                                      # format), retried once on schema failure.
-      quoteInPassage(...)             # grounding check, NO model: each cited quote must be a
-                                      # verbatim substring of its passage, else dropped + counted
-      groundVerdict(...)              # every verdict but absent needs a verified quote: none ⇒
-                                      # contradicted→absent, faithful/partial/overstated→"unsupported"
-                                      # (needs-you); counted in usage
-  termFaith / mdFaith
-```
-`faithClaim` (the older defender+critic two-call, `faithDefenderSys`/`faithCriticSys`) is retained
-only for `runEvidence`/`runAudit`'s intended-proposition reconstruction, not the faithfulness mode.
+- **`backend`** — the single `Complete` seam every LLM provider implements (subpackages `anthropic`,
+  `ollama`, and the test `fake`), so a mode runner calls one method and never names a provider. Holds
+  the request/response shapes, `MaxTokens`, and the web-search / JSON-schema fields. Contract: `spec/CLI.md` §Backends.
+- **`brief`** — renders the default stdout "Needs you" report from the verdict rows, deterministically
+  and with no model call. `Qualify` is shared with `tree`, so the brief and the tree agree on which
+  claims a human must look at.
+- **`embed`** — the local Ollama embedding client (`nomic-embed-text`, L2-normalised vectors) that
+  supplies the semantic half of faithfulness retrieval, kept separate from the judge backend.
+- **`manifest`** — the held-document set derived from the `sources/` filesystem and keyed by canonical
+  id, so a run can tell `absent` (checked, not there) from `unverifiable` (the truth-maker is missing).
+- **`retrieve`** — turns the corpus into role-tagged speaker-turn passages and ranks them against a
+  claim with BM25, so the judge sees only the passages a claim is about, not the whole corpus.
+- **`tree`** — renders the verdict rows three ways: the **report tree** by §-heading path (`tree.go`,
+  `spec/TREE.md`), the **argument tree** with judgements derived bottom-up (`argument.go`,
+  `spec/ARGUMENT.md`), and the **root summary block** above both (`root.go`).
 
-**Evidence-grounding — `runEvidence`**
-```
-main() → runEvidence(input, src)
-  splitSummary(input)
-  for claim:
-    if src != "": faithClaim(claim, src)
-      → use SourceSays when verdict is partial|overstated
-        (grounds the intended proposition, not literal words)
-    evidenceClaim(proposition)
-      callJSONSourced(evidenceSys, ..., withTools=true)  # web_search_20250305; captures retrieved URLs
-      crossCheckEvidence(...)  # downgrade supported|mixed|refuted → unverifiable when the model's cited
-                               # URLs are absent from the actually-retrieved set (d009/d010)
-  termEvidence / mdEvidence
-```
+### `assay.go` — the CLI and the judge path
 
-**Audit — `runAudit`** (Go only)
-```
-main() → runAudit(input, src)
-  splitSummary(input)    # shared decomposition across all three modes
-  for claim: faithClaim + assayClaim + evidenceClaim
-  mdAudit(claims, fs, ss, es)  # always markdown
-```
-
-**Key design constraint:** `producerSys` deliberately omits the critique axes. The Producer must
-steelman without knowing how it will be attacked.
-
-**API plumbing:** `callClaude` makes a non-streaming POST to the Anthropic API. `callJSON` wraps it
-with one retry on JSON parse failure, dispatching through `cfg.call` (nil in production → falls back
-to `callClaude`; set to a stub in tests). `extractJSON` / `unmarshalLoose` handle markdown fences
-and trailing commas. Web search uses `withTools=true`, which adds `web_search_20250305` to the
-request. `callClaude` parses `web_search_tool_result` blocks into `retrievedSource`s (the URLs
-actually fetched); `callJSONSourced` threads these back so `crossCheckEvidence` can compare them
-(host+path, via `normalizeURL`) against the model's self-reported `sources`. Other tool-use blocks
-(`server_tool_use`, etc.) are consumed silently (or logged in `-v`).
-
-**Verdicts:**
-- Dialectic: `"substantive"` | `"partial"` | `"hollow"`     | `"error"`. Only `substantive` and `partial` appear in the final residue. `partial` claims carry `SurvivingClaim`.
-- Faithfulness: `"faithful"` | `"partial"` | `"overstated"` | `"absent"` | `"contradicted"` | `"unsupported"`
-  (`unsupported` is set in code, never by the judge: a `faithful`/`partial` with no verified quote — see `groundVerdict`)
-- Evidence: `"supported"`    | `"mixed"`   | `"refuted"`    | `"unverifiable"`
-  - Grounding integrity: `crossCheckEvidence` downgrades `supported`/`mixed`/`refuted` →
-    `unverifiable` when the model's cited URLs are absent from the retrieved set (or nothing was
-    retrieved/cited). This checks URL *provenance* (was the page fetched), NOT *content support*
-    (does the page back the sentence) — see the axis boundary note. No code path validates the
-    verdict strings against these enums (BACKGROUND.md W10); a junk verdict renders as-is.
-
-**`maxTokens = 1500`** caps every Claude response. Raise this constant if critiques truncate. A
-`max_tokens` cutoff (or stubborn malformed JSON past the single reparse) collapses a case to
-`"error"`, which the tally counts as unverified rather than surfacing why (BACKGROUND.md W11).
-
-**Reporting (three tiers).** Every run emits, to stderr:
-- *Tier 1* — one `progressDone` completion line per case (verdict + truncated claim + elapsed),
-  plus a 60s `startHeartbeat` liveness line (`heartbeatLine`) so long grounding runs don't look
-  hung. Both are gated by `cfg.progressEnabled()` (off under `-quiet`).
-- *SUMMARY block* — `printSummary` prints a final rollup (fixture, mode, model, verified/total,
-  per-verdict counts from `runTally`, and the `usageCounters` snapshot). Always emitted, even under
-  `-quiet`.
-- *Tier 2* — a JSONL verification chain (one record per case) written to `cfg.chainFile`, derived
-  from `-chain-dir` (default `eval/<stamp>/`), for offline audit of the full run.
-
-`runTally` (`newRunTally`/`record`/`snapshot`) counts verdicts across a run; an `"error"` case
-counts as unverified, not a win. `usageCounters` (`newUsageCounters`/`add`/`snapshot`) accumulates
-input/output/cache tokens and web-search request counts from each `callClaude` (parsed from
-`apiUsage`); `-usage-out` appends the snapshot as one JSON record per run.
+`main` parses flags and dispatches; the `serve` subcommand serves a built `-review` site (`spec/SERVE.md`).
+The judge path is here because it makes model calls: per claim it retrieves passages, then `faithJudge`
+makes one schema-enforced call (verdict + evidence quotes) via `callSchema` over the chosen `backend`;
+`quoteInPassage` / `groundVerdict` verify every cited quote against its passage with **no model**, and
+`faithJudgeRepeat` samples `-n` times for a stability class. Runs write a Tier-2 JSONL chain that
+`-from` re-renders into trees with no further model calls. Decomposition, the older single-file mode
+runners, and usage/tally accounting also live here. Its size is the reason a new concern starts as an
+`internal/` package instead.
 
 ## Hard rule: never fabricate inputs, and propagate provenance to conclusions
 This is a claim-validation tool. Its credibility is its substrate. Fabricated inputs don't just
