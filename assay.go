@@ -16,10 +16,14 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
+	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"slices"
 	"sort"
 	"strconv"
@@ -76,9 +80,9 @@ type cfg struct {
 	treeHTMLPath string              // eval/<stamp>/tree.html sink, written alongside audit.md
 	argumentFile string              // -argument: argument.txt path; when set, -from renders the argument tree
 	argHTMLPath  string              // argument.html sink, alongside audit.md, when -argument is set
-	review       bool                // -review: also write review.html — the two-pane PDF-linked argument page
-	reviewPath   string              // review.html sink, alongside argument.html, when -review is set
-	sourcesDir   string              // -manifest's parent dir; the href prefix and PDF-scan root for -review
+	review       bool                // -review: build the self-contained review site (spec/SERVE.md)
+	siteDir      string              // site/ sink under the example dir, when -review is set
+	sourcesDir   string              // -manifest's parent dir; the on-disk PDF tree the site copies from
 	rootTitle    string              // report title for the root block's line 1, from the claims file "# title:" header
 	rootDate     string              // report date for the root block's line 1, from the claims file "# date:" header
 	sourceDocs   int                 // M: documents held per the manifest; the root block's "checked against M" figure
@@ -143,6 +147,14 @@ func (rt *runTally) snapshot() (total, verified int, counts map[string]int) {
 }
 
 func main() {
+	// serve is a subcommand with its own flag set — the review page it serves needs a real HTTP
+	// origin, not the global claim-assay flags. Dispatch before flag.Parse so -port/-no-open don't
+	// collide with the assay flags of the same shape.
+	if len(os.Args) > 1 && os.Args[1] == "serve" {
+		runServe(os.Args[2:])
+		return
+	}
+
 	var c cfg
 	var src, text, chainDir, fromChain string
 	var ev, audit, full bool
@@ -186,7 +198,7 @@ func main() {
 	flag.Var(&treeF, "tree", "print the tree report to stdout; -tree=full expands every node")
 	flag.StringVar(&fromChain, "from", "", "render brief/tree/audit from a saved chain JSONL (no model calls); a comma-list of chains merges them leaf-by-leaf")
 	flag.StringVar(&c.argumentFile, "argument", "", "with -from: render the argument tree keyed by this argument.txt (spec/ARGUMENT.md) into argument.html, instead of the section-path tree")
-	flag.BoolVar(&c.review, "review", false, "with -argument -manifest: also write review.html — a two-pane page whose left iframe shows the source PDF the argument's links open (report §/page, quote provenance)")
+	flag.BoolVar(&c.review, "review", false, "with -argument -manifest: build a self-contained review site (site/review.html + site/argument.html + site/sources/ with a copy of every linked PDF; links relative to site/) under the example dir — see spec/SERVE.md")
 	flag.Parse()
 
 	// -full and -tree select different stdout renderers; refuse to guess which the caller meant.
@@ -402,6 +414,80 @@ func main() {
 	}
 
 	printUsageLine(c.model, c.usage, c.usageOut)
+}
+
+// ── serve ────────────────────────────────────────────────────────────────────
+
+// runServe starts a loopback static file server over a self-contained review site and opens
+// review.html at its root. The site links into its own `sources/` tree with root-relative hrefs
+// (`sources/report.pdf?p=53#page=53`), so serving the site directory whole puts review.html at
+// /review.html and every link at /sources/…. Serving over HTTP — rather than opening the file://
+// path — is what lets a PDF viewer honour the `#page=N` fragment and load the `sources/…` iframe
+// target. `<dir>` is the site built by `assay -review` (spec/SERVE.md).
+func runServe(args []string) {
+	fs := flag.NewFlagSet("serve", flag.ExitOnError)
+	var (
+		port   int
+		noOpen bool
+	)
+	fs.IntVar(&port, "port", 8080, "listen port on 127.0.0.1")
+	fs.BoolVar(&noOpen, "no-open", false, "print and serve, but don't open a browser")
+	fs.Usage = func() {
+		fmt.Fprintln(os.Stderr, "usage: assay serve [-port N] [-no-open] <site-dir>")
+		fs.PrintDefaults()
+	}
+	_ = fs.Parse(args)
+	if fs.NArg() != 1 {
+		fs.Usage()
+		os.Exit(2)
+	}
+	dir := fs.Arg(0)
+	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+		fatal("serve: not a directory: " + dir)
+	}
+
+	// review.html sits at the site root; warn but keep serving if it is missing, so a site that only
+	// produced argument.html is still reachable.
+	reviewURL := fmt.Sprintf("http://127.0.0.1:%d/review.html", port)
+	if _, err := os.Stat(filepath.Join(dir, "review.html")); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: review.html not found under %s; serving anyway\n", dir)
+	}
+
+	// Bind before printing, so a taken port fails now rather than after we claim a URL that never
+	// answers. Loopback only — this serves local render output, not the network.
+	ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", port))
+	if err != nil {
+		fatal("serve: " + err.Error())
+	}
+
+	fmt.Println(reviewURL)
+	if !noOpen {
+		if err := openBrowser(reviewURL); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: could not open browser: %v\n", err)
+		}
+	}
+	if err := http.Serve(ln, serveHandler(dir)); err != nil {
+		fatal("serve: " + err.Error())
+	}
+}
+
+// serveHandler is the static file handler rooted at `dir`, split out so a test can drive it through
+// httptest without binding a port or opening a browser. http.Dir confines every request to `dir`;
+// a path escaping it (../) is rejected by the FileServer, not served.
+func serveHandler(dir string) http.Handler { return http.FileServer(http.Dir(dir)) }
+
+// openBrowser opens `url` in the platform default browser: `open` on macOS, `xdg-open` on Linux,
+// `cmd /c start` on Windows. A missing opener returns an error for the caller to downgrade to a
+// warning — the server is useful without a browser having launched.
+func openBrowser(url string) error {
+	switch runtime.GOOS {
+	case "darwin":
+		return exec.Command("open", url).Start()
+	case "windows":
+		return exec.Command("cmd", "/c", "start", "", url).Start()
+	default:
+		return exec.Command("xdg-open", url).Start()
+	}
 }
 
 // ── progress helpers ─────────────────────────────────────────────────────────
@@ -1486,10 +1572,12 @@ var (
 // carries no JS). Each page link carries a distinct `?p=<page>` query BEFORE the `#page` fragment so
 // Chrome reloads the iframe on every click — a fragment-only change leaves the URL identical and the
 // PDF viewer does not re-fetch. Hearing PDFs carry no page anchor (the transcript locator is a turn
-// index, not a page), so they link to the document. `srcPrefix` is the href prefix and the root under
-// which submissions/*.pdf are scanned to recover each submission's real filename. It is the Go port of
-// the retired current/build-review.py, and returns a one-line link tally for the caller to report.
-func renderReview(page, srcPrefix string) (out, counts string) {
+// index, not a page), so they link to the document. `srcPrefix` is the href prefix baked into the
+// page (`sources`, so links are site-relative); `scanDir` is the on-disk sources tree whose
+// submissions/*.pdf are scanned to recover each submission's real filename — kept separate so the
+// links can point at the site while the scan reads the real corpus. It is the Go port of the retired
+// current/build-review.py, and returns a one-line link tally for the caller to report.
+func renderReview(page, srcPrefix, scanDir string) (out, counts string) {
 	// submission number (+attachment flag) → pdf filename, scanned from disk so the redaction suffix
 	// and zero-padding don't have to be guessed.
 	type subKey struct {
@@ -1497,7 +1585,7 @@ func renderReview(page, srcPrefix string) (out, counts string) {
 		att bool
 	}
 	subMap := map[subKey]string{}
-	entries, _ := os.ReadDir(filepath.Join(srcPrefix, "submissions"))
+	entries, _ := os.ReadDir(filepath.Join(scanDir, "submissions"))
 	for _, e := range entries {
 		fn := e.Name()
 		if !strings.HasSuffix(fn, ".pdf") {
@@ -1593,6 +1681,92 @@ html,body{height:100%%;margin:0}
 		counts += fmt.Sprintf("; submission files missing=%d", nSubMissing)
 	}
 	return out, counts
+}
+
+// reSitePDF matches a PDF the rendered site page reaches — an `href` link or the left iframe `src` —
+// under the site-relative `sources/` prefix, capturing the path with its `?p=…#page=…` suffix
+// stripped. That path is both the read source (under `sourcesDir`) and the write destination (under
+// the site's `sources/`), which is what makes the site relocatable as a unit.
+var reSitePDF = regexp.MustCompile(`(?:href|src)="sources/([^"?#]*\.pdf)`)
+
+// buildSite writes the self-contained review site under `siteDir`: `review.html` and `argument.html`
+// at its root and `sources/` holding a copy of every PDF `review.html` links to (report.pdf, and each
+// hearing, submission and qon document — the four link classes). Every href is site-relative
+// (`sources/…`, not `../sources/…`), so the tree serves over HTTP and moves as one unit; `assay serve
+// <siteDir>` then answers `review.html` at the root. `page` is the rendered argument page; `sourcesDir`
+// is the on-disk sources tree the copies are read from. Returns renderReview's link tally plus the
+// copied/missing PDF count. See spec/SERVE.md.
+func buildSite(page, sourcesDir, siteDir string) (string, error) {
+	review, linkCounts := renderReview(page, "sources", sourcesDir)
+	copied, missing, err := writeSite(review, page, sourcesDir, siteDir)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%s; pdfs copied=%d missing=%d", linkCounts, copied, missing), nil
+}
+
+// writeSite copies every PDF `reviewHTML` references into `siteDir/sources/` and writes review.html
+// and argument.html at the site root. It is split from buildSite so a refuter can drive it with a
+// hand-written page and a fake sources tree, and assert every href resolves under the site — the
+// property the whole site exists to hold. A PDF that cannot be copied is counted as missing and
+// warned, never synthesized: a broken link is reported, not papered over.
+func writeSite(reviewHTML, argHTML, sourcesDir, siteDir string) (copied, missing int, err error) {
+	if err = os.MkdirAll(siteDir, 0o755); err != nil {
+		return 0, 0, err
+	}
+	for _, rel := range referencedPDFs(reviewHTML) {
+		if cpErr := copyFile(filepath.Join(sourcesDir, rel), filepath.Join(siteDir, "sources", rel)); cpErr != nil {
+			fmt.Fprintf(os.Stderr, "warning: site: cannot copy %s: %v\n", rel, cpErr)
+			missing++
+			continue
+		}
+		copied++
+	}
+	if err = os.WriteFile(filepath.Join(siteDir, "review.html"), []byte(reviewHTML), 0o644); err != nil {
+		return copied, missing, err
+	}
+	if err = os.WriteFile(filepath.Join(siteDir, "argument.html"), []byte(argHTML), 0o644); err != nil {
+		return copied, missing, err
+	}
+	return copied, missing, nil
+}
+
+// referencedPDFs returns the distinct `sources/`-relative PDF paths the site page links to or embeds,
+// sorted for a stable copy order. Each path is the relative locator shared by the read source and the
+// write destination — see reSitePDF.
+func referencedPDFs(html string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, m := range reSitePDF.FindAllStringSubmatch(html, -1) {
+		if !seen[m[1]] {
+			seen[m[1]] = true
+			out = append(out, m[1])
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// copyFile streams `src` to `dst`, creating dst's parent and truncating any existing dst so a rebuild
+// is idempotent. It streams rather than reading whole because the source PDFs run to megabytes.
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	return out.Close()
 }
 
 // loadRefs reads the per-claim report section from claims-machine.txt: the pipe-delimited "ref=§…"
@@ -3208,7 +3382,9 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 		c.treeHTMLPath = ""
 		c.argHTMLPath = filepath.Join(dir, "argument.html")
 		if c.review {
-			c.reviewPath = filepath.Join(dir, "review.html")
+			// The site is a peer of the render dir under the example dir — sourcesDir is
+			// <example>/sources, so its parent is the example dir the site sits beside.
+			c.siteDir = filepath.Join(filepath.Dir(c.sourcesDir), "site")
 		}
 	}
 
@@ -3349,12 +3525,11 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 			fmt.Fprintf(os.Stderr, "argument (html): %s\n", c.argHTMLPath)
 		}
 	}
-	if c.reviewPath != "" {
-		review, counts := renderReview(page, c.sourcesDir)
-		if err := os.WriteFile(c.reviewPath, []byte(review), 0o644); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.reviewPath, err)
+	if c.siteDir != "" {
+		if counts, err := buildSite(page, c.sourcesDir, c.siteDir); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: cannot build site %s: %v\n", c.siteDir, err)
 		} else {
-			fmt.Fprintf(os.Stderr, "review (html): %s — %s\n", c.reviewPath, counts)
+			fmt.Fprintf(os.Stderr, "site: %s — %s\n", c.siteDir, counts)
 		}
 	}
 	fmt.Print(rootBlock)

@@ -22,6 +22,9 @@ examples/destructive/laundering/sources/
 examples/vic-lceic/sources/*
 # ...but the corpus MANIFEST (document names + ids, no copyrighted text) is a tracked artifact.
 !examples/vic-lceic/sources/MANIFEST.md
+# The self-contained review site `assay -review` builds — a build output whose sources/ holds copies
+# of the same copyrighted PDFs excluded above. Rebuild with the command in spec/SERVE.md.
+examples/vic-lceic/site/
 
 # Local API key export — never commit (holds a live ANTHROPIC_API_KEY)
 /setkey.sh

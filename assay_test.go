@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -1461,4 +1464,98 @@ func TestUniquePassageFor(t *testing.T) {
 			t.Errorf("uniquePassageFor(%q, %v) = %q, want %q", c.quote, c.passages, got, c.want)
 		}
 	}
+}
+
+// TestServeReviewLinksResolve is serveHandler's refuter: it pins that a self-contained site's
+// review.html and the sources file its links reach both answer 200 over HTTP with the site served
+// whole. review.html links with root-relative hrefs (sources/…), so fetching /review.html must let
+// /sources/… resolve — a 404 on either is exactly the link class breaking, which this test refuses.
+func TestServeReviewLinksResolve(t *testing.T) {
+	dir := t.TempDir()
+	pdf := []byte("%PDF-1.4 fake report bytes")
+	writeFile(t, filepath.Join(dir, "sources", "report.pdf"), pdf)
+	review := `<a href="sources/report.pdf?p=53#page=53">report</a>`
+	writeFile(t, filepath.Join(dir, "review.html"), []byte(review))
+
+	srv := httptest.NewServer(serveHandler(dir))
+	defer srv.Close()
+
+	body := getOK(t, srv.URL+"/review.html")
+	if !strings.Contains(string(body), "sources/report.pdf") {
+		t.Fatalf("review.html body missing the sources link: %q", body)
+	}
+	got := getOK(t, srv.URL+"/sources/report.pdf")
+	if !bytes.Equal(got, pdf) {
+		t.Fatalf("served report.pdf = %q, want %q", got, pdf)
+	}
+}
+
+// TestWriteSiteHrefsResolve is buildSite's refuter, the task's own: every href in the written
+// review.html resolves to a file under the site. It writes a fake sources tree with one PDF per link
+// class (report, hearing, submission, qon), a review page linking all four plus the iframe src, then
+// asserts each sources/ href lands on a copied file and that both pages sit at the site root. A
+// missing copy or an unresolved href fails — the exact break `assay serve` would surface as a 404.
+func TestWriteSiteHrefsResolve(t *testing.T) {
+	sources := t.TempDir()
+	rels := []string{
+		"report.pdf",
+		"hearings/2025-03-13/4_public-galleries.pdf",
+		"submissions/33.-public-galleries-redacted.pdf",
+		"qon/abc-2025-03-21.pdf",
+	}
+	for _, r := range rels {
+		writeFile(t, filepath.Join(sources, r), []byte("%PDF-1.4 "+r))
+	}
+	review := `<iframe src="sources/report.pdf" name="doc"></iframe>` +
+		`<a href="sources/report.pdf?p=53#page=53">report</a>` +
+		`<a href="sources/hearings/2025-03-13/4_public-galleries.pdf">hearing</a>` +
+		`<a href="sources/submissions/33.-public-galleries-redacted.pdf?p=8#page=8">sub</a>` +
+		`<a href="sources/qon/abc-2025-03-21.pdf?p=2#page=2">qon</a>`
+
+	site := t.TempDir()
+	copied, missing, err := writeSite(review, "<html>argument</html>", sources, site)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if copied != len(rels) || missing != 0 {
+		t.Fatalf("writeSite copied=%d missing=%d, want %d/0", copied, missing, len(rels))
+	}
+
+	for _, m := range reSitePDF.FindAllStringSubmatch(review, -1) {
+		if _, err := os.Stat(filepath.Join(site, "sources", m[1])); err != nil {
+			t.Errorf("href sources/%s does not resolve under site: %v", m[1], err)
+		}
+	}
+	for _, f := range []string{"review.html", "argument.html"} {
+		if _, err := os.Stat(filepath.Join(site, f)); err != nil {
+			t.Errorf("%s missing from site root: %v", f, err)
+		}
+	}
+}
+
+func writeFile(t *testing.T, path string, b []byte) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func getOK(t *testing.T, url string) []byte {
+	t.Helper()
+	resp, err := http.Get(url)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("GET %s → %d, want 200", url, resp.StatusCode)
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b
 }
