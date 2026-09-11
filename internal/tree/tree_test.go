@@ -139,7 +139,7 @@ func TestRenderHTML(t *testing.T) {
 		{ID: "F1", Path: "2=Chapter 2/2.2=Access", Text: "ticket prices bar entry", Faith: "overstated"},
 	}
 	details := map[string]Leaf{
-		"F1": {Reason: "the source hedged this", Quotes: []string{"we saw some price sensitivity"}},
+		"F1": {Reason: "the source hedged this", Quotes: []Quote{{Text: "we saw some price sensitivity"}}},
 	}
 	out := RenderHTML(rows, details, "model X · calls 0 · $0.0000", "")
 	for _, want := range []string{
@@ -149,6 +149,31 @@ func TestRenderHTML(t *testing.T) {
 	} {
 		if !strings.Contains(out, want) {
 			t.Errorf("RenderHTML output missing %q\n---\n%s", want, out)
+		}
+	}
+}
+
+// TestLeafQuoteProvenance pins the leaf render of quote provenance and the report-section line: a
+// quote with a resolved Prov ends in "> quote — <doc>, <witness>, p.N"; a quote whose passage id has
+// no manifest entry renders the "(passage <id>, unresolved)" marker (never dropped); and a row with a
+// Section prints a "report:" line. This package only concatenates Prov (the caller resolves it), so
+// the refuter is that both Prov forms and the section reach the leaf body verbatim.
+func TestLeafQuoteProvenance(t *testing.T) {
+	rows := []brief.Row{{ID: "F20", Text: "funding not indexed", Faith: "faithful", Section: "§3.2.1 p7"}}
+	details := map[string]Leaf{
+		"F20": {Reason: "witnesses say so", Quotes: []Quote{
+			{Text: "a 30 per cent loss", Prov: "— submission:33, Public Galleries, p.9"},
+			{Text: "orphan span", Prov: "(passage submission-99#p1, unresolved)"},
+		}},
+	}
+	out := RenderHTML(rows, details, "", "")
+	for _, want := range []string{
+		"report: §3.2.1 p7",
+		"&gt; a 30 per cent loss — submission:33, Public Galleries, p.9",
+		"&gt; orphan span (passage submission-99#p1, unresolved)",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("leaf missing %q\n---\n%s", want, out)
 		}
 	}
 }

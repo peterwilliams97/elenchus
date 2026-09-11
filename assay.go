@@ -68,6 +68,8 @@ type cfg struct {
 	embed        bool                // -embed: add the nomic-embed-text ranker, fused with BM25 by RRF
 	oracle       map[string][]string // -retrieve=oracle: claim-id → fixed gold passage ids
 	held         map[string]bool     // -manifest: doc ids the corpus holds; a claim citing a missing one is unverifiable
+	docLabels    map[string]string   // -manifest: canonical doc id → witness/author, for a quote's provenance line
+	refs         map[string]string   // -refs: claim id → report section ref (§…), for the leaf's report line
 	index        *retrieve.Index     // built once from the source corpus when retrieveMode != "none"
 	auditPath    string              // full-table sink; every run writes it, whichever renderer stdout gets
 	treeHTMLPath string              // eval/<stamp>/tree.html sink, written alongside audit.md
@@ -148,9 +150,11 @@ func main() {
 	flag.StringVar(&ollamaURL, "ollama-url", envOr("OLLAMA_HOST", ollama.DefaultBaseURL), "ollama server base URL")
 	flag.BoolVar(&think, "think", false, "ollama: emit the model's reasoning block (default off; on needs a higher token cap)")
 	var speakers bool
-	var embedModel, oracleFile, manifestFile, makeManifest string
+	var embedModel, oracleFile, manifestFile, makeManifest, refsFile, backfillChain string
 	flag.StringVar(&manifestFile, "manifest", "", "MANIFEST.md of held documents; a claim citing a doc not in it is 'unverifiable' (no model call)")
 	flag.StringVar(&makeManifest, "make-manifest", "", "scan this sources root, write <root>/MANIFEST.md, and exit")
+	flag.StringVar(&refsFile, "refs", "", "claims-machine.txt whose ref=§ per claim id annotates each rendered leaf with its report section")
+	flag.StringVar(&backfillChain, "backfill-passages", "", "no-model: rewrite this chain JSONL in place, adding quote_passages by verbatim-matching each quote against the record's own passages (needs -source); then exit")
 	flag.StringVar(&c.retrieveMode, "retrieve", "bm25", "per-claim passage retrieval: bm25|none|oracle (none sends the full corpus; oracle reads -oracle)")
 	flag.StringVar(&oracleFile, "oracle", "", "oracle retrieval: JSON map of claim-id → [passage-id]; the judge sees exactly those passages")
 	flag.IntVar(&c.maxTokens, "max-tokens", retrieveTokenCap, "retrieval token budget per claim (fused bm25+embed ranking)")
@@ -205,6 +209,28 @@ func main() {
 		}
 		c.held = held
 		c.sourceDocs = len(held)
+		labels, err := manifest.LoadLabels(manifestFile)
+		if err != nil {
+			fatal("load manifest labels: " + err.Error())
+		}
+		c.docLabels = labels // canonical doc id → witness/author, for a rendered quote's provenance
+	}
+
+	// -refs: load the report section (§) per claim id from claims-machine.txt, so each rendered leaf
+	// names the section it rests on. No model, no key; used only on the render paths.
+	if refsFile != "" {
+		refs, err := loadRefs(refsFile)
+		if err != nil {
+			fatal("load refs: " + err.Error())
+		}
+		c.refs = refs
+	}
+
+	// -backfill-passages rewrites a saved chain in place, adding each quote's passage id by matching it
+	// against the record's own passages — no model call. It needs the corpus (-source), then exits.
+	if backfillChain != "" {
+		c.backfillPassages(backfillChain, src)
+		return
 	}
 
 	// -from replays a saved chain with no model calls, so it needs neither an API key nor a new
@@ -528,8 +554,8 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 		_, dissent := spreadFromSamples(samples)
 		rows[i] = brief.Row{ID: parsed[i].id, Path: parsed[i].path, Text: parsed[i].text,
 			Faith: chosen.Verdict, FaithReason: chosen.Evidence, Spread: spread, Dissent: dissent,
-			Gap: chosen.Gap, SoWhat: chosen.SoWhat, Route: parsed[i].route}
-		details[parsed[i].id] = tree.Leaf{Reason: chosen.Evidence, Quotes: chosen.Quotes}
+			Gap: chosen.Gap, SoWhat: chosen.SoWhat, Route: parsed[i].route, Section: c.refs[parsed[i].id]}
+		details[parsed[i].id] = tree.Leaf{Reason: chosen.Evidence, Quotes: buildLeafQuotes(chosen.Quotes, chosen.QuotePassages, c.docLabels)}
 		vs[i] = chosen.Verdict
 	}
 
@@ -547,8 +573,9 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 		spread, dissent := spreadForRecord(rec)
 		rows[i] = brief.Row{ID: parsed[i].id, Path: parsed[i].path, Text: parsed[i].text,
 			Faith: rec.Verdict, FaithReason: fd.CriticFinding, Spread: spread, Dissent: dissent,
-			Gap: fd.Gap, SoWhat: fd.SoWhat, Route: routeOr(rec.Route, parsed[i].route)}
-		details[parsed[i].id] = tree.Leaf{Reason: fd.CriticFinding, Quotes: fd.Quotes}
+			Gap: fd.Gap, SoWhat: fd.SoWhat, Route: routeOr(rec.Route, parsed[i].route),
+			Section: c.refs[parsed[i].id]}
+		details[parsed[i].id] = tree.Leaf{Reason: fd.CriticFinding, Quotes: buildLeafQuotes(fd.Quotes, fd.QuotePassages, c.docLabels)}
 		vs[i] = rec.Verdict
 	}
 
@@ -1052,11 +1079,12 @@ func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64
 	}
 	// ground verifies each cited quote is a verbatim substring of the passage it names — the grounding
 	// check, no model call — returning the surviving quotes, their sources, and the reject count.
-	ground := func(jj judgeJSON) (verified, sources []string, rejects int) {
+	ground := func(jj judgeJSON) (verified, sources, passageIDs []string, rejects int) {
 		for _, e := range jj.Evidence {
 			if p, ok := byID[e.PassageID]; ok && quoteInPassage(e.Quote, p) {
 				verified = append(verified, e.Quote)
-				sources = append(sources, p.Source) // "hearing" | "submission", for the evidence-origin table
+				sources = append(sources, p.Source)   // "hearing" | "submission", for the evidence-origin table
+				passageIDs = append(passageIDs, p.ID) // the passage the quote was cited from, for provenance
 			} else {
 				rejects++ // a paraphrase presented as verbatim, or an id the judge invented
 			}
@@ -1068,7 +1096,7 @@ func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64
 	if err := c.callSchema(faithJudgeSys, cached, user, json.RawMessage(judgeSchema), "faith_verdict", temp, &j); err != nil {
 		return faith{Claim: claim, Verdict: "error", Evidence: err.Error()}
 	}
-	verified, sources, rejects := ground(j)
+	verified, sources, passageIDs, rejects := ground(j)
 
 	// report_says/source_says must be plain restatements the reader can act on (the check reads the
 	// grounded quotes, so it runs after grounding). A violation gets one retry (counted), steered to
@@ -1083,7 +1111,7 @@ func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64
 		var j2 judgeJSON
 		if err := c.callSchema(faithJudgeSys, cached, steer, json.RawMessage(judgeSchema), "faith_verdict", temp, &j2); err == nil {
 			j = j2
-			verified, sources, rejects = ground(j)
+			verified, sources, passageIDs, rejects = ground(j)
 		}
 	}
 	if rejects > 0 && c.usage != nil {
@@ -1094,7 +1122,8 @@ func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64
 	// faithful/partial/overstated→unsupported) selects the matching template.
 	soWhat := renderStakes(verdict, j.ReportSays, j.SourceSays)
 	return faith{Claim: claim, Verdict: verdict, Evidence: j.Reason, ReportSays: j.ReportSays,
-		SourceSays: j.SourceSays, Gap: j.Gap, SoWhat: soWhat, Quotes: verified, QuoteSources: sources}
+		SourceSays: j.SourceSays, Gap: j.Gap, SoWhat: soWhat, Quotes: verified, QuoteSources: sources,
+		QuotePassages: passageIDs}
 }
 
 // renderStakes assembles the stakes line the tree leaf and root block show, from the judge's two
@@ -1375,6 +1404,164 @@ var quotePunct = strings.NewReplacer("’", "'", "‘", "'", "“", `"`, "”", 
 // word still fails the substring test — that is the point of the grounding check.
 func normQuote(s string) string {
 	return quoteWS.ReplaceAllString(quotePunct.Replace(strings.ToLower(strings.TrimSpace(s))), " ")
+}
+
+// resolveQuoteProv renders a verified quote's provenance suffix from its passage id, using only the
+// manifest labels — no corpus, so the render needs the chain plus MANIFEST.md and nothing more. It is
+// "— <doc>, <witness>, <locator>" when the id maps to a held document, else the
+// "(passage <id>, unresolved)" marker (the quote is never dropped). An empty id — the backfill could
+// not pin the quote to exactly one passage — renders "(passage unresolved)". With no labels loaded
+// (no -manifest) it returns "", so the leaf shows the bare quote unchanged.
+func resolveQuoteProv(pid string, labels map[string]string) string {
+	if len(labels) == 0 {
+		return ""
+	}
+	if pid == "" {
+		return "(passage unresolved)"
+	}
+	doc, loc, ok := manifest.CanonicalDoc(pid)
+	if !ok {
+		return "(passage " + pid + ", unresolved)"
+	}
+	witness, held := labels[doc]
+	if !held {
+		return "(passage " + pid + ", unresolved)"
+	}
+	if witness == "" {
+		return fmt.Sprintf("— %s, %s", doc, loc)
+	}
+	return fmt.Sprintf("— %s, %s, %s", doc, witness, loc)
+}
+
+// buildLeafQuotes pairs each verified quote with its resolved provenance suffix for a tree leaf.
+// `passageIDs` is parallel to `quotes`; a missing entry (a shorter or absent list) leaves that quote
+// with no id, which resolveQuoteProv renders as unresolved rather than dropping it.
+func buildLeafQuotes(quotes, passageIDs []string, labels map[string]string) []tree.Quote {
+	out := make([]tree.Quote, len(quotes))
+	for i, q := range quotes {
+		pid := ""
+		if i < len(passageIDs) {
+			pid = passageIDs[i]
+		}
+		out[i] = tree.Quote{Text: q, Prov: resolveQuoteProv(pid, labels)}
+	}
+	return out
+}
+
+// loadRefs reads the per-claim report section from claims-machine.txt: the pipe-delimited "ref=§…"
+// field, keyed by claim id, for the leaf's "report:" line. Comment (#) and pipe-less lines are
+// skipped; a line with no ref= field contributes no entry.
+func loadRefs(path string) (map[string]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	refs := map[string]string{}
+	for _, ln := range strings.Split(string(data), "\n") {
+		if strings.HasPrefix(strings.TrimSpace(ln), "#") || !strings.Contains(ln, "|") {
+			continue
+		}
+		fields := strings.Split(ln, "|")
+		id := strings.TrimSpace(fields[0])
+		if id == "" {
+			continue
+		}
+		for _, f := range fields[1:] {
+			if ref, ok := strings.CutPrefix(strings.TrimSpace(f), "ref="); ok {
+				refs[id] = strings.TrimSpace(ref)
+				break
+			}
+		}
+	}
+	return refs, nil
+}
+
+// backfillPassages rewrites a chain JSONL in place, adding each faithfulness record's quote_passages —
+// the passage id every verified quote was cited from — with NO model call. It recovers, for chains
+// judged before ground kept e.PassageID, the id the live judge now persists, by verbatim-substring-
+// matching each quote against the record's OWN passages (loaded from -source, via the same quoteInPassage
+// grounding check). A quote matching exactly one passage records that id; a quote matching zero or more
+// than one is left "" (unresolved) — never guessed. Non-faithfulness chains and quote-less records pass
+// through unchanged. The record is re-marshalled through chainRecord/faithDetail, whose field order the
+// live writer already uses, so the on-disk diff is exactly the added quote_passages.
+func (c *cfg) backfillPassages(chainPath, src string) {
+	if src == "" {
+		fatal("-backfill-passages needs -source (the corpus to match quotes against)")
+	}
+	ix, err := loadCorpusIndex(src)
+	if err != nil {
+		fatal("load corpus: " + err.Error())
+	}
+	byID := make(map[string]retrieve.Passage, len(ix.Passages))
+	for _, p := range ix.Passages {
+		byID[p.ID] = p
+	}
+	data, err := os.ReadFile(chainPath)
+	if err != nil {
+		fatal("read chain: " + err.Error())
+	}
+	var out []string
+	var recs, quotes, resolved int
+	for _, ln := range strings.Split(strings.TrimRight(string(data), "\n"), "\n") {
+		if strings.TrimSpace(ln) == "" {
+			continue
+		}
+		var rec chainRecord
+		if err := json.Unmarshal([]byte(ln), &rec); err != nil {
+			fatal("parse chain line: " + err.Error())
+		}
+		if rec.Mode == "faithfulness" {
+			var det faithDetail
+			if err := json.Unmarshal(rec.Detail, &det); err != nil {
+				fatal("parse detail: " + err.Error())
+			}
+			if len(det.Quotes) > 0 {
+				recs++
+				det.QuotePassages = make([]string, len(det.Quotes))
+				for i, q := range det.Quotes {
+					quotes++
+					pid := uniquePassageFor(q, rec.Passages, byID)
+					det.QuotePassages[i] = pid
+					if pid != "" {
+						resolved++
+					}
+				}
+				raw, _ := json.Marshal(det)
+				rec.Detail = raw
+			}
+		}
+		raw, err := json.Marshal(rec)
+		if err != nil {
+			fatal("marshal record: " + err.Error())
+		}
+		out = append(out, string(raw))
+	}
+	if quotes == 0 {
+		fatal("backfill matched 0 quotes — not a faithfulness chain with quotes?") // zero-output rule
+	}
+	if err := os.WriteFile(chainPath, []byte(strings.Join(out, "\n")+"\n"), 0o644); err != nil {
+		fatal("write chain: " + err.Error())
+	}
+	fmt.Fprintf(os.Stderr, "backfilled %s: %d records, %d quotes → %d resolved, %d unresolved\n",
+		chainPath, recs, quotes, resolved, quotes-resolved)
+}
+
+// uniquePassageFor returns the id of the single passage among `passages` whose visible text contains
+// `quote` verbatim (quoteInPassage). Zero or multiple matches return "" — the backfill records an
+// unresolved marker rather than misattribute a quote that appears in two retrieved passages. A passage
+// id absent from the corpus index is skipped.
+func uniquePassageFor(quote string, passages []string, byID map[string]retrieve.Passage) string {
+	hit, n := "", 0
+	for _, pid := range passages {
+		if p, ok := byID[pid]; ok && quoteInPassage(quote, p) {
+			n++
+			hit = pid
+		}
+	}
+	if n == 1 {
+		return hit
+	}
+	return ""
 }
 
 // faithRepeat runs faithClaim c.repeat times (once when repeat ≤ 1) and returns the modal result
@@ -1927,6 +2114,7 @@ type faith struct {
 	SoWhat                               string   // stakes line assembled by renderStakes from report/source_says
 	Quotes                               []string // defender's verbatim source spans, for the tree leaf
 	QuoteSources                         []string // parallel to Quotes: "hearing"|"submission" origin of each
+	QuotePassages                        []string // parallel to Quotes: the passage id each quote was cited from
 }
 type source struct{ Title, URL string }
 type evidence struct {
@@ -2434,8 +2622,9 @@ type substanceDetail struct {
 
 type faithDetail struct {
 	DefenderSupport string   `json:"defender_support,omitempty"`
-	Quotes          []string `json:"quotes,omitempty"`        // verbatim source spans the judge cited
-	QuoteSources    []string `json:"quote_sources,omitempty"` // parallel: "hearing"|"submission" per quote
+	Quotes          []string `json:"quotes,omitempty"`         // verbatim source spans the judge cited
+	QuoteSources    []string `json:"quote_sources,omitempty"`  // parallel: "hearing"|"submission" per quote
+	QuotePassages   []string `json:"quote_passages,omitempty"` // parallel: the passage id each quote was cited from ("" = unresolved)
 	CriticFinding   string   `json:"critic_finding,omitempty"`
 	DistortionType  string   `json:"distortion_type,omitempty"`
 	ReportSays      string   `json:"report_says,omitempty"` // judge's ≤12-word plain restatement of the summary
@@ -2481,6 +2670,7 @@ func faithChainRecord(i, total int, claim string, f faith, start time.Time) chai
 	det := faithDetail{
 		Quotes:        f.Quotes,
 		QuoteSources:  f.QuoteSources,
+		QuotePassages: f.QuotePassages,
 		CriticFinding: f.Evidence,
 		ReportSays:    f.ReportSays,
 		SourceSays:    f.SourceSays,
@@ -2523,6 +2713,7 @@ func auditChainRecord(i, n int, claim string, f faith, s substance, e evidence, 
 	det := auditDetail{
 		Faith: faithDetail{
 			Quotes:        f.Quotes,
+			QuotePassages: f.QuotePassages,
 			CriticFinding: f.Evidence,
 			SourceSays:    f.SourceSays,
 			Gap:           f.Gap,
@@ -2892,7 +3083,7 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
 				Faith: r.Verdict, FaithReason: det.CriticFinding, Spread: spread, Dissent: dissent,
 				Gap: det.Gap, SoWhat: det.SoWhat, Route: routeOr(r.Route, routes[i])}
-			leaf := tree.Leaf{Reason: det.CriticFinding, Quotes: det.Quotes}
+			leaf := tree.Leaf{Reason: det.CriticFinding, Quotes: buildLeafQuotes(det.Quotes, det.QuotePassages, c.docLabels)}
 			if applySchemaGate(&rows[i], det.CriticFinding) {
 				leaf.Reason = schemaLeafFlag(det.CriticFinding)
 			}
@@ -2955,7 +3146,7 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 				Faith: fv, Substance: sv, Grounding: evv,
 				FaithReason: det.Faith.CriticFinding, GroundReason: det.Evidence.Finding,
 				Gap: det.Faith.Gap, SoWhat: det.Faith.SoWhat, Route: routeOr(r.Route, routes[i])}
-			leaf := tree.Leaf{Reason: det.Faith.CriticFinding, Quotes: det.Faith.Quotes}
+			leaf := tree.Leaf{Reason: det.Faith.CriticFinding, Quotes: buildLeafQuotes(det.Faith.Quotes, det.Faith.QuotePassages, c.docLabels)}
 			if applySchemaGate(&rows[i], det.Faith.CriticFinding) {
 				leaf.Reason = schemaLeafFlag(det.Faith.CriticFinding)
 				fv = rows[i].Faith
@@ -2970,7 +3161,8 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 	}
 
 	for i := range rows {
-		rows[i].Class = classes[i] // "" under a single chain; settled/wobble/contested when merged
+		rows[i].Class = classes[i]           // "" under a single chain; settled/wobble/contested when merged
+		rows[i].Section = c.refs[rows[i].ID] // -refs: the report section this claim rests on ("" if none)
 		if classes[i] == "contested" {
 			rows[i].Split = splitDescriptor(recordSamples(recs[i])) // "" unless the pool tied — then "a/b"
 		}

@@ -26,6 +26,7 @@ type Row struct {
 	Gap                                        string // judge's gap class; a non-"none" gap on a partial opens the branch
 	SoWhat                                     string // assembled stakes line for a needs-you leaf ("The report says X. …")
 	Route                                      string // what can settle the claim: evidence|source|evaluative|data-gap
+	Section                                    string // report section ref (claims-machine.txt ref=§, e.g. "§3.2.1 p7"); "" if unknown
 	Class                                      string // multi-run stability: settled|wobble|contested; "" for a single-chain render
 	Split                                      string // tied top verdicts ("a/b") when a merged pool had no majority; "" otherwise — always a contested leaf
 	SchemaFail                                 bool   // the judge's reason was empty or carried a raw tag; verdict forced to unverifiable

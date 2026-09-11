@@ -13,6 +13,7 @@ import (
 
 	"assay/internal/backend"
 	"assay/internal/backend/fake"
+	"assay/internal/retrieve"
 )
 
 func TestSplitSummaryNewlines(t *testing.T) {
@@ -1402,5 +1403,62 @@ func TestFromReplayBackendAgnostic(t *testing.T) {
 	}
 	if aRecs[0].Backend != "anthropic" || oRecs[0].Backend != "ollama" {
 		t.Errorf("producing backend not preserved: %q / %q", aRecs[0].Backend, oRecs[0].Backend)
+	}
+}
+
+// TestResolveQuoteProv is the render-side refuter for quote provenance: a passage id whose canonical
+// document is in the manifest labels resolves to "— <doc>, <witness>, <locator>"; an id whose document
+// is absent renders the "(passage <id>, unresolved)" marker rather than dropping the quote; an empty id
+// (backfill could not pin the quote) renders "(passage unresolved)"; and with no labels loaded the
+// suffix is empty (the bare quote). Resolution uses only the labels map — no corpus.
+func TestResolveQuoteProv(t *testing.T) {
+	labels := map[string]string{
+		"submission:19": "Theatre Network Australia",
+		"hearing:2025-03-13/4_public-galleries-association-of-victoria": "Public Galleries Association Of Victoria",
+	}
+	cases := []struct {
+		pid, want string
+		labels    map[string]string
+	}{
+		{"submission-19#p9", "— submission:19, Theatre Network Australia, p.9", labels},
+		{"2025-03-13/4_public-galleries-association-of-victoria#t48",
+			"— hearing:2025-03-13/4_public-galleries-association-of-victoria, Public Galleries Association Of Victoria, line 48", labels},
+		{"submission-99#p1", "(passage submission-99#p1, unresolved)", labels}, // doc not in manifest
+		{"garbage", "(passage garbage, unresolved)", labels},                   // unparseable id
+		{"", "(passage unresolved)", labels},                                   // backfill left it empty
+		{"submission-19#p9", "", nil},                                          // no -manifest: bare quote
+	}
+	for _, c := range cases {
+		if got := resolveQuoteProv(c.pid, c.labels); got != c.want {
+			t.Errorf("resolveQuoteProv(%q) = %q, want %q", c.pid, got, c.want)
+		}
+	}
+}
+
+// TestUniquePassageFor is the backfill refuter: a quote verbatim in exactly one of the record's OWN
+// passages resolves to that passage id; a quote in two of them, or in none, resolves to "" — the
+// backfill records an unresolved marker rather than pick. The record's passage list (not the whole
+// corpus) is the candidate set, so a passage containing the quote but absent from the list is ignored.
+func TestUniquePassageFor(t *testing.T) {
+	byID := map[string]retrieve.Passage{
+		"a": {ID: "a", Text: "the quick brown fox"},
+		"b": {ID: "b", Text: "jumps over the lazy dog"},
+		"c": {ID: "c", Text: "the quick brown fox again"},
+	}
+	cases := []struct {
+		quote    string
+		passages []string
+		want     string
+	}{
+		{"lazy dog", []string{"a", "b", "c"}, "b"}, // exactly one match
+		{"brown fox", []string{"a", "b", "c"}, ""}, // in a and c → ambiguous, don't pick
+		{"brown fox", []string{"a", "b"}, "a"},     // c excluded by the record's list → unique again
+		{"unicorn", []string{"a", "b", "c"}, ""},   // no match
+		{"lazy dog", []string{"a", "missing"}, ""}, // b not in the record's list → no match
+	}
+	for _, c := range cases {
+		if got := uniquePassageFor(c.quote, c.passages, byID); got != c.want {
+			t.Errorf("uniquePassageFor(%q, %v) = %q, want %q", c.quote, c.passages, got, c.want)
+		}
 	}
 }

@@ -84,7 +84,16 @@ func Render(rows []brief.Row, expandAll bool, auditPath string) string {
 // and the verbatim source spans, both taken from the verification chain and keyed by row ID.
 type Leaf struct {
 	Reason string
-	Quotes []string
+	Quotes []Quote
+}
+
+// Quote is one verified source span plus its already-resolved provenance suffix. `Prov` is built by
+// the caller (which owns the manifest, so this package stays corpus-agnostic): either
+// "— <doc>, <witness>, <locator>" for a resolved passage or "(passage <id>, unresolved)" when the
+// passage id has no manifest entry. An empty Prov renders the bare quote, unchanged.
+type Quote struct {
+	Text string
+	Prov string
 }
 
 const htmlHead = `<!doctype html>
@@ -152,12 +161,19 @@ func renderLeafHTML(b *strings.Builder, row *brief.Row, details map[string]Leaf)
 		fmt.Fprintf(b, "so what: %s\n", html.EscapeString(r.SoWhat))
 	}
 	fmt.Fprintf(b, "claim: %s\n", html.EscapeString(r.Text))
+	if r.Section != "" {
+		fmt.Fprintf(b, "report: %s\n", html.EscapeString(r.Section)) // the report section this claim rests on
+	}
 	d := details[r.ID]
 	if d.Reason != "" {
 		fmt.Fprintf(b, "reason: %s\n", html.EscapeString(d.Reason))
 	}
 	for _, q := range d.Quotes {
-		fmt.Fprintf(b, "&gt; %s\n", html.EscapeString(q))
+		line := q.Text
+		if q.Prov != "" {
+			line += " " + q.Prov // "— <doc>, <witness>, <loc>" or "(passage <id>, unresolved)"
+		}
+		fmt.Fprintf(b, "&gt; %s\n", html.EscapeString(line))
 	}
 	b.WriteString("</div></details>\n")
 }
