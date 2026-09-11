@@ -39,20 +39,45 @@ now vs. log unaided first to protect the disagreement baseline — not yet resol
 ## Running it
 
 ```sh
-export ANTHROPIC_API_KEY=sk-ant-...
-
 ./build.sh                                             # test + build → ./assay
+```
 
-./assay memo.txt                                       # substance (default)
-./assay -source transcript.txt summary.txt             # faithfulness
-./assay -evidence claims.txt                           # grounding
-./assay -source transcript.txt -evidence summary.txt   # grounding on intended proposition
-./assay -audit -source transcript.txt -md summary.txt  # all three, markdown cross-tab
-./assay -v memo.txt                                    # verbose: show every API call
-./assay -model claude-opus-4-8 -max-rounds 3 memo.txt
-./assay -quiet -usage-out usage.jsonl memo.txt         # suppress per-case lines; append a usage record
-./assay -max-claims 5 -evidence claims.txt             # bound an expensive grounding run
-./assay -chain-dir eval/run1 memo.txt                  # write the Tier-2 JSONL chain here
+**Judge run** — the one pass that makes model calls: retrieved, N=3, against the manifest, writing a
+Tier-2 chain plus `tree.html` and `audit.md` under `-chain-dir` (`spec/TREE.md`):
+
+```sh
+source ./setkey.sh && ./assay -backend anthropic -model claude-sonnet-4-6 -retrieve bm25 -n 3 \
+  -manifest examples/vic-lceic/sources/MANIFEST.md \
+  -source examples/vic-lceic/sources/hearings,examples/vic-lceic/sources/submissions,examples/vic-lceic/sources/qon \
+  -chain-dir evidence/<date>-full/sonnet-retrieved \
+  -tree examples/vic-lceic/claims-machine-full.txt
+```
+
+**Backfill passage ids** into a saved chain — no model call; adds each quote's `quote_passages` by
+verbatim-matching it against that record's own passages, unresolved on zero or multiple matches:
+
+```sh
+./assay -backfill-passages <chain>.jsonl \
+  -source ../sources/hearings,../sources/submissions,../sources/qon
+```
+
+**Render from a saved chain** — no model calls. Flags go **before** the positional claims file
+(Go's parser stops at the first non-flag). `-from` takes a comma-list of chains and merges them
+leaf-by-leaf; `-argument` + `-manifest` + `-refs` render the argument tree with per-leaf provenance;
+`-review` also builds the self-contained PDF-linked site under the example dir (`spec/SERVE.md`):
+
+```sh
+# run from examples/vic-lceic/current/
+./assay -from current.faithfulness.jsonl,current-2026-09-10.faithfulness.jsonl \
+  -argument ../argument.txt -manifest ../sources/MANIFEST.md -refs ../claims-machine.txt \
+  -review \
+  claims.txt
+```
+
+**Serve the built site** over HTTP — loopback only, opens the browser unless `-no-open` (`spec/SERVE.md`):
+
+```sh
+./assay serve examples/vic-lceic/site        # → http://127.0.0.1:8080/review.html
 ```
 
 **`ANTHROPIC_API_KEY` lives in `./setkey.sh`.** Runs that need it use `source ./setkey.sh &&
@@ -62,11 +87,14 @@ auth, report that and stop.
 
 `ANTHROPIC_MODEL` env var overrides the default model (`claude-sonnet-4-6`).
 
-**Flags beyond the modes:** `-max-rounds N` (producer–critic rounds, substance only, default 2);
-`-max-claims N` (cap claims graded, 0 = unlimited); `-progress` (per-case stderr lines + 60s
-heartbeat, default on); `-quiet` (suppress per-case lines and heartbeat but keep the SUMMARY block
-and Tier-2 chain); `-usage-out FILE` (append one JSON usage record per run); `-chain-dir DIR` (Tier-2
-JSONL verification chain destination, default `eval/<stamp>/`); `-v`/`-verbose`; `-no-color`.
+**Flags beyond those shown:** `-retrieve bm25|none|oracle` (per-claim retrieval; `none` sends the
+whole corpus, `oracle` reads `-oracle`); `-n N` (repeat each claim N times → modal verdict + `k/N`
+agreement, the stability class); `-fresh` (re-judge every claim rather than resume an existing
+chain); `-tree=full` / `-full` (expand every node / print the full table); `-make-manifest <root>`
+(scan a sources root, write its `MANIFEST.md`, exit); `-floor` (top-passage cosine below which a
+claim is `absent` with no model call); `-embed` / `-embed-model` (the semantic ranker fused with
+BM25); `-quiet`, `-progress`, `-usage-out FILE`, `-v`/`-verbose`, `-no-color`. The single-file modes
+add `-max-rounds N`, `-max-claims N`, `-evidence`, `-audit`, `-md` (`spec/CLI.md`).
 
 ## Architecture
 
