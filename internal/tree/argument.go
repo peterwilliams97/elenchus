@@ -287,30 +287,40 @@ func ArgumentTitle(argText string) string {
 	return ""
 }
 
-// ArgumentPage returns the full argument.html and, separately, the plain-text root block it embeds
-// (so the caller can also print it to stdout). The page is the root block above, then the findings
-// and claims as a nested-<details> tree — the recommendations, their findings, and the atomic-claim
-// leaves, the leaves rendered exactly as the section-path tree renders them. `title` is the report
-// name (ArgumentTitle) that replaces htmlHead's "assay tree" as the page <title>.
-func ArgumentPage(root *ArgNode, details map[string]Leaf, header, title string) (page, rootBlock string) {
+// ArgumentPage renders the argument tree as index.html (spec/SERVE.md § index.html) and, separately,
+// returns the plain-text root block (argRootBlock) for the caller to print to stdout. The page is,
+// top to bottom: the report title, the `what`/sources sentences, the thesis in a card with the
+// recommendation tally beneath it, then one card per root child — the recommendations in the argument
+// file's order, then the descriptive base — each opening down through its findings, claims, and the
+// quotes those claims rest on. Every badge is DERIVED, never authored: a leaf's pooled verdict, an
+// internal node's conjunction. `title` is the report name (ArgumentTitle); `what` is the
+// corpus-specific "what this page checks / which sources are held" sentence the caller builds from the
+// manifest — this package stays corpus-agnostic, so it takes the sentence rather than the held set.
+func ArgumentPage(root *ArgNode, details map[string]Leaf, title, what string) (page, rootBlock string) {
 	rootBlock = argRootBlock(root)
 	var b strings.Builder
-	// argument.html ships in the review site next to favicon.svg (spec/SERVE.md), so it links the site
-	// mark and takes the report's title in place of the shared "assay tree"; the section-path tree
-	// (tree.html) keeps the plain htmlHead and does neither.
-	head := strings.Replace(htmlHead, "<title>assay tree</title>",
-		"<title>"+html.EscapeString(title)+"</title>", 1)
-	head = strings.Replace(head,
-		"</head>", `<link rel="icon" href="favicon.svg" type="image/svg+xml">`+"\n</head>", 1)
-	b.WriteString(head)
-	if header != "" {
-		fmt.Fprintf(&b, "<pre>%s</pre>\n", html.EscapeString(header))
+	fmt.Fprintf(&b, argHead, html.EscapeString(title))
+	fmt.Fprintf(&b, "<main class=\"page\">\n<h1>%s</h1>\n", html.EscapeString(title))
+	if what != "" {
+		fmt.Fprintf(&b, "<p class=\"what\">%s</p>\n", html.EscapeString(what))
 	}
-	fmt.Fprintf(&b, "<pre class=\"root\">%s</pre>\n", html.EscapeString(rootBlock))
+	b.WriteString(`<button class="toggle" type="button">Expand all</button>` + "\n")
+	// The thesis card is static — the root is not a toggle — so a reader meets the whole case (the
+	// proposition, the recommendation tally, the base sentence) before opening any recommendation.
+	b.WriteString(`<section class="thesis">` + "\n")
+	fmt.Fprintf(&b, "<p class=\"prop\">%s</p>\n", html.EscapeString(root.Content))
+	fmt.Fprintf(&b, "<p class=\"tally\">%s</p>\n", html.EscapeString(rootTally(root)))
+	if s := baseSentence(root); s != "" {
+		fmt.Fprintf(&b, "<p class=\"base\">%s</p>\n", html.EscapeString(s))
+	}
+	b.WriteString("</section>\n")
 	for _, c := range root.Children {
-		renderArgHTML(&b, c, details)
+		renderNodeCard(&b, c, details)
 	}
-	b.WriteString(htmlTail)
+	b.WriteString(keyHTML)
+	b.WriteString("</main>\n")
+	b.WriteString(argScript)
+	b.WriteString("</body></html>\n")
 	return b.String(), rootBlock
 }
 
@@ -476,23 +486,178 @@ func argRootBlock(root *ArgNode) string {
 	return b.String()
 }
 
-// renderArgHTML writes one argument-tree node as an open <details> block. A leaf renders through the
-// shared renderLeafHTML (identical to the section tree); an internal node's summary carries its id, a
-// "?" when it hangs on a `?` edge, its content, its derived judgement, and its child count.
-func renderArgHTML(b *strings.Builder, n *ArgNode, details map[string]Leaf) {
+// renderNodeCard writes one internal argument node — a recommendation, a finding, or the descriptive
+// base — as a closed <details> card: a badge for its DERIVED judgement, its id (with a trailing `?`
+// on a `?` edge), its proposition, and, when it does not hold, the child that decides it in small
+// text. An atomic-claim leaf renders through renderLeafCard.
+func renderNodeCard(b *strings.Builder, n *ArgNode, details map[string]Leaf) {
 	if n.row != nil {
-		renderLeafHTML(b, n.row, details)
+		renderLeafCard(b, n.row, details)
 		return
 	}
-	q := ""
-	if n.Query {
-		q = " ?"
+	j := n.Judgement()
+	b.WriteString(`<details class="card"><summary>`)
+	badgeSpan(b, j, j)
+	b.WriteString(idSpan(n))
+	fmt.Fprintf(b, `<span class="prop">%s</span>`, html.EscapeString(n.Content))
+	if j != jHolds {
+		if dc := decidingChild(n); dc != "" {
+			fmt.Fprintf(b, `<span class="dc">(%s)</span>`, html.EscapeString(dc))
+		}
 	}
-	fmt.Fprintf(b, "<details open><summary>%s%s  %s  [%s]  [%d]</summary>\n",
-		html.EscapeString(n.ID), q, html.EscapeString(label12(n.Content)),
-		html.EscapeString(n.Judgement()), len(n.Children))
+	b.WriteString("</summary>\n")
 	for _, c := range n.Children {
-		renderArgHTML(b, c, details)
+		renderNodeCard(b, c, details)
 	}
 	b.WriteString("</details>\n")
 }
+
+// renderLeafCard writes one atomic-claim leaf as a closed <details> card. Its badge is the pooled
+// verdict, coloured on the severity scale (a contested/split leaf takes the contested hue); the
+// summary carries the verdict word, the k/N agreement, the id and the claim head; the body reveals
+// the full claim, the report section, the judge's reason, and the quotes the claim rests on — each
+// quote's provenance kept in the exact "report: §… / … — <doc>, <witness>, <loc>" text renderReview
+// (assay.go) rewrites into a PDF link.
+func renderLeafCard(b *strings.Builder, row *brief.Row, details map[string]Leaf) {
+	r := *row
+	class, word, note := leafBadge(r)
+	b.WriteString(`<details class="card leaf"><summary>`)
+	badgeSpan(b, class, word)
+	if note != "" {
+		fmt.Fprintf(b, `<span class="note">%s</span>`, html.EscapeString(note))
+	}
+	fmt.Fprintf(b, `<span class="id">%s</span><span class="claim">%s</span></summary>`+"\n",
+		html.EscapeString(r.ID), html.EscapeString(truncate(r.Text, 80)))
+	b.WriteString(`<div class="body">` + "\n")
+	fmt.Fprintf(b, "<p class=\"claimfull\">%s</p>\n", html.EscapeString(r.Text))
+	if r.SoWhat != "" {
+		fmt.Fprintf(b, "<p class=\"meta\">so what: %s</p>\n", html.EscapeString(r.SoWhat))
+	}
+	if r.Section != "" {
+		// "report: §X pN" verbatim — renderReview rewrites it into a link to the report PDF page.
+		fmt.Fprintf(b, "<p class=\"meta\">report: %s</p>\n", html.EscapeString(r.Section))
+	}
+	d := details[r.ID]
+	if d.Reason != "" {
+		fmt.Fprintf(b, "<p class=\"meta\">reason: %s</p>\n", html.EscapeString(d.Reason))
+	}
+	for _, q := range d.Quotes {
+		line := q.Text
+		if q.Prov != "" {
+			line += " " + q.Prov // "— <doc>, <witness>, <loc>": renderReview rewrites the provenance into a PDF link
+		}
+		fmt.Fprintf(b, "<blockquote>%s</blockquote>\n", html.EscapeString(line))
+	}
+	b.WriteString("</div></details>\n")
+}
+
+// idSpan writes a node's id, with a trailing `?` marker when the edge from its parent is a `?` edge —
+// a linkage the report does not establish (spec/ARGUMENT.md § Edges).
+func idSpan(n *ArgNode) string {
+	if n.Query {
+		return fmt.Sprintf(`<span class="id">%s<span class="q"> ?</span></span>`, html.EscapeString(n.ID))
+	}
+	return fmt.Sprintf(`<span class="id">%s</span>`, html.EscapeString(n.ID))
+}
+
+// badgeSpan writes a coloured badge. The class names the colour (b-holds … b-contested); the word is
+// what the reader sees, so the colour is redundant with the text and a colour-blind reader loses
+// nothing (spec/SERVE.md § Badges).
+func badgeSpan(b *strings.Builder, class, word string) {
+	fmt.Fprintf(b, `<span class="badge b-%s">%s</span>`, html.EscapeString(class), html.EscapeString(word))
+}
+
+// leafBadge maps one pooled leaf to its badge: the colour class, the verdict word shown, and a small
+// note (the k/N agreement and any minority verdict). A contested or tied `split` leaf takes the
+// contested hue whatever its modal verdict; an opinion is never judged. Otherwise the colour is the
+// leaf's contribution to its parent (leafJudgement) so a claim and the finding above it agree on
+// colour, while the word stays the verdict itself.
+func leafBadge(r brief.Row) (class, word, note string) {
+	if brief.IsOpinion(r) {
+		return "opinion", "opinion", ""
+	}
+	if r.Split != "" {
+		return "contested", "split", r.Split
+	}
+	note = strings.TrimSpace(r.Spread)
+	if r.Dissent != "" {
+		note = strings.TrimSpace(note + " ≠ " + r.Dissent)
+	}
+	if r.Class == "contested" {
+		return "contested", verdictOf(r), note
+	}
+	return leafJudgement(&r), verdictOf(r), note
+}
+
+// argHead is the argument page's head through the opening <body>, with one %s for the report title.
+// The CSS carries no per-cent sign so the whole block passes through fmt.Fprintf untouched. Layout
+// (width, gutters) sits on the `.page` wrapper, not `body`, so renderReview can drop the body content
+// into its right pane without the page's margins fighting the two-pane frame.
+const argHead = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>%s</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+:root{--holds:#009e73;--weak:#e69f00;--open:#0072b2;--fails:#d55e00;--opinion:#767676;--contested:#cc79a7}
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a;background:#fafafa;margin:0;line-height:1.5}
+.page{max-width:60rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+h1{font-size:1.3rem;font-weight:600;line-height:1.3;margin:0 0 .6rem}
+.what{color:#555;margin:0 0 1.25rem;max-width:46rem}
+.thesis{border:1px solid #ddd;border-radius:8px;background:#fff;padding:1rem 1.15rem;margin:0 0 1.5rem}
+.thesis .prop{font-size:1.05rem;font-weight:500;margin:0 0 .6rem}
+.thesis .tally{margin:0 0 .3rem}
+.thesis .base{color:#555;margin:0}
+.toggle{font:inherit;font-size:.82rem;border:1px solid #ccc;border-radius:6px;background:#fff;padding:.28rem .7rem;cursor:pointer;margin:0 0 1rem}
+details.card{border:1px solid #e3e3e3;border-radius:8px;background:#fff;margin:.5rem 0}
+details.card>summary{cursor:pointer;list-style:none;padding:.55rem .8rem;display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap}
+details.card>summary::-webkit-details-marker{display:none}
+details.card[open]>summary{border-bottom:1px solid #eee}
+details.card details.card{margin:.5rem .8rem}
+.card .id{font-weight:600;white-space:nowrap}
+.card .q{color:#999}
+.card .prop{flex:1 1 18rem}
+.card .dc{color:#777;font-size:.85rem;white-space:nowrap}
+.leaf .body{padding:.5rem .85rem .85rem;color:#333;font-size:.95rem}
+.leaf .claimfull{margin:.2rem 0 .5rem}
+.leaf .meta{color:#555;margin:.2rem 0}
+.leaf blockquote{margin:.5rem 0;padding:.25rem 0 .25rem .8rem;border-left:3px solid #ddd;color:#333}
+.claim{flex:1 1 18rem}
+.badge{font-size:.7rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:.14rem .5rem;border-radius:999px;white-space:nowrap;color:#fff}
+.b-holds{background:var(--holds)}
+.b-weakened{background:var(--weak);color:#000}
+.b-open{background:var(--open)}
+.b-fails{background:var(--fails)}
+.b-opinion{background:var(--opinion)}
+.b-contested{background:var(--contested);color:#000}
+.note{color:#777;font-size:.8rem;white-space:nowrap}
+.key{border-top:1px solid #ddd;margin:2rem 0 0;padding-top:1.1rem;color:#555;font-size:.9rem;line-height:2}
+.key .badge{margin-right:.35rem}
+.nav{margin:1.1rem 0 0;font-size:.9rem}
+.nav a,.key a{color:inherit}
+</style>
+</head><body>
+`
+
+// keyHTML is the verdict key and the two-pane link, at the foot of the page. It is generic to the
+// argument tree — the verdict semantics, not this corpus — so it lives here rather than being passed
+// in. Each line leads with the badge it defines, so the key doubles as the colour legend.
+const keyHTML = `<div class="key">
+<b>R</b> = recommendation, <b>F</b> = finding. Each badge shows its class as a word, so the colour is redundant.<br>
+<span class="badge b-holds">holds</span> every claim underneath was found in a source saying what the report says.<br>
+<span class="badge b-weakened">weakened</span> found, but the source says less.<br>
+<span class="badge b-open">open</span> the report doesn't say what this rests on, or the sources don't settle a claim.<br>
+<span class="badge b-fails">fails</span> a claim it rests on was not found in any held source.<br>
+<span class="badge b-opinion">opinion</span> the Committee's own view; not checked.<br>
+<span class="badge b-contested">contested</span> a claim the runs could not settle.
+</div>
+<p class="nav"><a href="review.html">Open the two-pane reading — the report on the left, this tree on the right</a> · <a href="sources/report.pdf">the report as published</a></p>
+`
+
+// argScript is the page's only JavaScript: it opens every card when the URL carries ?open=all, and
+// wires the Expand-all button to open or close them all. One statement block — the page is otherwise
+// static (spec/SERVE.md § index.html).
+const argScript = `<script>
+{const p=new URLSearchParams(location.search).get("open")==="all",d=document.querySelectorAll("details.card"),b=document.querySelector(".toggle");if(p)d.forEach(x=>{x.open=true});if(b)b.onclick=()=>{const o=[...d].some(x=>!x.open);d.forEach(x=>{x.open=o});b.textContent=o?"Collapse all":"Expand all"}}
+</script>
+`

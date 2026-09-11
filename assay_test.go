@@ -1,10 +1,10 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"html"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -1514,7 +1514,7 @@ func TestWriteSiteHrefsResolve(t *testing.T) {
 		`<a href="sources/qon/abc-2025-03-21.pdf?p=2#page=2">qon</a>`
 
 	site := t.TempDir()
-	copied, missing, err := writeSite(review, "<html>argument</html>", sources, site, "Report Name", nil)
+	copied, missing, err := writeSite(review, "<html>page</html>", sources, site)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1527,36 +1527,28 @@ func TestWriteSiteHrefsResolve(t *testing.T) {
 			t.Errorf("href sources/%s does not resolve under site: %v", m[1], err)
 		}
 	}
-	for _, f := range []string{"review.html", "argument.html"} {
+	for _, f := range []string{"index.html", "review.html"} {
 		if _, err := os.Stat(filepath.Join(site, f)); err != nil {
 			t.Errorf("%s missing from site root: %v", f, err)
 		}
 	}
 }
 
-// TestWriteSiteIndex is index.html's refuter: writeSite writes the landing page and each of its three
-// links resolves under the site. It drives writeSite with a review page that links the report PDF (so
-// sources/report.pdf is copied), a report title, and an argument page carrying a <pre class="root">
-// block, then asserts index.html exists, its <title> equals the title line (not the thesis), the
-// thesis appears once — inside the reproduced root block — and never as the heading, favicon.svg is
-// present and linked, and review.html, argument.html and sources/report.pdf all resolve under the site.
-func TestWriteSiteIndex(t *testing.T) {
+// TestWriteSitePage is index.html's refuter: writeSite writes the argument-tree page verbatim as
+// index.html — it does not rewrite it on the way to disk — and writes favicon.svg and review.html
+// beside it. The page it is handed carries the favicon link (as the real ArgumentPage does), so the
+// verbatim write is what makes index.html link a favicon that also resolves under the site. A page
+// silently rewritten is a page no refuter checked.
+func TestWriteSitePage(t *testing.T) {
 	sources := t.TempDir()
 	writeFile(t, filepath.Join(sources, "report.pdf"), []byte("%PDF-1.4 report"))
 	review := `<iframe src="sources/report.pdf" name="doc"></iframe>` +
 		`<a href="sources/report.pdf?p=9#page=9">report</a>`
-	rootPre := "<pre class=\"root\">The report argues X.\nOf 2 recommendations, 1 holds.</pre>"
-	argHTML := rootPre + "\n"
-	const title = "Inquiry into X — Committee, June 2025"
-
-	held := map[string]bool{
-		"hearing:a": true, "hearing:b": true,
-		"submission:1": true, "submission:2": true, "submission:3": true,
-		"qon:x": true,
-	}
+	page := `<!doctype html><html><head><link rel="icon" href="favicon.svg" type="image/svg+xml">` +
+		`<title>Inquiry into X</title></head><body><h1>Inquiry into X</h1></body></html>`
 
 	site := t.TempDir()
-	if _, _, err := writeSite(review, argHTML, sources, site, title, held); err != nil {
+	if _, _, err := writeSite(review, page, sources, site); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1564,36 +1556,61 @@ func TestWriteSiteIndex(t *testing.T) {
 	if err != nil {
 		t.Fatalf("index.html missing from site root: %v", err)
 	}
-	index := string(b)
-	// The key defines the verdicts and the R/F labels a reader meets on the trees; the counts sentence
-	// reports the corpus by category from `held`, so the landing page states what was actually checked.
-	for _, want := range []string{"R</b> = recommendation", "opinion</b> — the Committee's own view"} {
-		if !strings.Contains(index, want) {
-			t.Errorf("index.html key missing %q:\n%s", want, index)
+	if string(b) != page {
+		t.Errorf("index.html is not the page verbatim:\ngot:  %s\nwant: %s", b, page)
+	}
+	// index.html links a favicon (it carries the link, since the page does), review.html sits beside
+	// it, and both the favicon and the report PDF resolve under the site.
+	if !strings.Contains(string(b), `"favicon.svg`) {
+		t.Errorf("index.html does not link favicon.svg:\n%s", b)
+	}
+	for _, f := range []string{"index.html", "review.html", "favicon.svg", "README.md", "sources/report.pdf"} {
+		if _, err := os.Stat(filepath.Join(site, filepath.FromSlash(f))); err != nil {
+			t.Errorf("%s does not resolve under site: %v", f, err)
 		}
 	}
-	if want := "Sources held: 2 hearing transcripts, 3 submissions, 1 answers to questions on notice."; !strings.Contains(index, want) {
-		t.Errorf("index.html missing source counts %q:\n%s", want, index)
+}
+
+// TestZipSiteContainsIndex is -zip's refuter: zipSite writes site.zip beside the site and the archive
+// carries every built file, index.html among them. It builds a real site with writeSite, zips it, then
+// reads the archive back and asserts the entries — proving the download is the whole site, not an empty
+// or truncated archive (the zero-output failure the tool guards against).
+func TestZipSiteContainsIndex(t *testing.T) {
+	sources := t.TempDir()
+	writeFile(t, filepath.Join(sources, "report.pdf"), []byte("%PDF-1.4 report"))
+	review := `<iframe src="sources/report.pdf" name="doc"></iframe>` +
+		`<a href="sources/report.pdf?p=9#page=9">report</a>`
+	site := filepath.Join(t.TempDir(), "site")
+	if _, _, err := writeSite(review, "<html>page</html>", sources, site); err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(index, "<title>"+html.EscapeString(title)+"</title>") {
-		t.Errorf("index.html <title> is not the title line:\n%s", index)
+
+	zipPath, n, err := zipSite(site)
+	if err != nil {
+		t.Fatal(err)
 	}
-	// The thesis lives once, inside the root block; it is neither the <title> nor the <h1>.
-	if strings.Contains(index, "<title>The report argues X.</title>") || strings.Contains(index, "<h1>The report argues X.</h1>") {
-		t.Errorf("index.html uses the thesis as its title/heading; it must use the title line:\n%s", index)
+	if zipPath != site+".zip" {
+		t.Errorf("zip path = %s, want %s.zip", zipPath, site)
 	}
-	if strings.Count(index, "The report argues X.") != 1 {
-		t.Errorf("thesis should appear exactly once (in the root block), got %d:\n%s", strings.Count(index, "The report argues X."), index)
+	if _, err := os.Stat(zipPath); err != nil {
+		t.Fatalf("site.zip not written beside site/: %v", err)
 	}
-	if !strings.Contains(index, rootPre) {
-		t.Errorf("index.html does not reproduce the root block verbatim:\n%s", index)
+
+	zr, err := zip.OpenReader(zipPath)
+	if err != nil {
+		t.Fatal(err)
 	}
-	for _, href := range []string{"review.html", "argument.html", "sources/report.pdf", "favicon.svg"} {
-		if !strings.Contains(index, `"`+href) {
-			t.Errorf("index.html does not link %s", href)
-		}
-		if _, err := os.Stat(filepath.Join(site, filepath.FromSlash(href))); err != nil {
-			t.Errorf("index link %s does not resolve under site: %v", href, err)
+	defer zr.Close()
+	got := map[string]bool{}
+	for _, f := range zr.File {
+		got[f.Name] = true
+	}
+	if len(got) != n {
+		t.Errorf("zip holds %d entries, zipSite reported %d", len(got), n)
+	}
+	for _, want := range []string{"site/index.html", "site/review.html", "site/README.md", "site/sources/report.pdf"} {
+		if !got[want] {
+			t.Errorf("zip missing %s; has %v", want, got)
 		}
 	}
 }

@@ -12,6 +12,7 @@ package main
 // (always markdown for -audit).
 
 import (
+	"archive/zip"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -53,43 +54,44 @@ type retrievedSource = backend.Source
 // ── config ────────────────────────────────────────────────────────────────────
 
 type cfg struct {
-	model        string
-	apiKey       string
-	maxRounds    int
-	maxClaims    int
-	repeat       int // -n: run each claim this many times and report the modal verdict + agreement
-	verbose      bool
-	noColor      bool
-	asMarkdown   bool
-	showProgress bool
-	quiet        bool
-	fresh        bool // -fresh: re-judge every claim instead of resuming from an existing chain
-	usageOut     string
-	chainFile    string              // Tier-2 JSONL destination; set by runners before case loop
-	renderMode   string              // stdout renderer: "brief" (default), "full", or "tree"
-	treeAll      bool                // -tree=full: expand every node rather than only Needs-you branches
-	retrieveMode string              // "bm25" (default) retrieves per-claim passages; "none" sends the full corpus
-	maxTokens    int                 // -max-tokens: retrieval token budget per claim (fused bm25+embed ranking)
-	floor        float64             // -floor: top-passage cosine below this ⇒ absent from code, no model call
-	embed        bool                // -embed: add the nomic-embed-text ranker, fused with BM25 by RRF
-	oracle       map[string][]string // -retrieve=oracle: claim-id → fixed gold passage ids
-	held         map[string]bool     // -manifest: doc ids the corpus holds; a claim citing a missing one is unverifiable
-	docLabels    map[string]string   // -manifest: canonical doc id → witness/author, for a quote's provenance line
-	refs         map[string]string   // -refs: claim id → report section ref (§…), for the leaf's report line
-	index        *retrieve.Index     // built once from the source corpus when retrieveMode != "none"
-	auditPath    string              // full-table sink; every run writes it, whichever renderer stdout gets
-	treeHTMLPath string              // eval/<stamp>/tree.html sink, written alongside audit.md
-	argumentFile string              // -argument: argument.txt path; when set, -from renders the argument tree
-	argHTMLPath  string              // argument.html sink, alongside audit.md, when -argument is set
-	review       bool                // -review: build the self-contained review site (spec/SERVE.md)
-	siteDir      string              // site/ sink under the example dir, when -review is set
-	sourcesDir   string              // -manifest's parent dir; the on-disk PDF tree the site copies from
-	rootTitle    string              // report title for the root block's line 1, from the claims file "# title:" header
-	rootDate     string              // report date for the root block's line 1, from the claims file "# date:" header
-	sourceDocs   int                 // M: documents held per the manifest; the root block's "checked against M" figure
-	runs         int                 // chains merged under -from; >1 adds the root block's stability line. 0/1 = single run
-	usage        *usageCounters
-	tally        *runTally
+	model         string
+	apiKey        string
+	maxRounds     int
+	maxClaims     int
+	repeat        int // -n: run each claim this many times and report the modal verdict + agreement
+	verbose       bool
+	noColor       bool
+	asMarkdown    bool
+	showProgress  bool
+	quiet         bool
+	fresh         bool // -fresh: re-judge every claim instead of resuming from an existing chain
+	usageOut      string
+	chainFile     string              // Tier-2 JSONL destination; set by runners before case loop
+	renderMode    string              // stdout renderer: "brief" (default), "full", or "tree"
+	treeAll       bool                // -tree=full: expand every node rather than only Needs-you branches
+	retrieveMode  string              // "bm25" (default) retrieves per-claim passages; "none" sends the full corpus
+	maxTokens     int                 // -max-tokens: retrieval token budget per claim (fused bm25+embed ranking)
+	floor         float64             // -floor: top-passage cosine below this ⇒ absent from code, no model call
+	embed         bool                // -embed: add the nomic-embed-text ranker, fused with BM25 by RRF
+	oracle        map[string][]string // -retrieve=oracle: claim-id → fixed gold passage ids
+	held          map[string]bool     // -manifest: doc ids the corpus holds; a claim citing a missing one is unverifiable
+	docLabels     map[string]string   // -manifest: canonical doc id → witness/author, for a quote's provenance line
+	refs          map[string]string   // -refs: claim id → report section ref (§…), for the leaf's report line
+	index         *retrieve.Index     // built once from the source corpus when retrieveMode != "none"
+	auditPath     string              // full-table sink; every run writes it, whichever renderer stdout gets
+	treeHTMLPath  string              // eval/<stamp>/tree.html sink, written alongside audit.md
+	argumentFile  string              // -argument: argument.txt path; when set, -from renders the argument tree
+	indexHTMLPath string              // index.html sink (the argument-tree page), alongside audit.md, when -argument is set
+	review        bool                // -review: build the self-contained review site (spec/SERVE.md)
+	zip           bool                // -zip: write site.zip beside site/ after -review builds it
+	siteDir       string              // site/ sink under the example dir, when -review is set
+	sourcesDir    string              // -manifest's parent dir; the on-disk PDF tree the site copies from
+	rootTitle     string              // report title for the root block's line 1, from the claims file "# title:" header
+	rootDate      string              // report date for the root block's line 1, from the claims file "# date:" header
+	sourceDocs    int                 // M: documents held per the manifest; the root block's "checked against M" figure
+	runs          int                 // chains merged under -from; >1 adds the root block's stability line. 0/1 = single run
+	usage         *usageCounters
+	tally         *runTally
 	// cachedSource is the stable prefix (e.g. the source transcript) placed in a Request's Cached
 	// field, which the Anthropic backend turns into an ephemeral cache block ahead of the variable
 	// prompt and the Ollama backend folds into the prompt. Set per-call by callJSON/callJSONSourced
@@ -198,8 +200,9 @@ func main() {
 	flag.BoolVar(&full, "full", false, "print the full table to stdout instead of the brief report")
 	flag.Var(&treeF, "tree", "print the tree report to stdout; -tree=full expands every node")
 	flag.StringVar(&fromChain, "from", "", "render brief/tree/audit from a saved chain JSONL (no model calls); a comma-list of chains merges them leaf-by-leaf")
-	flag.StringVar(&c.argumentFile, "argument", "", "with -from: render the argument tree keyed by this argument.txt (spec/ARGUMENT.md) into argument.html, instead of the section-path tree")
-	flag.BoolVar(&c.review, "review", false, "with -argument -manifest: build a self-contained review site (site/review.html + site/argument.html + site/sources/ with a copy of every linked PDF; links relative to site/) under the example dir — see spec/SERVE.md")
+	flag.StringVar(&c.argumentFile, "argument", "", "with -from: render the argument tree keyed by this argument.txt (spec/ARGUMENT.md) into index.html, instead of the section-path tree")
+	flag.BoolVar(&c.review, "review", false, "with -argument -manifest: build a self-contained review site (site/index.html + site/review.html + site/sources/ with a copy of every linked PDF; links relative to site/) under the example dir — see spec/SERVE.md")
+	flag.BoolVar(&c.zip, "zip", false, "with -review: also write site.zip beside site/ (the whole built site, one downloadable archive)")
 	flag.Parse()
 
 	// -full and -tree select different stdout renderers; refuse to guess which the caller meant.
@@ -240,6 +243,10 @@ func main() {
 	// -manifest.
 	if c.review && (c.argumentFile == "" || manifestFile == "") {
 		fatal("-review needs -argument (the tree to link) and -manifest (the sources tree the links open)")
+	}
+	// -zip archives the built site, so it means nothing without -review to build one.
+	if c.zip && !c.review {
+		fatal("-zip needs -review (there is no site to archive without it)")
 	}
 
 	// -refs: load the report section (§) per claim id from claims-machine.txt, so each rendered leaf
@@ -420,8 +427,8 @@ func main() {
 // ── serve ────────────────────────────────────────────────────────────────────
 
 // runServe starts a loopback static file server over a self-contained review site and opens
-// index.html at its root — the landing page linking review.html, argument.html and the source
-// report. The site links into its own `sources/` tree with root-relative hrefs
+// index.html at its root — the argument-tree page, which links review.html and the source report.
+// The site links into its own `sources/` tree with root-relative hrefs
 // (`sources/report.pdf?p=53#page=53`), so serving the site directory whole puts index.html at
 // /index.html and every link at /sources/…. Serving over HTTP — rather than opening the file://
 // path — is what lets a PDF viewer honour the `#page=N` fragment and load the `sources/…` iframe
@@ -448,8 +455,8 @@ func runServe(args []string) {
 		fatal("serve: not a directory: " + dir)
 	}
 
-	// index.html sits at the site root; warn but keep serving if it is missing, so a site whose pages
-	// are still reachable directly (review.html, argument.html) works even without the landing page.
+	// index.html sits at the site root; warn but keep serving if it is missing, so a site whose
+	// review.html is still reachable directly works even without the argument-tree page.
 	indexURL := fmt.Sprintf("http://127.0.0.1:%d/index.html", port)
 	if _, err := os.Stat(filepath.Join(dir, "index.html")); err != nil {
 		fmt.Fprintf(os.Stderr, "warning: index.html not found under %s; serving anyway\n", dir)
@@ -1610,6 +1617,9 @@ func renderReview(page, srcPrefix, scanDir, title string) (out, counts string) {
 	if m := reBodyBlock.FindStringSubmatch(page); m != nil {
 		body = m[1]
 	}
+	// The two-pane page exists to click the provenance links, so its cards start open — otherwise every
+	// link is hidden behind a disclosure triangle. index.html keeps them closed; only review.html opens.
+	body = strings.ReplaceAll(body, `<details class=`, `<details open class=`)
 
 	// 1. claim § → report PDF at the page (printed page + printedToPDF).
 	body = reReportLink.ReplaceAllStringFunc(body, func(s string) string {
@@ -1688,9 +1698,9 @@ html,body{height:100%%;margin:0}
 }
 
 // faviconSVG is the site mark: an argument-tree glyph — one node above three, edges fanning down — in
-// the pages' text colour (#000, the monospace body default). No brand and no text; it is the same
-// tree the report and argument pages draw, shrunk to a favicon. writeSite writes it into the site and
-// index.html, review.html and argument.html each link it (spec/SERVE.md).
+// the pages' text colour (#000). No brand and no text; it is the same tree the page draws, shrunk to
+// a favicon. writeSite writes it into the site and both index.html and review.html link it
+// (spec/SERVE.md).
 const faviconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#000" stroke="#000" stroke-width="1.3" stroke-linecap="round">
 <line x1="12" y1="5" x2="5" y2="19"/>
 <line x1="12" y1="5" x2="12" y2="19"/>
@@ -1702,16 +1712,35 @@ const faviconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" 
 </svg>
 `
 
-// reRootBlock captures the argument page's root screen — the `<pre class="root">` element holding the
-// root proposition, the recommendation tally and one line per recommendation. index.html reproduces
-// this element verbatim, so the landing page and the argument page state the same top-level verdict.
-var reRootBlock = regexp.MustCompile(`(?s)<pre class="root">(.*?)</pre>`)
+// siteREADME is the reader's-manual dropped at the site root by writeSite: how to open the two pages,
+// how to serve them over HTTP when the browser blocks the file:// PDF, and one line on what each page
+// is. It ships inside the site (and the -zip archive) so an unzipped copy is self-explanatory with no
+// reference back to this repo (spec/SERVE.md).
+const siteREADME = "# Review site\n" + `
+Two pages, self-contained. ` + "`index.html`" + ` is the argument tree — the thesis, the counts, and
+every claim with its faithfulness verdict. ` + "`review.html`" + ` is that same tree in a two-pane
+layout: the tree on the right, the source PDF on the left, so a claim's page link lands on the page
+it rests on.
 
-// sourceCountsLine summarises the held corpus for index.html's opening — hearing transcripts,
+## Open it
+
+1. Unzip, then open ` + "`index.html`" + ` in Chrome or Edge.
+2. If ` + "`review.html`" + `'s left pane is blank, the browser is refusing the ` + "`file://`" + ` PDF —
+   serve the folder over HTTP instead, then open ` + "`http://127.0.0.1:8080/review.html`" + `:
+
+       python3 -m http.server 8080     # run inside this folder
+
+   or, with the assay binary from the parent folder:
+
+       assay serve site
+`
+
+// sourceCountsLine summarises the held corpus for the page's opening sentence — hearing transcripts,
 // submissions and answers to questions on notice — counted from the manifest's held set by the same
 // canonical-id prefixes manifest.Render groups by (manifest.go:123). An empty category is dropped so
 // a corpus with no qon does not read "0 answers"; an empty set yields "" and the caller omits the
-// sentence rather than claiming to hold nothing.
+// sentence rather than claiming to hold nothing. presentArgument passes the result into ArgumentPage,
+// keeping the corpus-specific counting out of the corpus-agnostic tree package.
 func sourceCountsLine(held map[string]bool) string {
 	var hearings, submissions, qon int
 	for id := range held {
@@ -1737,60 +1766,6 @@ func sourceCountsLine(held map[string]bool) string {
 	return strings.Join(parts, ", ")
 }
 
-// renderIndex builds site/index.html from the rendered argument page (`argHTML`), the report name
-// `title` and the manifest's held set: the title as the page <title> and <h1>, two sentences saying
-// what the page checks and which sources are held (from `held`), the root block reproduced verbatim,
-// a key to the verdicts and R/F labels, the three site links (review.html, argument.html,
-// sources/report.pdf) and a footer linking the repo. The thesis is NOT the heading — it appears once,
-// as the root block's first line inside the reproduced <pre class="root">. Returns ok=false when the
-// page carries no root block, so writeSite warns rather than writing a landing page with no verdict.
-func renderIndex(argHTML, title string, held map[string]bool) (out string, ok bool) {
-	m := reRootBlock.FindStringSubmatch(argHTML)
-	if m == nil {
-		return "", false
-	}
-	rootPre := m[0] // the whole <pre class="root"> element, verbatim (thesis is its first line)
-	esc := html.EscapeString(title)
-	what := "This page checks whether the report's findings say what its sources say, and which " +
-		"recommendations that leaves standing."
-	if counts := sourceCountsLine(held); counts != "" {
-		what += " Sources held: " + counts + "."
-	}
-	out = fmt.Sprintf(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>%s</title>
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
-<style>
-body{font-family:monospace;margin:1.5rem;max-width:72ch}
-h1{font-size:1.05rem;font-weight:normal;line-height:1.45;margin:0 0 .3rem}
-.what{color:#555;margin:0 0 1.5rem}
-.root{white-space:pre-wrap;margin:0 0 1.5rem}
-.key{color:#555;margin:0 0 1.5rem;line-height:1.5}
-ul{list-style:none;padding:0}
-li{margin:.5em 0}
-a{color:#0645ad}
-footer{color:#777;margin-top:2rem}
-</style>
-</head><body>
-<h1>%s</h1>
-<p class="what">%s</p>
-%s
-<p class="key"><b>R</b> = recommendation, <b>F</b> = finding.<br>
-<b>holds</b> — every claim underneath was found in a source saying what the report says.<br>
-<b>weakened</b> — found, but the source says less.<br>
-<b>open</b> — the report doesn't say what this rests on, or the sources don't settle a claim.<br>
-<b>fails</b> — a claim it rests on was not found in any held source.<br>
-<b>opinion</b> — the Committee's own view; not checked.</p>
-<ul>
-<li><a href="review.html">review.html — the report on the left, this reading on the right; click a section or quote to jump to the page</a></li>
-<li><a href="argument.html">argument.html — the full reading: every recommendation, finding, claim and quote</a></li>
-<li><a href="sources/report.pdf">report.pdf — the report as published</a></li>
-</ul>
-<footer>Generated by <a href="https://github.com/peterwilliams97/elenchus">elenchus</a></footer>
-</body></html>
-`, esc, esc, html.EscapeString(what), rootPre)
-	return out, true
-}
-
 // reSitePDF matches a PDF the rendered site page reaches — an `href` link or the left iframe `src` —
 // under the site-relative `sources/` prefix, capturing the path with its `?p=…#page=…` suffix
 // stripped. That path is both the read source (under `sourcesDir`) and the write destination (under
@@ -1801,27 +1776,26 @@ var reSitePDF = regexp.MustCompile(`(?:href|src)="sources/([^"?#]*\.pdf)`)
 // at its root and `sources/` holding a copy of every PDF `review.html` links to (report.pdf, and each
 // hearing, submission and qon document — the four link classes). Every href is site-relative
 // (`sources/…`, not `../sources/…`), so the tree serves over HTTP and moves as one unit; `assay serve
-// <siteDir>` then answers `review.html` at the root. `page` is the rendered argument page; `sourcesDir`
-// is the on-disk sources tree the copies are read from. `title` is the report name (ArgumentTitle)
-// carried into every page. Returns renderReview's link tally plus the copied/missing PDF count. See
-// spec/SERVE.md.
-func buildSite(page, sourcesDir, siteDir, title string, held map[string]bool) (string, error) {
+// <siteDir>` then answers `index.html` at the root. `page` is the rendered argument-tree page (the
+// same page written as index.html); `sourcesDir` is the on-disk sources tree the copies are read
+// from. `title` is the report name (ArgumentTitle) that becomes review.html's <title>. Returns
+// renderReview's link tally plus the copied/missing PDF count. See spec/SERVE.md.
+func buildSite(page, sourcesDir, siteDir, title string) (string, error) {
 	review, linkCounts := renderReview(page, "sources", sourcesDir, title)
-	copied, missing, err := writeSite(review, page, sourcesDir, siteDir, title, held)
+	copied, missing, err := writeSite(review, page, sourcesDir, siteDir)
 	if err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("%s; pdfs copied=%d missing=%d", linkCounts, copied, missing), nil
 }
 
-// writeSite copies every PDF `reviewHTML` references into `siteDir/sources/`, writes review.html and
-// argument.html at the site root, and writes index.html (the landing page, from `argHTML` and the
-// manifest's `held` set for the source counts) and
-// favicon.svg beside them. It is split from buildSite so a refuter can drive it with a hand-written
-// page and a fake sources tree, and assert every href resolves under the site — the property the whole
-// site exists to hold. A PDF that cannot be copied is counted as missing and warned, never
-// synthesized: a broken link is reported, not papered over.
-func writeSite(reviewHTML, argHTML, sourcesDir, siteDir, title string, held map[string]bool) (copied, missing int, err error) {
+// writeSite copies every PDF `reviewHTML` references into `siteDir/sources/`, writes `pageHTML` as
+// index.html (the argument-tree page verbatim) and `reviewHTML` as review.html at the site root, and
+// writes favicon.svg and README.md beside them. It is split from buildSite so a refuter can drive it with a
+// hand-written page and a fake sources tree, and assert every href resolves under the site — the
+// property the whole site exists to hold. A PDF that cannot be copied is counted as missing and
+// warned, never synthesized: a broken link is reported, not papered over.
+func writeSite(reviewHTML, pageHTML, sourcesDir, siteDir string) (copied, missing int, err error) {
 	if err = os.MkdirAll(siteDir, 0o755); err != nil {
 		return 0, 0, err
 	}
@@ -1833,21 +1807,15 @@ func writeSite(reviewHTML, argHTML, sourcesDir, siteDir, title string, held map[
 		}
 		copied++
 	}
-	if err = os.WriteFile(filepath.Join(siteDir, "review.html"), []byte(reviewHTML), 0o644); err != nil {
-		return copied, missing, err
-	}
-	if err = os.WriteFile(filepath.Join(siteDir, "argument.html"), []byte(argHTML), 0o644); err != nil {
-		return copied, missing, err
-	}
-	if err = os.WriteFile(filepath.Join(siteDir, "favicon.svg"), []byte(faviconSVG), 0o644); err != nil {
-		return copied, missing, err
-	}
-	if index, ok := renderIndex(argHTML, title, held); ok {
-		if err = os.WriteFile(filepath.Join(siteDir, "index.html"), []byte(index), 0o644); err != nil {
+	for _, f := range []struct{ name, body string }{
+		{"index.html", pageHTML},
+		{"review.html", reviewHTML},
+		{"favicon.svg", faviconSVG},
+		{"README.md", siteREADME},
+	} {
+		if err = os.WriteFile(filepath.Join(siteDir, f.name), []byte(f.body), 0o644); err != nil {
 			return copied, missing, err
 		}
-	} else {
-		fmt.Fprintln(os.Stderr, "warning: site: argument page has no root block; index.html not written")
 	}
 	return copied, missing, nil
 }
@@ -1888,6 +1856,55 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	return out.Close()
+}
+
+// zipSite writes `siteDir`.zip beside the built site: every file under `siteDir`, entry-named under the
+// site's own base dir (site/index.html, …), so unzipping restores a `site/` folder `assay serve site`
+// can serve. Called after writeSite when -zip is set. Returns the archive path and the file count so a
+// zero-file archive — the empty-run failure the whole tool guards against — is visible, not silent.
+func zipSite(siteDir string) (string, int, error) {
+	zipPath := siteDir + ".zip"
+	f, err := os.Create(zipPath)
+	if err != nil {
+		return "", 0, err
+	}
+	defer f.Close()
+	zw := zip.NewWriter(f)
+	base := filepath.Base(siteDir)
+	n := 0
+	walkErr := filepath.Walk(siteDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info.IsDir() {
+			return err
+		}
+		rel, err := filepath.Rel(siteDir, path)
+		if err != nil {
+			return err
+		}
+		w, err := zw.Create(filepath.ToSlash(filepath.Join(base, rel)))
+		if err != nil {
+			return err
+		}
+		in, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer in.Close()
+		if _, err := io.Copy(w, in); err != nil {
+			return err
+		}
+		n++
+		return nil
+	})
+	if walkErr != nil {
+		return "", n, walkErr
+	}
+	if err := zw.Close(); err != nil {
+		return "", n, err
+	}
+	if n == 0 {
+		return zipPath, 0, fmt.Errorf("zipSite: %s held no files to archive", siteDir)
+	}
+	return zipPath, n, nil
 }
 
 // loadRefs reads the per-claim report section from claims-machine.txt: the pipe-delimited "ref=§…"
@@ -3499,9 +3516,9 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 	c.auditPath = filepath.Join(dir, "audit.md")
 	c.treeHTMLPath = filepath.Join(dir, "tree.html")
 	if c.argumentFile != "" {
-		// The argument tree replaces the section-path tree; it writes argument.html, not tree.html.
+		// The argument tree replaces the section-path tree; it writes index.html, not tree.html.
 		c.treeHTMLPath = ""
-		c.argHTMLPath = filepath.Join(dir, "argument.html")
+		c.indexHTMLPath = filepath.Join(dir, "index.html")
 		if c.review {
 			// The site is a peer of the render dir under the example dir — sourcesDir is
 			// <example>/sources, so its parent is the example dir the site sits beside.
@@ -3623,9 +3640,10 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 
 // presentArgument renders the argument tree (spec/ARGUMENT.md) in place of the section-path tree: it
 // writes the flat verdict table to auditPath (unchanged), then builds the tree from the argument file,
-// hangs the merged rows on its leaves, derives each node's judgement bottom-up, and writes argument.html.
-// The root block — root proposition + judgement, then one line per recommendation — is also printed to
-// stdout, so a reader sees the top-level verdict without opening the page.
+// hangs the merged rows on its leaves, derives each node's judgement bottom-up, and writes the
+// argument-tree page as index.html (spec/SERVE.md). The root block — root proposition, tally, then one
+// line per recommendation — is also printed to stdout, so a reader sees the top-level verdict without
+// opening the page.
 func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, mdTable string) {
 	if c.auditPath != "" {
 		if err := os.WriteFile(c.auditPath, []byte(mdTable), 0o644); err != nil {
@@ -3637,27 +3655,39 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 	if err != nil {
 		fatal("argument tree: " + err.Error())
 	}
-	// title names the site pages and index.html's heading; the thesis (root.Content) stays the root
-	// block's alone. With no "# title:" line the fall-back is the file name, not the thesis.
+	// title names the page and its <h1>; the thesis (root.Content) stays the thesis card's alone. With
+	// no "# title:" line the fall-back is the file name, not the thesis.
 	title := tree.ArgumentTitle(argText)
 	if title == "" {
 		title = filepath.Base(c.argumentFile)
 	}
-	// The argument tree only ever renders under -from, where the calls/$/wall header is all zeros
-	// (no model call was made), so it is omitted here rather than stamped on every argument render.
-	page, rootBlock := tree.ArgumentPage(root, details, "", title)
-	if c.argHTMLPath != "" {
-		if err := os.WriteFile(c.argHTMLPath, []byte(page), 0o644); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.argHTMLPath, err)
+	// The `what` sentence is corpus-specific (it counts the manifest's held set), so it is built here
+	// and passed in — the tree package stays corpus-agnostic.
+	what := "This page checks whether the report's findings say what its sources say, and which " +
+		"recommendations that leaves standing."
+	if counts := sourceCountsLine(c.held); counts != "" {
+		what += " Sources held: " + counts + "."
+	}
+	page, rootBlock := tree.ArgumentPage(root, details, title, what)
+	if c.indexHTMLPath != "" {
+		if err := os.WriteFile(c.indexHTMLPath, []byte(page), 0o644); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.indexHTMLPath, err)
 		} else {
-			fmt.Fprintf(os.Stderr, "argument (html): %s\n", c.argHTMLPath)
+			fmt.Fprintf(os.Stderr, "page (html): %s\n", c.indexHTMLPath)
 		}
 	}
 	if c.siteDir != "" {
-		if counts, err := buildSite(page, c.sourcesDir, c.siteDir, title, c.held); err != nil {
+		if counts, err := buildSite(page, c.sourcesDir, c.siteDir, title); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: cannot build site %s: %v\n", c.siteDir, err)
 		} else {
 			fmt.Fprintf(os.Stderr, "site: %s — %s\n", c.siteDir, counts)
+			if c.zip {
+				if zipPath, n, zErr := zipSite(c.siteDir); zErr != nil {
+					fmt.Fprintf(os.Stderr, "warning: cannot zip site %s: %v\n", c.siteDir, zErr)
+				} else {
+					fmt.Fprintf(os.Stderr, "zip: %s — %d files\n", zipPath, n)
+				}
+			}
 		}
 	}
 	fmt.Print(rootBlock)

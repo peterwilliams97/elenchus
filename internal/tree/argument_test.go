@@ -113,10 +113,10 @@ func TestArgOpinionOnlyRecommendation(t *testing.T) {
 	}
 }
 
-// TestArgumentPage pins the rendered page: the root block leads with the proposition and the root
-// TALLY (not a single verdict), prints one line per recommendation with its judgement (and the
-// deciding child when it is not holds), and the tree below carries the atomic-claim leaf rendered by
-// the shared leaf renderer.
+// TestArgumentPage pins the card page's content: the report title is the <title> and <h1>, the `what`
+// sentence and the thesis card carry the proposition and tally, the recommendation card shows its
+// derived badge, id, proposition and deciding child, the `?` companion carries the `?` marker, and the
+// claim leaf card carries its verdict badge, claim text and reason. The stdout root block is unchanged.
 func TestArgumentPage(t *testing.T) {
 	root := mustBuild(t, joinLines(
 		"root  | Victoria's industries matter and the Government should act.  | SYNTHESISED",
@@ -129,7 +129,9 @@ func TestArgumentPage(t *testing.T) {
 		{ID: "F30", Text: "breakdowns not released", Faith: "faithful"},
 		{ID: "F29", Text: "fair share received", Faith: "faithful"},
 	})
-	page, rootBlock := ArgumentPage(root, map[string]Leaf{"F30": {Reason: "the source says so"}}, "model X · calls 0", "The Cultural Industries Inquiry")
+	page, rootBlock := ArgumentPage(root,
+		map[string]Leaf{"F30": {Reason: "the source says so"}},
+		"The Cultural Industries Inquiry", "This page checks the report against its sources.")
 	for _, want := range []string{
 		"Victoria's industries matter",
 		"Of 1 recommendation, 0 hold, 1 is open — 1 because the report doesn't say what they rest on.",
@@ -141,12 +143,73 @@ func TestArgumentPage(t *testing.T) {
 	}
 	for _, want := range []string{
 		"<title>The Cultural Industries Inquiry</title>", // the report title, not the shared "assay tree"
-		"<pre class=\"root\">", "<details open>", "breakdowns not released",
-		"claim: fair share received", "reason: the source says so", "[open]", "F29 ?",
+		"<h1>The Cultural Industries Inquiry</h1>",
+		"This page checks the report against its sources.", // the `what` sentence
+		`<section class="thesis">`,
+		"industries matter and the Government should act", // the thesis, in its card
+		`<details class="card">`, `<details class="card leaf">`,
+		`<span class="badge b-open">open</span>`,      // R4's derived judgement
+		`<span class="badge b-holds">faithful</span>`, // a settled-faithful leaf's badge
+		"Advocate release of the breakdowns.",
+		`<span class="dc">(F29 ?)</span>`, // the deciding child, small text
+		`<span class="q"> ?</span>`,       // the `?` marker on the companion's id
+		"breakdowns not released", "fair share received",
+		"reason: the source says so",
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("page missing %q:\n%s", want, page)
 		}
+	}
+}
+
+// TestArgumentCardPage is the spec/SERVE.md refuter: the page is a thesis card first, then the
+// recommendation cards in the argument file's order, with each claim card nested inside a finding card
+// inside a recommendation card. It builds two recommendations and a base child and asserts the source
+// order survives to the page and the three-deep nesting holds — the order and depth a reader relies on
+// to read the case top-down.
+func TestArgumentCardPage(t *testing.T) {
+	root := mustBuild(t, joinLines(
+		"root  | Root thesis.  | x",
+		"    R1  | First recommendation.  | x",
+		"        F1  | Finding one.  | x",
+		"            F1",
+		"    R2  | Second recommendation.  | x",
+		"        F2  | Finding two.  | x",
+		"            F2",
+		"    base ?  | Descriptive base.  | x",
+		"        F3  | Base finding.  | x",
+		"            F3",
+	), []brief.Row{
+		{ID: "F1", Text: "claim one", Faith: "faithful"},
+		{ID: "F2", Text: "claim two", Faith: "absent"},
+		{ID: "F3", Text: "claim three", Faith: "faithful"},
+	})
+	page, _ := ArgumentPage(root, nil, "Report", "what")
+
+	thesis := strings.Index(page, `<section class="thesis">`)
+	r1 := strings.Index(page, "First recommendation.")
+	r2 := strings.Index(page, "Second recommendation.")
+	base := strings.Index(page, "Descriptive base.")
+	if !(thesis >= 0 && thesis < r1 && r1 < r2 && r2 < base) {
+		t.Fatalf("cards out of order: thesis=%d r1=%d r2=%d base=%d", thesis, r1, r2, base)
+	}
+	// R1 (holds) and R2 (fails) carry their derived badges; a base child on a `?` edge takes the marker.
+	for _, want := range []string{
+		`<span class="badge b-holds">holds</span>`,
+		`<span class="badge b-fails">fails</span>`,
+		`<span class="q"> ?</span>`,
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("page missing %q", want)
+		}
+	}
+	// Nesting: within R1's card, a finding card, within it the claim leaf card — recommendation →
+	// finding → claim, matching the argument file's depth. The claim text sits after two card opens.
+	seg := page[r1:r2]
+	firstCard := strings.Index(seg, `<details class="card">`) // the finding card, nested under R1
+	leaf := strings.Index(seg, `<details class="card leaf">`) // the claim card, nested under the finding
+	if !(firstCard >= 0 && leaf > firstCard) {
+		t.Fatalf("R1 does not nest finding→claim: findingCard=%d leaf=%d\n%s", firstCard, leaf, seg)
 	}
 }
 

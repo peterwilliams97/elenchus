@@ -2,12 +2,15 @@
 
 ## Why
 
-`review.html` is a two-pane page: a left `<iframe>` PDF viewer and, on the right, the argument tree
-with every report section and quote provenance rewritten as a link that drives the iframe. The links
-open PDFs at a page (`sources/report.pdf?p=53#page=53`). Opened as a `file://` path the browser
-resolves them, but PDF viewers don't reliably honour the `#page=N` fragment over `file://` and some
-refuse cross-origin `file://` iframes. Serving the page over HTTP gives it a real origin, so the
-fragment lands on the right page and the iframe loads.
+The argument tree (`spec/ARGUMENT.md`) is read as one page — `index.html` — a proportional-font tree
+of cards: the report's thesis, then one card per recommendation, each opening to its findings, its
+claims, and the quotes those claims rest on. `review.html` is that same page in a two-pane layout: a
+left `<iframe>` PDF viewer, the tree on the right, with every report section and quote provenance
+rewritten as a link that drives the iframe. The links open PDFs at a page
+(`sources/report.pdf?p=53#page=53`). Opened as a `file://` path the browser resolves them, but PDF
+viewers don't reliably honour the `#page=N` fragment over `file://` and some refuse cross-origin
+`file://` iframes. Serving the page over HTTP gives it a real origin, so the fragment lands on the
+right page and the iframe loads.
 
 For that to be portable, the page and everything it links must travel together. `-review` builds a
 **self-contained site**: one directory holding the pages and a copy of every PDF they open, with
@@ -22,21 +25,15 @@ the site under the **example dir** (the parent of the sources tree the manifest 
     examples/vic-lceic/
       sources/            # the on-disk corpus (gitignored; PDFs read from here)
       site/               # ← built by -review (gitignored build output)
-        index.html        # landing page: report title, root block, links to the three below
-        review.html       # two-pane PDF-linked argument page
-        argument.html     # the same argument tree, no iframe
-        favicon.svg       # the site mark (an argument-tree glyph), linked from all three pages
+        index.html        # the argument-tree page (below)
+        review.html       # index.html's tree in the right pane, the source PDF on the left
+        favicon.svg       # the site mark (an argument-tree glyph), linked from both pages
+        README.md         # how to open and serve the site (below)
         sources/
           report.pdf
           hearings/…/*.pdf
           submissions/*.pdf
           qon/*.pdf
-
-Every href in `review.html` is **site-relative** — `sources/report.pdf?p=53#page=53`, never
-`../sources/…` — and each links to a PDF copied into `site/sources/` at the same relative path. Four
-link classes are copied: the report, and each linked hearing, submission and qon document. A PDF that
-cannot be read is warned and counted `missing`, never synthesized; a non-zero `missing` means a link
-class is broken.
 
 Build command (run from `current/`, the render dir; flags **before** the positional claims file):
 
@@ -47,18 +44,74 @@ Build command (run from `current/`, the render dir; flags **before** the positio
 
 It reports one line: link tally per class plus `pdfs copied=N missing=0`.
 
-`argument.html` carries no PDF links (it is the plain tree), so it needs no copies; it ships in the
-site as the iframe-free reading of the same page.
+`README.md` at the site root is the reader's manual — the two pages named in one line each, how to
+open them (unzip, open `index.html` in Chrome or Edge), and how to serve them over HTTP
+(`python3 -m http.server 8080`, or `assay serve site`) when the browser blocks the `file://` PDF and
+`review.html`'s left pane comes up blank. It ships inside the site so an unzipped copy explains
+itself with no reference back to this repo.
 
-`index.html` is the landing page — plain HTML, no JS, same monospace styling as the other pages. It
-carries the report title (the root proposition), one line saying what the site is (the report checked
-against its sources), the argument page's root block reproduced **verbatim**, and three links:
-`review.html` (the report and the reading side by side), `argument.html` (the reading alone) and
-`sources/report.pdf` (the source report). The title is the first line of the root block, so the
-landing page and the argument page state the same thesis.
+`-zip` (with `-review`) also writes `site.zip` beside `site/`: the whole built site archived under a
+top-level `site/` entry, so unzipping restores a `site/` folder `assay serve site` can serve. It
+reports `zip: <path> — N files`; an archive with no files is an error, not a silent empty download.
 
-`favicon.svg` is a plain mark — an argument-tree glyph, one node above three, in the pages' text
-colour, no brand and no text. `index.html`, `review.html` and `argument.html` each link it.
+### `index.html` — the argument-tree page
+
+One page replaces the earlier landing page and separate tree. It is plain HTML in a **proportional**
+font, laid out top to bottom:
+
+1. the report **title** (the argument file's `# title:` line);
+2. two sentences — **what the page checks** and **which sources are held** (the manifest's held set,
+   counted by category);
+3. the **thesis** in a card, with the recommendation **tally** and the descriptive-base sentence
+   beneath it (the root block of `spec/ARGUMENT.md`, split into a card rather than a text block);
+4. one **card per root child** — the recommendations `R1`…`R11` in the argument file's order, then
+   the descriptive `base` card. Each card's summary carries a **badge**, the node `id` (with a
+   trailing `?` where the report does not establish the edge to its parent), the **proposition** in
+   the report's words, and — when the node does not `hold` — its **deciding child** in small text.
+
+Each card is a `<details>`. Opening a recommendation reveals its findings as nested cards with the
+same badge; opening a finding reveals its claims, each a card whose badge is the claim's verdict and
+whose summary carries the `k/N` agreement; opening a claim reveals the quotes it rests on, each with
+its provenance. Nesting matches the argument file: root → recommendation → finding → claim → quotes.
+
+**Badges are the one thing on the page with colour, and the colour is redundant with the word** —
+every badge shows its class as text, so a colour-blind reader loses nothing. Six classes, one
+colour-blind-safe hue each (Okabe–Ito):
+
+| badge | on | colour |
+|---|---|---|
+| `holds` | a recommendation/finding whose load-bearing children all hold; a `faithful`+`settled` claim | green |
+| `weakened` | a node standing on narrower ground; a `partial`/`overstated` claim, or a same-side `wobble` | orange |
+| `open` | a node the report doesn't say what it rests on, or resting on a contested/unverifiable claim | blue |
+| `fails` | a node a load-bearing child collapsed; a `contradicted`/`unsupported`/`absent` claim | vermillion |
+| `opinion` | a node resting only on Committee value judgements; an `opinion` claim (never judged) | grey |
+| `contested` | a claim leaf the runs could not settle — `contested`, or a tied `split` | reddish purple |
+
+An internal node's badge is its **derived** judgement (`spec/ARGUMENT.md` § Internal judgement); a
+claim's badge is its **pooled verdict**, coloured on the same severity scale, with the `contested`
+hue reserved for leaves the runs split on. No judgement is authored — the tree computes every badge.
+
+Cards are **closed by default**. One affordance opens them: an *Expand all* button, and an
+`?open=all` query that opens every card on load — a single line of JavaScript wires both, and the
+page is otherwise script-free.
+
+`favicon.svg` is a plain mark — an argument-tree glyph, one node above three, in the page's text
+colour, no brand and no text. Both `index.html` and `review.html` link it.
+
+### `review.html` — the two-pane reading
+
+`review.html` is `index.html`'s tree rewritten for the two-pane layout: the tree fills the right
+pane, a PDF `<iframe>` the left. Every `report: §…` and every quote provenance becomes an
+`<a target="doc">` that loads the PDF at the page. Its cards are **opened**, so the provenance links
+are visible without a click — the two-pane page exists to click them. Each page link carries a
+distinct `?p=<page>` query before the `#page` fragment so the viewer re-fetches on every click; a
+hearing link carries no page anchor (the transcript locator is a turn index, not a page). Four link
+classes are rewritten and copied into `site/sources/`: the report, and each linked hearing,
+submission and qon document. A PDF that cannot be read is warned and counted `missing`, never
+synthesized; a non-zero `missing` means a link class is broken.
+
+Every href in `review.html` is **site-relative** — `sources/report.pdf?p=53#page=53`, never
+`../sources/…` — and each links to a PDF copied into `site/sources/` at the same relative path.
 
 ## `assay serve` — serving the site
 
@@ -76,8 +129,7 @@ colour, no brand and no text. `index.html`, `review.html` and `argument.html` ea
    exit non-zero.
 2. Serve `<site-dir>` as static files (`http.FileServer`, rooted there — no path escapes it).
 3. Print `http://127.0.0.1:<port>/index.html`. Warn to stderr, non-fatally, if `index.html` is
-   absent under `<site-dir>` — the server still runs so `review.html` and `argument.html` are still
-   reachable directly.
+   absent under `<site-dir>` — the server still runs so `review.html` is still reachable directly.
 4. Unless `-no-open`, open that URL in the default browser: `open` (macOS), `xdg-open` (Linux),
    `cmd /c start` (Windows). A missing opener is a warning, not a failure.
 5. Block, serving, until interrupted.
@@ -89,11 +141,15 @@ colour, no brand and no text. `index.html`, `review.html` and `argument.html` ea
 
 ## Refuters
 
-- **`site/index.html` exists and its three hrefs resolve under `site/`.** `TestWriteSiteIndex` drives
-  `writeSite` with a review page linking the report PDF and an argument page carrying a root block,
-  then asserts `index.html` is written with the root proposition as its title, the root block
-  reproduced verbatim, and `review.html`, `argument.html` and `sources/report.pdf` all landing under
-  the site — an unresolved landing link is exactly the 404 a reader would hit.
+- **The page is a root card first, then the recommendation cards in order, nested to the argument
+  file's depth.** `TestArgumentCardPage` (tree package) drives `ArgumentPage` with a thesis, two
+  recommendations and a base child, and asserts the thesis card precedes `R1`, `R1` precedes `R2`, a
+  claim card sits nested inside a finding card inside a recommendation card, and each node carries its
+  derived badge class — the order and nesting a reader relies on to read the case top-down.
+- **`site/index.html` is the page verbatim, and its links resolve under `site/`.** `TestWriteSitePage`
+  drives `writeSite` and asserts `index.html` is the built page byte-for-byte, `favicon.svg` is
+  written and linked, and `review.html` sits beside it — a page rewritten on the way to disk is a page
+  no refuter checked.
 - **Every href in `site/review.html` resolves to a file under `site/`.** `TestWriteSiteHrefsResolve`
   drives `writeSite` with a fake sources tree (one PDF per link class) and asserts each `sources/`
   href lands on a copied file and both pages sit at the site root — an unresolved href is exactly the
