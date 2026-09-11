@@ -1514,7 +1514,7 @@ func TestWriteSiteHrefsResolve(t *testing.T) {
 		`<a href="sources/qon/abc-2025-03-21.pdf?p=2#page=2">qon</a>`
 
 	site := t.TempDir()
-	copied, missing, err := writeSite(review, "<html>argument</html>", sources, site, "Report Name")
+	copied, missing, err := writeSite(review, "<html>argument</html>", sources, site, "Report Name", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1549,8 +1549,14 @@ func TestWriteSiteIndex(t *testing.T) {
 	argHTML := rootPre + "\n"
 	const title = "Inquiry into X — Committee, June 2025"
 
+	held := map[string]bool{
+		"hearing:a": true, "hearing:b": true,
+		"submission:1": true, "submission:2": true, "submission:3": true,
+		"qon:x": true,
+	}
+
 	site := t.TempDir()
-	if _, _, err := writeSite(review, argHTML, sources, site, title); err != nil {
+	if _, _, err := writeSite(review, argHTML, sources, site, title, held); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1559,6 +1565,16 @@ func TestWriteSiteIndex(t *testing.T) {
 		t.Fatalf("index.html missing from site root: %v", err)
 	}
 	index := string(b)
+	// The key defines the verdicts and the R/F labels a reader meets on the trees; the counts sentence
+	// reports the corpus by category from `held`, so the landing page states what was actually checked.
+	for _, want := range []string{"R</b> = recommendation", "opinion</b> — the Committee's own view"} {
+		if !strings.Contains(index, want) {
+			t.Errorf("index.html key missing %q:\n%s", want, index)
+		}
+	}
+	if want := "Sources held: 2 hearing transcripts, 3 submissions, 1 answers to questions on notice."; !strings.Contains(index, want) {
+		t.Errorf("index.html missing source counts %q:\n%s", want, index)
+	}
 	if !strings.Contains(index, "<title>"+html.EscapeString(title)+"</title>") {
 		t.Errorf("index.html <title> is not the title line:\n%s", index)
 	}

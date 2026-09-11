@@ -1707,19 +1707,55 @@ const faviconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" 
 // this element verbatim, so the landing page and the argument page state the same top-level verdict.
 var reRootBlock = regexp.MustCompile(`(?s)<pre class="root">(.*?)</pre>`)
 
-// renderIndex builds site/index.html from the rendered argument page (`argHTML`) and the report name
-// `title`: the title as the page <title> and <h1>, one line naming what the site is, the root block
-// reproduced verbatim, and the three site links (review.html, argument.html, sources/report.pdf). The
-// thesis is NOT the heading — it appears once, as the root block's first line inside the reproduced
-// <pre class="root">. Returns ok=false when the page carries no root block, so writeSite warns rather
-// than writing a landing page with no verdict on it.
-func renderIndex(argHTML, title string) (out string, ok bool) {
+// sourceCountsLine summarises the held corpus for index.html's opening — hearing transcripts,
+// submissions and answers to questions on notice — counted from the manifest's held set by the same
+// canonical-id prefixes manifest.Render groups by (manifest.go:123). An empty category is dropped so
+// a corpus with no qon does not read "0 answers"; an empty set yields "" and the caller omits the
+// sentence rather than claiming to hold nothing.
+func sourceCountsLine(held map[string]bool) string {
+	var hearings, submissions, qon int
+	for id := range held {
+		switch {
+		case strings.HasPrefix(id, "hearing:"):
+			hearings++
+		case strings.HasPrefix(id, "submission:"):
+			submissions++
+		case strings.HasPrefix(id, "qon:"):
+			qon++
+		}
+	}
+	var parts []string
+	if hearings > 0 {
+		parts = append(parts, fmt.Sprintf("%d hearing transcripts", hearings))
+	}
+	if submissions > 0 {
+		parts = append(parts, fmt.Sprintf("%d submissions", submissions))
+	}
+	if qon > 0 {
+		parts = append(parts, fmt.Sprintf("%d answers to questions on notice", qon))
+	}
+	return strings.Join(parts, ", ")
+}
+
+// renderIndex builds site/index.html from the rendered argument page (`argHTML`), the report name
+// `title` and the manifest's held set: the title as the page <title> and <h1>, two sentences saying
+// what the page checks and which sources are held (from `held`), the root block reproduced verbatim,
+// a key to the verdicts and R/F labels, the three site links (review.html, argument.html,
+// sources/report.pdf) and a footer linking the repo. The thesis is NOT the heading — it appears once,
+// as the root block's first line inside the reproduced <pre class="root">. Returns ok=false when the
+// page carries no root block, so writeSite warns rather than writing a landing page with no verdict.
+func renderIndex(argHTML, title string, held map[string]bool) (out string, ok bool) {
 	m := reRootBlock.FindStringSubmatch(argHTML)
 	if m == nil {
 		return "", false
 	}
 	rootPre := m[0] // the whole <pre class="root"> element, verbatim (thesis is its first line)
 	esc := html.EscapeString(title)
+	what := "This page checks whether the report's findings say what its sources say, and which " +
+		"recommendations that leaves standing."
+	if counts := sourceCountsLine(held); counts != "" {
+		what += " Sources held: " + counts + "."
+	}
 	out = fmt.Sprintf(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>%s</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -1728,21 +1764,30 @@ body{font-family:monospace;margin:1.5rem;max-width:72ch}
 h1{font-size:1.05rem;font-weight:normal;line-height:1.45;margin:0 0 .3rem}
 .what{color:#555;margin:0 0 1.5rem}
 .root{white-space:pre-wrap;margin:0 0 1.5rem}
+.key{color:#555;margin:0 0 1.5rem;line-height:1.5}
 ul{list-style:none;padding:0}
 li{margin:.5em 0}
 a{color:#0645ad}
+footer{color:#777;margin-top:2rem}
 </style>
 </head><body>
 <h1>%s</h1>
-<p class="what">The report, checked against its sources.</p>
+<p class="what">%s</p>
 %s
+<p class="key"><b>R</b> = recommendation, <b>F</b> = finding.<br>
+<b>holds</b> — every claim underneath was found in a source saying what the report says.<br>
+<b>weakened</b> — found, but the source says less.<br>
+<b>open</b> — the report doesn't say what this rests on, or the sources don't settle a claim.<br>
+<b>fails</b> — a claim it rests on was not found in any held source.<br>
+<b>opinion</b> — the Committee's own view; not checked.</p>
 <ul>
-<li><a href="review.html">review.html — the report and the reading, side by side</a></li>
-<li><a href="argument.html">argument.html — the reading alone</a></li>
-<li><a href="sources/report.pdf">report.pdf — the source report</a></li>
+<li><a href="review.html">review.html — the report on the left, this reading on the right; click a section or quote to jump to the page</a></li>
+<li><a href="argument.html">argument.html — the full reading: every recommendation, finding, claim and quote</a></li>
+<li><a href="sources/report.pdf">report.pdf — the report as published</a></li>
 </ul>
+<footer>Generated by <a href="https://github.com/peterwilliams97/elenchus">elenchus</a></footer>
 </body></html>
-`, esc, esc, rootPre)
+`, esc, esc, html.EscapeString(what), rootPre)
 	return out, true
 }
 
@@ -1760,9 +1805,9 @@ var reSitePDF = regexp.MustCompile(`(?:href|src)="sources/([^"?#]*\.pdf)`)
 // is the on-disk sources tree the copies are read from. `title` is the report name (ArgumentTitle)
 // carried into every page. Returns renderReview's link tally plus the copied/missing PDF count. See
 // spec/SERVE.md.
-func buildSite(page, sourcesDir, siteDir, title string) (string, error) {
+func buildSite(page, sourcesDir, siteDir, title string, held map[string]bool) (string, error) {
 	review, linkCounts := renderReview(page, "sources", sourcesDir, title)
-	copied, missing, err := writeSite(review, page, sourcesDir, siteDir, title)
+	copied, missing, err := writeSite(review, page, sourcesDir, siteDir, title, held)
 	if err != nil {
 		return "", err
 	}
@@ -1770,12 +1815,13 @@ func buildSite(page, sourcesDir, siteDir, title string) (string, error) {
 }
 
 // writeSite copies every PDF `reviewHTML` references into `siteDir/sources/`, writes review.html and
-// argument.html at the site root, and writes index.html (the landing page, from `argHTML`) and
+// argument.html at the site root, and writes index.html (the landing page, from `argHTML` and the
+// manifest's `held` set for the source counts) and
 // favicon.svg beside them. It is split from buildSite so a refuter can drive it with a hand-written
 // page and a fake sources tree, and assert every href resolves under the site — the property the whole
 // site exists to hold. A PDF that cannot be copied is counted as missing and warned, never
 // synthesized: a broken link is reported, not papered over.
-func writeSite(reviewHTML, argHTML, sourcesDir, siteDir, title string) (copied, missing int, err error) {
+func writeSite(reviewHTML, argHTML, sourcesDir, siteDir, title string, held map[string]bool) (copied, missing int, err error) {
 	if err = os.MkdirAll(siteDir, 0o755); err != nil {
 		return 0, 0, err
 	}
@@ -1796,7 +1842,7 @@ func writeSite(reviewHTML, argHTML, sourcesDir, siteDir, title string) (copied, 
 	if err = os.WriteFile(filepath.Join(siteDir, "favicon.svg"), []byte(faviconSVG), 0o644); err != nil {
 		return copied, missing, err
 	}
-	if index, ok := renderIndex(argHTML, title); ok {
+	if index, ok := renderIndex(argHTML, title, held); ok {
 		if err = os.WriteFile(filepath.Join(siteDir, "index.html"), []byte(index), 0o644); err != nil {
 			return copied, missing, err
 		}
@@ -3608,7 +3654,7 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 		}
 	}
 	if c.siteDir != "" {
-		if counts, err := buildSite(page, c.sourcesDir, c.siteDir, title); err != nil {
+		if counts, err := buildSite(page, c.sourcesDir, c.siteDir, title, c.held); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: cannot build site %s: %v\n", c.siteDir, err)
 		} else {
 			fmt.Fprintf(os.Stderr, "site: %s — %s\n", c.siteDir, counts)
