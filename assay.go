@@ -419,9 +419,10 @@ func main() {
 // ── serve ────────────────────────────────────────────────────────────────────
 
 // runServe starts a loopback static file server over a self-contained review site and opens
-// review.html at its root. The site links into its own `sources/` tree with root-relative hrefs
-// (`sources/report.pdf?p=53#page=53`), so serving the site directory whole puts review.html at
-// /review.html and every link at /sources/…. Serving over HTTP — rather than opening the file://
+// index.html at its root — the landing page linking review.html, argument.html and the source
+// report. The site links into its own `sources/` tree with root-relative hrefs
+// (`sources/report.pdf?p=53#page=53`), so serving the site directory whole puts index.html at
+// /index.html and every link at /sources/…. Serving over HTTP — rather than opening the file://
 // path — is what lets a PDF viewer honour the `#page=N` fragment and load the `sources/…` iframe
 // target. `<dir>` is the site built by `assay -review` (spec/SERVE.md).
 func runServe(args []string) {
@@ -446,11 +447,11 @@ func runServe(args []string) {
 		fatal("serve: not a directory: " + dir)
 	}
 
-	// review.html sits at the site root; warn but keep serving if it is missing, so a site that only
-	// produced argument.html is still reachable.
-	reviewURL := fmt.Sprintf("http://127.0.0.1:%d/review.html", port)
-	if _, err := os.Stat(filepath.Join(dir, "review.html")); err != nil {
-		fmt.Fprintf(os.Stderr, "warning: review.html not found under %s; serving anyway\n", dir)
+	// index.html sits at the site root; warn but keep serving if it is missing, so a site whose pages
+	// are still reachable directly (review.html, argument.html) works even without the landing page.
+	indexURL := fmt.Sprintf("http://127.0.0.1:%d/index.html", port)
+	if _, err := os.Stat(filepath.Join(dir, "index.html")); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: index.html not found under %s; serving anyway\n", dir)
 	}
 
 	// Bind before printing, so a taken port fails now rather than after we claim a URL that never
@@ -460,9 +461,9 @@ func runServe(args []string) {
 		fatal("serve: " + err.Error())
 	}
 
-	fmt.Println(reviewURL)
+	fmt.Println(indexURL)
 	if !noOpen {
-		if err := openBrowser(reviewURL); err != nil {
+		if err := openBrowser(indexURL); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: could not open browser: %v\n", err)
 		}
 	}
@@ -1657,6 +1658,7 @@ func renderReview(page, srcPrefix, scanDir string) (out, counts string) {
 
 	out = fmt.Sprintf(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>assay review</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
 <style>
 html,body{height:100%%;margin:0}
 .split{display:flex;height:100vh}
@@ -1683,6 +1685,65 @@ html,body{height:100%%;margin:0}
 	return out, counts
 }
 
+// faviconSVG is the site mark: an argument-tree glyph — one node above three, edges fanning down — in
+// the pages' text colour (#000, the monospace body default). No brand and no text; it is the same
+// tree the report and argument pages draw, shrunk to a favicon. writeSite writes it into the site and
+// index.html, review.html and argument.html each link it (spec/SERVE.md).
+const faviconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#000" stroke="#000" stroke-width="1.3" stroke-linecap="round">
+<line x1="12" y1="5" x2="5" y2="19"/>
+<line x1="12" y1="5" x2="12" y2="19"/>
+<line x1="12" y1="5" x2="19" y2="19"/>
+<circle cx="12" cy="5" r="2.4"/>
+<circle cx="5" cy="19" r="2.4"/>
+<circle cx="12" cy="19" r="2.4"/>
+<circle cx="19" cy="19" r="2.4"/>
+</svg>
+`
+
+// reRootBlock captures the argument page's root screen — the `<pre class="root">` element holding the
+// root proposition, the recommendation tally and one line per recommendation. index.html reproduces
+// this element verbatim, so the landing page and the argument page state the same top-level verdict.
+var reRootBlock = regexp.MustCompile(`(?s)<pre class="root">(.*?)</pre>`)
+
+// renderIndex builds site/index.html from the rendered argument page (`argHTML`): the report's root
+// proposition as the title and heading, one line naming what the site is, the root block reproduced
+// verbatim, and the three site links (review.html, argument.html, sources/report.pdf). The
+// proposition is the first line of the root block, already HTML-escaped by the argument page, so it is
+// dropped into the title and heading unchanged. Returns ok=false when the page carries no root block,
+// so writeSite warns rather than writing a titleless landing page.
+func renderIndex(argHTML string) (out string, ok bool) {
+	m := reRootBlock.FindStringSubmatch(argHTML)
+	if m == nil {
+		return "", false
+	}
+	rootPre, inner := m[0], m[1]            // the whole element (verbatim) and its escaped text
+	title, _, _ := strings.Cut(inner, "\n") // the root proposition — the block's first line
+	out = fmt.Sprintf(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>%s</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+body{font-family:monospace;margin:1.5rem;max-width:72ch}
+h1{font-size:1.05rem;font-weight:normal;line-height:1.45;margin:0 0 .3rem}
+.what{color:#555;margin:0 0 1.5rem}
+.root{white-space:pre-wrap;margin:0 0 1.5rem}
+ul{list-style:none;padding:0}
+li{margin:.5em 0}
+a{color:#0645ad}
+</style>
+</head><body>
+<h1>%s</h1>
+<p class="what">The report, checked against its sources.</p>
+%s
+<ul>
+<li><a href="review.html">review.html — the report and the reading, side by side</a></li>
+<li><a href="argument.html">argument.html — the reading alone</a></li>
+<li><a href="sources/report.pdf">report.pdf — the source report</a></li>
+</ul>
+</body></html>
+`, title, title, rootPre)
+	return out, true
+}
+
 // reSitePDF matches a PDF the rendered site page reaches — an `href` link or the left iframe `src` —
 // under the site-relative `sources/` prefix, capturing the path with its `?p=…#page=…` suffix
 // stripped. That path is both the read source (under `sourcesDir`) and the write destination (under
@@ -1705,11 +1766,12 @@ func buildSite(page, sourcesDir, siteDir string) (string, error) {
 	return fmt.Sprintf("%s; pdfs copied=%d missing=%d", linkCounts, copied, missing), nil
 }
 
-// writeSite copies every PDF `reviewHTML` references into `siteDir/sources/` and writes review.html
-// and argument.html at the site root. It is split from buildSite so a refuter can drive it with a
-// hand-written page and a fake sources tree, and assert every href resolves under the site — the
-// property the whole site exists to hold. A PDF that cannot be copied is counted as missing and
-// warned, never synthesized: a broken link is reported, not papered over.
+// writeSite copies every PDF `reviewHTML` references into `siteDir/sources/`, writes review.html and
+// argument.html at the site root, and writes index.html (the landing page, from `argHTML`) and
+// favicon.svg beside them. It is split from buildSite so a refuter can drive it with a hand-written
+// page and a fake sources tree, and assert every href resolves under the site — the property the whole
+// site exists to hold. A PDF that cannot be copied is counted as missing and warned, never
+// synthesized: a broken link is reported, not papered over.
 func writeSite(reviewHTML, argHTML, sourcesDir, siteDir string) (copied, missing int, err error) {
 	if err = os.MkdirAll(siteDir, 0o755); err != nil {
 		return 0, 0, err
@@ -1727,6 +1789,16 @@ func writeSite(reviewHTML, argHTML, sourcesDir, siteDir string) (copied, missing
 	}
 	if err = os.WriteFile(filepath.Join(siteDir, "argument.html"), []byte(argHTML), 0o644); err != nil {
 		return copied, missing, err
+	}
+	if err = os.WriteFile(filepath.Join(siteDir, "favicon.svg"), []byte(faviconSVG), 0o644); err != nil {
+		return copied, missing, err
+	}
+	if index, ok := renderIndex(argHTML); ok {
+		if err = os.WriteFile(filepath.Join(siteDir, "index.html"), []byte(index), 0o644); err != nil {
+			return copied, missing, err
+		}
+	} else {
+		fmt.Fprintln(os.Stderr, "warning: site: argument page has no root block; index.html not written")
 	}
 	return copied, missing, nil
 }

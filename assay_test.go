@@ -1533,6 +1533,46 @@ func TestWriteSiteHrefsResolve(t *testing.T) {
 	}
 }
 
+// TestWriteSiteIndex is index.html's refuter: writeSite writes the landing page and each of its three
+// links resolves under the site. It drives writeSite with a review page that links the report PDF (so
+// sources/report.pdf is copied) and an argument page carrying a <pre class="root"> block (so the page
+// has a title and a root paragraph to reproduce), then asserts index.html exists, its title is the
+// root proposition, the root block is reproduced verbatim, favicon.svg is present and linked, and
+// review.html, argument.html and sources/report.pdf all resolve under the site.
+func TestWriteSiteIndex(t *testing.T) {
+	sources := t.TempDir()
+	writeFile(t, filepath.Join(sources, "report.pdf"), []byte("%PDF-1.4 report"))
+	review := `<iframe src="sources/report.pdf" name="doc"></iframe>` +
+		`<a href="sources/report.pdf?p=9#page=9">report</a>`
+	rootPre := "<pre class=\"root\">The report argues X.\nOf 2 recommendations, 1 holds.</pre>"
+	argHTML := rootPre + "\n"
+
+	site := t.TempDir()
+	if _, _, err := writeSite(review, argHTML, sources, site); err != nil {
+		t.Fatal(err)
+	}
+
+	b, err := os.ReadFile(filepath.Join(site, "index.html"))
+	if err != nil {
+		t.Fatalf("index.html missing from site root: %v", err)
+	}
+	index := string(b)
+	if !strings.Contains(index, "<title>The report argues X.</title>") {
+		t.Errorf("index.html title is not the root proposition:\n%s", index)
+	}
+	if !strings.Contains(index, rootPre) {
+		t.Errorf("index.html does not reproduce the root block verbatim:\n%s", index)
+	}
+	for _, href := range []string{"review.html", "argument.html", "sources/report.pdf", "favicon.svg"} {
+		if !strings.Contains(index, `"`+href) {
+			t.Errorf("index.html does not link %s", href)
+		}
+		if _, err := os.Stat(filepath.Join(site, filepath.FromSlash(href))); err != nil {
+			t.Errorf("index link %s does not resolve under site: %v", href, err)
+		}
+	}
+}
+
 func writeFile(t *testing.T, path string, b []byte) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {

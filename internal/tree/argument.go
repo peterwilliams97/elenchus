@@ -276,7 +276,10 @@ func decidingChild(n *ArgNode) string {
 func ArgumentPage(root *ArgNode, details map[string]Leaf, header string) (page, rootBlock string) {
 	rootBlock = argRootBlock(root)
 	var b strings.Builder
-	b.WriteString(htmlHead)
+	// argument.html ships in the review site next to favicon.svg (spec/SERVE.md), so it links the site
+	// mark; the section-path tree (tree.html) keeps the plain htmlHead and does not.
+	b.WriteString(strings.Replace(htmlHead,
+		"</head>", `<link rel="icon" href="favicon.svg" type="image/svg+xml">`+"\n</head>", 1))
 	if header != "" {
 		fmt.Fprintf(&b, "<pre>%s</pre>\n", html.EscapeString(header))
 	}
