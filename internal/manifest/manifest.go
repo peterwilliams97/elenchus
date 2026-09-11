@@ -158,6 +158,80 @@ func LoadHeld(path string) (map[string]bool, error) {
 	return set, nil
 }
 
+// LoadLabels parses a MANIFEST.md into a map from canonical document id to the witness/author name a
+// quote's provenance line shows. The name is the LAST " — "-separated segment of the bullet — the
+// organisation or witness — so `- ` + "`hearing:…`" + ` — Hearing 2025-03-13 — Public Galleries …`
+// yields "Public Galleries …". A missing file yields an empty map and no error, matching LoadHeld.
+func LoadLabels(path string) (map[string]string, error) {
+	labels := map[string]string{}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return labels, nil
+		}
+		return nil, err
+	}
+	for ln := range strings.SplitSeq(string(data), "\n") {
+		ln = strings.TrimSpace(ln)
+		m := docIDLine.FindStringSubmatch(ln)
+		if m == nil {
+			continue
+		}
+		if segs := strings.Split(ln, " — "); len(segs) >= 2 {
+			labels[m[1]] = strings.TrimSpace(segs[len(segs)-1])
+		}
+	}
+	return labels, nil
+}
+
+// CanonicalDoc maps a retrieval passage id (minted by internal/retrieve) back to the canonical
+// document id this manifest uses, plus a human locator. The three passage shapes and their canonical
+// forms — the inverse of Scan's id construction, so a resolved doc id is exactly what LoadHeld/
+// LoadLabels key on:
+//
+//	"<date>/<session>#t<n>"   → "hearing:<date>/<session>",              locator "line <n>"
+//	"submission-<num>#p<n>"   → "submission:<N>[/attachment-<k>]",       locator "p.<n>"   (num "09" or "09.1")
+//	"qon-<org>-<date>#p<n>"   → "qon:<org>/<date>",                      locator "p.<n>"
+//
+// ok is false when the id matches none of these shapes; a `#p<n>` is a paragraph ordinal and a
+// `#t<n>` a speaker-turn ordinal, not a PDF page — the locator wording follows the report's own
+// "page or transcript line" naming, not the ordinal's kind.
+func CanonicalDoc(pid string) (docID, locator string, ok bool) {
+	base, frag, hasFrag := strings.Cut(pid, "#")
+	if !hasFrag || base == "" || frag == "" {
+		return "", "", false
+	}
+	switch {
+	case strings.HasPrefix(base, "submission-"):
+		whole, att, _ := strings.Cut(strings.TrimPrefix(base, "submission-"), ".")
+		n, err := strconv.Atoi(whole)
+		if err != nil {
+			return "", "", false
+		}
+		docID = fmt.Sprintf("submission:%d", n)
+		if att != "" {
+			k, err := strconv.Atoi(att)
+			if err != nil {
+				return "", "", false
+			}
+			docID = fmt.Sprintf("submission:%d/attachment-%d", n, k)
+		}
+		return docID, "p." + strings.TrimPrefix(frag, "p"), true
+	case strings.HasPrefix(base, "qon-"):
+		m := qonFile.FindStringSubmatch(strings.TrimPrefix(base, "qon-"))
+		if m == nil {
+			return "", "", false
+		}
+		return "qon:" + m[1] + "/" + m[2], "p." + strings.TrimPrefix(frag, "p"), true
+	default:
+		// Hearing: "<date>/<session>#t<n>" — the only shape carrying a "/" in its base and a "t" turn.
+		if strings.ContainsRune(base, '/') && strings.HasPrefix(frag, "t") {
+			return "hearing:" + base, "line " + strings.TrimPrefix(frag, "t"), true
+		}
+		return "", "", false
+	}
+}
+
 func prettySession(stem string) string {
 	// "1_yarra-city-council" → "Yarra City Council"
 	if i := strings.Index(stem, "_"); i >= 0 {
