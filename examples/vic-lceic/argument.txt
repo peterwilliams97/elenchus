@@ -1,5 +1,7 @@
 # argument.txt — the LCEIC report as an argument tree (spec/ARGUMENT.md)
 #
+# title: Inquiry into Victoria's cultural and creative industries — Legislative Council Economy and Infrastructure Committee, June 2025
+#
 # The report as a root proposition refined down to evidence:
 #   root → recommendation (R1–R11) → finding (F1–F55) → atomic claim (ids in claims-machine.txt).
 # This file carries CONTENT and STRUCTURE only. Judgements are DERIVED, never authored, so there is

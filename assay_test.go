@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -1513,7 +1514,7 @@ func TestWriteSiteHrefsResolve(t *testing.T) {
 		`<a href="sources/qon/abc-2025-03-21.pdf?p=2#page=2">qon</a>`
 
 	site := t.TempDir()
-	copied, missing, err := writeSite(review, "<html>argument</html>", sources, site)
+	copied, missing, err := writeSite(review, "<html>argument</html>", sources, site, "Report Name")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1535,10 +1536,10 @@ func TestWriteSiteHrefsResolve(t *testing.T) {
 
 // TestWriteSiteIndex is index.html's refuter: writeSite writes the landing page and each of its three
 // links resolves under the site. It drives writeSite with a review page that links the report PDF (so
-// sources/report.pdf is copied) and an argument page carrying a <pre class="root"> block (so the page
-// has a title and a root paragraph to reproduce), then asserts index.html exists, its title is the
-// root proposition, the root block is reproduced verbatim, favicon.svg is present and linked, and
-// review.html, argument.html and sources/report.pdf all resolve under the site.
+// sources/report.pdf is copied), a report title, and an argument page carrying a <pre class="root">
+// block, then asserts index.html exists, its <title> equals the title line (not the thesis), the
+// thesis appears once — inside the reproduced root block — and never as the heading, favicon.svg is
+// present and linked, and review.html, argument.html and sources/report.pdf all resolve under the site.
 func TestWriteSiteIndex(t *testing.T) {
 	sources := t.TempDir()
 	writeFile(t, filepath.Join(sources, "report.pdf"), []byte("%PDF-1.4 report"))
@@ -1546,9 +1547,10 @@ func TestWriteSiteIndex(t *testing.T) {
 		`<a href="sources/report.pdf?p=9#page=9">report</a>`
 	rootPre := "<pre class=\"root\">The report argues X.\nOf 2 recommendations, 1 holds.</pre>"
 	argHTML := rootPre + "\n"
+	const title = "Inquiry into X — Committee, June 2025"
 
 	site := t.TempDir()
-	if _, _, err := writeSite(review, argHTML, sources, site); err != nil {
+	if _, _, err := writeSite(review, argHTML, sources, site, title); err != nil {
 		t.Fatal(err)
 	}
 
@@ -1557,8 +1559,15 @@ func TestWriteSiteIndex(t *testing.T) {
 		t.Fatalf("index.html missing from site root: %v", err)
 	}
 	index := string(b)
-	if !strings.Contains(index, "<title>The report argues X.</title>") {
-		t.Errorf("index.html title is not the root proposition:\n%s", index)
+	if !strings.Contains(index, "<title>"+html.EscapeString(title)+"</title>") {
+		t.Errorf("index.html <title> is not the title line:\n%s", index)
+	}
+	// The thesis lives once, inside the root block; it is neither the <title> nor the <h1>.
+	if strings.Contains(index, "<title>The report argues X.</title>") || strings.Contains(index, "<h1>The report argues X.</h1>") {
+		t.Errorf("index.html uses the thesis as its title/heading; it must use the title line:\n%s", index)
+	}
+	if strings.Count(index, "The report argues X.") != 1 {
+		t.Errorf("thesis should appear exactly once (in the root block), got %d:\n%s", strings.Count(index, "The report argues X."), index)
 	}
 	if !strings.Contains(index, rootPre) {
 		t.Errorf("index.html does not reproduce the root block verbatim:\n%s", index)

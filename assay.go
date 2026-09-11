@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"html"
 	"io"
 	"net"
 	"net/http"
@@ -1576,9 +1577,10 @@ var (
 // index, not a page), so they link to the document. `srcPrefix` is the href prefix baked into the
 // page (`sources`, so links are site-relative); `scanDir` is the on-disk sources tree whose
 // submissions/*.pdf are scanned to recover each submission's real filename — kept separate so the
-// links can point at the site while the scan reads the real corpus. It is the Go port of the retired
-// current/build-review.py, and returns a one-line link tally for the caller to report.
-func renderReview(page, srcPrefix, scanDir string) (out, counts string) {
+// links can point at the site while the scan reads the real corpus. `title` is the report name that
+// becomes review.html's <title>. It is the Go port of the retired current/build-review.py, and returns
+// a one-line link tally for the caller to report.
+func renderReview(page, srcPrefix, scanDir, title string) (out, counts string) {
 	// submission number (+attachment flag) → pdf filename, scanned from disk so the redaction suffix
 	// and zero-padding don't have to be guessed.
 	type subKey struct {
@@ -1657,7 +1659,7 @@ func renderReview(page, srcPrefix, scanDir string) (out, counts string) {
 	total := nReport + nSub + nQon + nHear
 
 	out = fmt.Sprintf(`<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>assay review</title>
+<html lang="en"><head><meta charset="utf-8"><title>%s</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <style>
 html,body{height:100%%;margin:0}
@@ -1675,7 +1677,7 @@ html,body{height:100%%;margin:0}
 </div>
 </div>
 </body></html>
-`, style, srcPrefix, body)
+`, html.EscapeString(title), style, srcPrefix, body)
 
 	counts = fmt.Sprintf("report=%d submission=%d qon=%d hearing=%d total=%d; unresolved=%d",
 		nReport, nSub, nQon, nHear, total, nUnresolved)
@@ -1705,19 +1707,19 @@ const faviconSVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" 
 // this element verbatim, so the landing page and the argument page state the same top-level verdict.
 var reRootBlock = regexp.MustCompile(`(?s)<pre class="root">(.*?)</pre>`)
 
-// renderIndex builds site/index.html from the rendered argument page (`argHTML`): the report's root
-// proposition as the title and heading, one line naming what the site is, the root block reproduced
-// verbatim, and the three site links (review.html, argument.html, sources/report.pdf). The
-// proposition is the first line of the root block, already HTML-escaped by the argument page, so it is
-// dropped into the title and heading unchanged. Returns ok=false when the page carries no root block,
-// so writeSite warns rather than writing a titleless landing page.
-func renderIndex(argHTML string) (out string, ok bool) {
+// renderIndex builds site/index.html from the rendered argument page (`argHTML`) and the report name
+// `title`: the title as the page <title> and <h1>, one line naming what the site is, the root block
+// reproduced verbatim, and the three site links (review.html, argument.html, sources/report.pdf). The
+// thesis is NOT the heading — it appears once, as the root block's first line inside the reproduced
+// <pre class="root">. Returns ok=false when the page carries no root block, so writeSite warns rather
+// than writing a landing page with no verdict on it.
+func renderIndex(argHTML, title string) (out string, ok bool) {
 	m := reRootBlock.FindStringSubmatch(argHTML)
 	if m == nil {
 		return "", false
 	}
-	rootPre, inner := m[0], m[1]            // the whole element (verbatim) and its escaped text
-	title, _, _ := strings.Cut(inner, "\n") // the root proposition — the block's first line
+	rootPre := m[0] // the whole <pre class="root"> element, verbatim (thesis is its first line)
+	esc := html.EscapeString(title)
 	out = fmt.Sprintf(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>%s</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -1740,7 +1742,7 @@ a{color:#0645ad}
 <li><a href="sources/report.pdf">report.pdf — the source report</a></li>
 </ul>
 </body></html>
-`, title, title, rootPre)
+`, esc, esc, rootPre)
 	return out, true
 }
 
@@ -1755,11 +1757,12 @@ var reSitePDF = regexp.MustCompile(`(?:href|src)="sources/([^"?#]*\.pdf)`)
 // hearing, submission and qon document — the four link classes). Every href is site-relative
 // (`sources/…`, not `../sources/…`), so the tree serves over HTTP and moves as one unit; `assay serve
 // <siteDir>` then answers `review.html` at the root. `page` is the rendered argument page; `sourcesDir`
-// is the on-disk sources tree the copies are read from. Returns renderReview's link tally plus the
-// copied/missing PDF count. See spec/SERVE.md.
-func buildSite(page, sourcesDir, siteDir string) (string, error) {
-	review, linkCounts := renderReview(page, "sources", sourcesDir)
-	copied, missing, err := writeSite(review, page, sourcesDir, siteDir)
+// is the on-disk sources tree the copies are read from. `title` is the report name (ArgumentTitle)
+// carried into every page. Returns renderReview's link tally plus the copied/missing PDF count. See
+// spec/SERVE.md.
+func buildSite(page, sourcesDir, siteDir, title string) (string, error) {
+	review, linkCounts := renderReview(page, "sources", sourcesDir, title)
+	copied, missing, err := writeSite(review, page, sourcesDir, siteDir, title)
 	if err != nil {
 		return "", err
 	}
@@ -1772,7 +1775,7 @@ func buildSite(page, sourcesDir, siteDir string) (string, error) {
 // page and a fake sources tree, and assert every href resolves under the site — the property the whole
 // site exists to hold. A PDF that cannot be copied is counted as missing and warned, never
 // synthesized: a broken link is reported, not papered over.
-func writeSite(reviewHTML, argHTML, sourcesDir, siteDir string) (copied, missing int, err error) {
+func writeSite(reviewHTML, argHTML, sourcesDir, siteDir, title string) (copied, missing int, err error) {
 	if err = os.MkdirAll(siteDir, 0o755); err != nil {
 		return 0, 0, err
 	}
@@ -1793,7 +1796,7 @@ func writeSite(reviewHTML, argHTML, sourcesDir, siteDir string) (copied, missing
 	if err = os.WriteFile(filepath.Join(siteDir, "favicon.svg"), []byte(faviconSVG), 0o644); err != nil {
 		return copied, missing, err
 	}
-	if index, ok := renderIndex(argHTML); ok {
+	if index, ok := renderIndex(argHTML, title); ok {
 		if err = os.WriteFile(filepath.Join(siteDir, "index.html"), []byte(index), 0o644); err != nil {
 			return copied, missing, err
 		}
@@ -3583,13 +3586,20 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.auditPath, err)
 		}
 	}
-	root, err := tree.BuildArgument(mustRead(c.argumentFile), rows)
+	argText := mustRead(c.argumentFile)
+	root, err := tree.BuildArgument(argText, rows)
 	if err != nil {
 		fatal("argument tree: " + err.Error())
 	}
+	// title names the site pages and index.html's heading; the thesis (root.Content) stays the root
+	// block's alone. With no "# title:" line the fall-back is the file name, not the thesis.
+	title := tree.ArgumentTitle(argText)
+	if title == "" {
+		title = filepath.Base(c.argumentFile)
+	}
 	// The argument tree only ever renders under -from, where the calls/$/wall header is all zeros
 	// (no model call was made), so it is omitted here rather than stamped on every argument render.
-	page, rootBlock := tree.ArgumentPage(root, details, "")
+	page, rootBlock := tree.ArgumentPage(root, details, "", title)
 	if c.argHTMLPath != "" {
 		if err := os.WriteFile(c.argHTMLPath, []byte(page), 0o644); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.argHTMLPath, err)
@@ -3598,7 +3608,7 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 		}
 	}
 	if c.siteDir != "" {
-		if counts, err := buildSite(page, c.sourcesDir, c.siteDir); err != nil {
+		if counts, err := buildSite(page, c.sourcesDir, c.siteDir, title); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: cannot build site %s: %v\n", c.siteDir, err)
 		} else {
 			fmt.Fprintf(os.Stderr, "site: %s — %s\n", c.siteDir, counts)

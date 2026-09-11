@@ -129,7 +129,7 @@ func TestArgumentPage(t *testing.T) {
 		{ID: "F30", Text: "breakdowns not released", Faith: "faithful"},
 		{ID: "F29", Text: "fair share received", Faith: "faithful"},
 	})
-	page, rootBlock := ArgumentPage(root, map[string]Leaf{"F30": {Reason: "the source says so"}}, "model X · calls 0")
+	page, rootBlock := ArgumentPage(root, map[string]Leaf{"F30": {Reason: "the source says so"}}, "model X · calls 0", "The Cultural Industries Inquiry")
 	for _, want := range []string{
 		"Victoria's industries matter",
 		"Of 1 recommendation, 0 hold, 1 is open — 1 because the report doesn't say what they rest on.",
@@ -140,12 +140,34 @@ func TestArgumentPage(t *testing.T) {
 		}
 	}
 	for _, want := range []string{
+		"<title>The Cultural Industries Inquiry</title>", // the report title, not the shared "assay tree"
 		"<pre class=\"root\">", "<details open>", "breakdowns not released",
 		"claim: fair share received", "reason: the source says so", "[open]", "F29 ?",
 	} {
 		if !strings.Contains(page, want) {
 			t.Errorf("page missing %q:\n%s", want, page)
 		}
+	}
+}
+
+// TestArgumentTitle: the "# title:" header is read as the report name and every other line — comments
+// without a title key, and the tree lines — is ignored; a file with no such header yields "" so the
+// caller falls back to the file name (never the thesis).
+func TestArgumentTitle(t *testing.T) {
+	withTitle := joinLines(
+		"# argument.txt — the report as an argument tree",
+		"# title: Inquiry into X — Committee, June 2025",
+		"root  | The report argues X.  | SYNTHESISED",
+	)
+	if got := ArgumentTitle(withTitle); got != "Inquiry into X — Committee, June 2025" {
+		t.Errorf("ArgumentTitle = %q, want the header value", got)
+	}
+	noTitle := joinLines(
+		"# Line format (indentation = depth):",
+		"root  | The report argues X.  | SYNTHESISED",
+	)
+	if got := ArgumentTitle(noTitle); got != "" {
+		t.Errorf("ArgumentTitle = %q, want \"\" when no title header (caller falls back to file name)", got)
 	}
 }
 
@@ -170,7 +192,7 @@ func TestArgRootTallyNotConjunction(t *testing.T) {
 		{ID: "F2", Text: "f2", Faith: "faithful"},
 		{ID: "F3", Text: "f3", Faith: "absent"},
 	})
-	_, rootBlock := ArgumentPage(root, nil, "")
+	_, rootBlock := ArgumentPage(root, nil, "", "")
 	tally := strings.Split(rootBlock, "\n")[1] // line 0 is the content, line 1 is the tally paragraph
 	for _, want := range []string{"Of 3 recommendations", "2 hold (R1, R2)", "1 fails (R3: no held source supports F3)"} {
 		if !strings.Contains(tally, want) {

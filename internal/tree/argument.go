@@ -269,17 +269,40 @@ func decidingChild(n *ArgNode) string {
 	return ""
 }
 
+// ArgumentTitle returns the report name from an argument.txt "# title:" header line — the name the
+// site pages carry as their <title> and index.html as its <h1>. It returns "" when the file has no
+// such line; the caller then falls back to the file name, never to the thesis, which stays the root
+// block's alone (`root.Content`, rendered once by argRootBlock).
+func ArgumentTitle(argText string) string {
+	for _, ln := range strings.Split(argText, "\n") {
+		t := strings.TrimSpace(ln)
+		if !strings.HasPrefix(t, "#") {
+			continue
+		}
+		body := strings.TrimSpace(strings.TrimPrefix(t, "#"))
+		if k, v, ok := strings.Cut(body, ":"); ok && strings.EqualFold(strings.TrimSpace(k), "title") {
+			return strings.TrimSpace(v)
+		}
+	}
+	return ""
+}
+
 // ArgumentPage returns the full argument.html and, separately, the plain-text root block it embeds
 // (so the caller can also print it to stdout). The page is the root block above, then the findings
 // and claims as a nested-<details> tree — the recommendations, their findings, and the atomic-claim
-// leaves, the leaves rendered exactly as the section-path tree renders them.
-func ArgumentPage(root *ArgNode, details map[string]Leaf, header string) (page, rootBlock string) {
+// leaves, the leaves rendered exactly as the section-path tree renders them. `title` is the report
+// name (ArgumentTitle) that replaces htmlHead's "assay tree" as the page <title>.
+func ArgumentPage(root *ArgNode, details map[string]Leaf, header, title string) (page, rootBlock string) {
 	rootBlock = argRootBlock(root)
 	var b strings.Builder
 	// argument.html ships in the review site next to favicon.svg (spec/SERVE.md), so it links the site
-	// mark; the section-path tree (tree.html) keeps the plain htmlHead and does not.
-	b.WriteString(strings.Replace(htmlHead,
-		"</head>", `<link rel="icon" href="favicon.svg" type="image/svg+xml">`+"\n</head>", 1))
+	// mark and takes the report's title in place of the shared "assay tree"; the section-path tree
+	// (tree.html) keeps the plain htmlHead and does neither.
+	head := strings.Replace(htmlHead, "<title>assay tree</title>",
+		"<title>"+html.EscapeString(title)+"</title>", 1)
+	head = strings.Replace(head,
+		"</head>", `<link rel="icon" href="favicon.svg" type="image/svg+xml">`+"\n</head>", 1)
+	b.WriteString(head)
 	if header != "" {
 		fmt.Fprintf(&b, "<pre>%s</pre>\n", html.EscapeString(header))
 	}
