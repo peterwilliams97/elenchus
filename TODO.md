@@ -59,3 +59,8 @@ with grounded reasoning, explicitly flagging any confidence/accuracy mismatch.
 ## 3. Standard code testing.
 
 1. Fuzz
+2. Peturb prompts
+3. Test mulitple LLMs
+4. Run LLMs multiple times to check variance
+5. Write a result tester
+6. Test on other reports

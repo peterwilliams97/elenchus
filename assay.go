@@ -22,6 +22,7 @@ import (
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -75,6 +76,9 @@ type cfg struct {
 	treeHTMLPath string              // eval/<stamp>/tree.html sink, written alongside audit.md
 	argumentFile string              // -argument: argument.txt path; when set, -from renders the argument tree
 	argHTMLPath  string              // argument.html sink, alongside audit.md, when -argument is set
+	review       bool                // -review: also write review.html — the two-pane PDF-linked argument page
+	reviewPath   string              // review.html sink, alongside argument.html, when -review is set
+	sourcesDir   string              // -manifest's parent dir; the href prefix and PDF-scan root for -review
 	rootTitle    string              // report title for the root block's line 1, from the claims file "# title:" header
 	rootDate     string              // report date for the root block's line 1, from the claims file "# date:" header
 	sourceDocs   int                 // M: documents held per the manifest; the root block's "checked against M" figure
@@ -182,6 +186,7 @@ func main() {
 	flag.Var(&treeF, "tree", "print the tree report to stdout; -tree=full expands every node")
 	flag.StringVar(&fromChain, "from", "", "render brief/tree/audit from a saved chain JSONL (no model calls); a comma-list of chains merges them leaf-by-leaf")
 	flag.StringVar(&c.argumentFile, "argument", "", "with -from: render the argument tree keyed by this argument.txt (spec/ARGUMENT.md) into argument.html, instead of the section-path tree")
+	flag.BoolVar(&c.review, "review", false, "with -argument -manifest: also write review.html — a two-pane page whose left iframe shows the source PDF the argument's links open (report §/page, quote provenance)")
 	flag.Parse()
 
 	// -full and -tree select different stdout renderers; refuse to guess which the caller meant.
@@ -213,7 +218,15 @@ func main() {
 		if err != nil {
 			fatal("load manifest labels: " + err.Error())
 		}
-		c.docLabels = labels // canonical doc id → witness/author, for a rendered quote's provenance
+		c.docLabels = labels                      // canonical doc id → witness/author, for a rendered quote's provenance
+		c.sourcesDir = filepath.Dir(manifestFile) // MANIFEST.md sits at sources/; its dir is the href prefix
+	}
+
+	// -review builds the PDF-linked review page from the rendered argument page; both links and the
+	// left iframe need the sources tree the manifest lives in, so it only runs alongside -argument and
+	// -manifest.
+	if c.review && (c.argumentFile == "" || manifestFile == "") {
+		fatal("-review needs -argument (the tree to link) and -manifest (the sources tree the links open)")
 	}
 
 	// -refs: load the report section (§) per claim id from claims-machine.txt, so each rendered leaf
@@ -1446,6 +1459,140 @@ func buildLeafQuotes(quotes, passageIDs []string, labels map[string]string) []tr
 		out[i] = tree.Quote{Text: q, Prov: resolveQuoteProv(pid, labels)}
 	}
 	return out
+}
+
+// printedToPDF offsets a report's printed page to its page in report.pdf: printed page N sits at PDF
+// page N+18 (examples/vic-lceic/report-summary.md). The argument page prints the printed page; the
+// review links open the PDF, so the offset is applied here and nowhere else.
+const printedToPDF = 18
+
+// review link/scan patterns. The three provenance forms are the resolveQuoteProv suffixes rendered
+// into the argument page as plain text; each trailing (\n|<) is the delimiter the match stops at (Go
+// has no look-ahead) and is re-emitted unchanged. subFilePDF pulls the submission number and
+// attachment flag from a PDF filename so the redaction suffix and zero-padding need not be guessed.
+var (
+	reReportLink = regexp.MustCompile(`report: (§[\d.]+ p(\d+))`)
+	reSubLink    = regexp.MustCompile(`— (submission:(\d+)(/attachment-1)?), (.+?), p\.(\d+)(\n|<)`)
+	reQonLink    = regexp.MustCompile(`— (qon:([a-z]+)/(\d{4}-\d{2}-\d{2})), (.+?), (\d{4}-\d{2}-\d{2}), p\.(\d+)(\n|<)`)
+	reHearLink   = regexp.MustCompile(`— (hearing:[^\s,]+), (.+?), (line \d+)(\n|<)`)
+	subFilePDF   = regexp.MustCompile(`^(\d+)\.(\d+)?-`)
+	reStyleBlock = regexp.MustCompile(`(?s)<style>(.*?)</style>`)
+	reBodyBlock  = regexp.MustCompile(`(?s)<body>(.*?)</body>`)
+)
+
+// renderReview turns the rendered argument page into review.html: a left <iframe name="doc"> PDF
+// viewer and, on the right, the argument body with its plain-text report sections and quote
+// provenances rewritten as links that drive the iframe (a bare `<a target="doc">`, so the page
+// carries no JS). Each page link carries a distinct `?p=<page>` query BEFORE the `#page` fragment so
+// Chrome reloads the iframe on every click — a fragment-only change leaves the URL identical and the
+// PDF viewer does not re-fetch. Hearing PDFs carry no page anchor (the transcript locator is a turn
+// index, not a page), so they link to the document. `srcPrefix` is the href prefix and the root under
+// which submissions/*.pdf are scanned to recover each submission's real filename. It is the Go port of
+// the retired current/build-review.py, and returns a one-line link tally for the caller to report.
+func renderReview(page, srcPrefix string) (out, counts string) {
+	// submission number (+attachment flag) → pdf filename, scanned from disk so the redaction suffix
+	// and zero-padding don't have to be guessed.
+	type subKey struct {
+		num int
+		att bool
+	}
+	subMap := map[subKey]string{}
+	entries, _ := os.ReadDir(filepath.Join(srcPrefix, "submissions"))
+	for _, e := range entries {
+		fn := e.Name()
+		if !strings.HasSuffix(fn, ".pdf") {
+			continue
+		}
+		if m := subFilePDF.FindStringSubmatch(fn); m != nil {
+			n, _ := strconv.Atoi(m[1])
+			subMap[subKey{n, m[2] == "1"}] = fn
+		}
+	}
+
+	var nReport, nSub, nQon, nHear, nSubMissing int
+
+	style := ""
+	if m := reStyleBlock.FindStringSubmatch(page); m != nil {
+		style = m[1]
+	}
+	body := ""
+	if m := reBodyBlock.FindStringSubmatch(page); m != nil {
+		body = m[1]
+	}
+
+	// 1. claim § → report PDF at the page (printed page + printedToPDF).
+	body = reReportLink.ReplaceAllStringFunc(body, func(s string) string {
+		m := reReportLink.FindStringSubmatch(s)
+		nReport++
+		printed, _ := strconv.Atoi(m[2])
+		pdfPage := printed + printedToPDF
+		return fmt.Sprintf(`report: <a href="%s/report.pdf?p=%d#page=%d" target="doc">%s</a>`,
+			srcPrefix, pdfPage, pdfPage, m[1])
+	})
+
+	// 2a. submission quote provenance → submission PDF by page.
+	body = reSubLink.ReplaceAllStringFunc(body, func(s string) string {
+		m := reSubLink.FindStringSubmatch(s)
+		doc, num, att, witness, pageNo, delim := m[1], m[2], m[3], m[4], m[5], m[6]
+		n, _ := strconv.Atoi(num)
+		fn, ok := subMap[subKey{n, att == "/attachment-1"}]
+		if !ok {
+			nSubMissing++
+			return s
+		}
+		nSub++
+		href := fmt.Sprintf("%s/submissions/%s?p=%s#page=%s", srcPrefix, fn, pageNo, pageNo)
+		return fmt.Sprintf(`— <a href="%s" target="doc">%s, %s, p.%s</a>%s`, href, doc, witness, pageNo, delim)
+	})
+
+	// 2b. qon quote provenance → qon PDF by page (id qon:abc/2025-03-21 → abc-2025-03-21.pdf).
+	body = reQonLink.ReplaceAllStringFunc(body, func(s string) string {
+		m := reQonLink.FindStringSubmatch(s)
+		doc, org, date, witness, locDate, pageNo, delim := m[1], m[2], m[3], m[4], m[5], m[6], m[7]
+		nQon++
+		href := fmt.Sprintf("%s/qon/%s-%s.pdf?p=%s#page=%s", srcPrefix, org, date, pageNo, pageNo)
+		return fmt.Sprintf(`— <a href="%s" target="doc">%s, %s, %s, p.%s</a>%s`, href, doc, witness, locDate, pageNo, delim)
+	})
+
+	// 2c. hearing quote provenance → hearing PDF (document only; the locator is a turn index, not a
+	// page, so no ?p/#page and no per-click reload is needed — every quote in one hearing is one doc).
+	body = reHearLink.ReplaceAllStringFunc(body, func(s string) string {
+		m := reHearLink.FindStringSubmatch(s)
+		doc, witness, line, delim := m[1], m[2], m[3], m[4]
+		nHear++
+		href := fmt.Sprintf("%s/hearings/%s.pdf", srcPrefix, strings.SplitN(doc, ":", 2)[1])
+		return fmt.Sprintf(`— <a href="%s" target="doc">%s, %s, %s</a>%s`, href, doc, witness, line, delim)
+	})
+
+	nUnresolved := strings.Count(body, "(passage unresolved)")
+	total := nReport + nSub + nQon + nHear
+
+	out = fmt.Sprintf(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>assay review</title>
+<style>
+html,body{height:100%%;margin:0}
+.split{display:flex;height:100vh}
+#doc{flex:1;min-width:0;height:100%%;border:0;border-right:1px solid #ccc}
+.arg{flex:1;min-width:0;height:100%%;overflow:auto;box-sizing:border-box;padding:0 1rem}
+%s
+.arg a{color:#0645ad}
+</style>
+</head><body>
+<div class="split">
+<iframe id="doc" name="doc" src="%s/report.pdf" title="source document"></iframe>
+<div class="arg">
+%s
+</div>
+</div>
+</body></html>
+`, style, srcPrefix, body)
+
+	counts = fmt.Sprintf("report=%d submission=%d qon=%d hearing=%d total=%d; unresolved=%d",
+		nReport, nSub, nQon, nHear, total, nUnresolved)
+	if nSubMissing > 0 {
+		counts += fmt.Sprintf("; submission files missing=%d", nSubMissing)
+	}
+	return out, counts
 }
 
 // loadRefs reads the per-claim report section from claims-machine.txt: the pipe-delimited "ref=§…"
@@ -3060,6 +3207,9 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 		// The argument tree replaces the section-path tree; it writes argument.html, not tree.html.
 		c.treeHTMLPath = ""
 		c.argHTMLPath = filepath.Join(dir, "argument.html")
+		if c.review {
+			c.reviewPath = filepath.Join(dir, "review.html")
+		}
 	}
 
 	rows := make([]brief.Row, len(recs))
@@ -3197,6 +3347,14 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.argHTMLPath, err)
 		} else {
 			fmt.Fprintf(os.Stderr, "argument (html): %s\n", c.argHTMLPath)
+		}
+	}
+	if c.reviewPath != "" {
+		review, counts := renderReview(page, c.sourcesDir)
+		if err := os.WriteFile(c.reviewPath, []byte(review), 0o644); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.reviewPath, err)
+		} else {
+			fmt.Fprintf(os.Stderr, "review (html): %s — %s\n", c.reviewPath, counts)
 		}
 	}
 	fmt.Print(rootBlock)
