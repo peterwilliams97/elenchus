@@ -25,6 +25,10 @@ examples/vic-lceic/sources/*
 # The self-contained review site `assay -review` builds — a build output whose sources/ holds copies
 # of the same copyrighted PDFs excluded above. Rebuild with the command in spec/SERVE.md.
 examples/vic-lceic/site/
+# The -zip archive of that site, and the argument-tree page a render pass writes into current/ —
+# both are `assay -from`/`-review` outputs, rebuilt from the tracked chains and argument.txt.
+examples/vic-lceic/site.zip
+examples/vic-lceic/current/index.html
 
 # Local API key export — never commit (holds a live ANTHROPIC_API_KEY)
 /setkey.sh
