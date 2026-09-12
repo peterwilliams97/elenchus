@@ -177,6 +177,16 @@ The flat single-report form — a top-level `report_page_offset:` and `sections:
 `internal/manifest`) — is unchanged: it reads as one `report.pdf` with no `prefixes:`, so it claims
 every leaf. A `reports:` list, when present, overrides the flat keys.
 
+Report **passages** carry the excerpt too, not just the §-refs. When a corpus holds the report as its
+own source, each excerpt's `.txt` (`report.txt`, `report-productivity.txt`, at the sources root beside
+the PDFs) splits into passages whose id base and `Source` are both the excerpt file stem — `report`,
+`report-productivity` — so two excerpts mint distinct ids even on a shared page number, and
+`manifest.CanonicalDoc` resolves each base to its own PDF from the `reports:` list (an unlisted stem
+falls back to `<stem>.pdf`). A verified quote's provenance then names the excerpt the quote is actually
+in. The single-report self-consistency drop (`dropOwnParagraph`, `spec/TREE.md § Single-source judging
+has a direction`) is scoped by the same key: a claim's own paragraph is dropped from the excerpt its
+claim id routes to (`manifest.ReportFor`), never a same-page paragraph of the other excerpt.
+
 ## `assay serve` — serving the site
 
     assay serve [-port N] [-no-open] <site-dir>
@@ -221,6 +231,14 @@ every leaf. A `reports:` list, when present, overrides the flat keys.
   `report-productivity.pdf` at page 1 — a leaf routed to the wrong file or page is the break a reader
   clicking the provenance would hit. `TestLoadReportsMulti` (manifest package) pins the `reports:`-list
   parse and `ReportFor`'s prefix routing; `TestLoadReportsSingle` pins the flat single-report fallback.
+- **A two-excerpt corpus's passages carry the excerpt: no id collision, each resolves to its own PDF,
+  and self-exclusion drops the right one.** `TestReportPassagesTwoExcerpts` (retrieve package) loads the
+  real AI Index `report.txt` / `report-productivity.txt` and asserts each passage's id base and `Source`
+  are the file stem and that the two excerpts share no id. `TestCanonicalDoc` (manifest package) pins
+  `report#…` → `report.pdf` and `report-productivity#…` → `report-productivity.pdf` (and the
+  `<stem>.pdf` fallback with no list); `TestResolveQuoteProv` (assay package) pins the same through a
+  quote's rendered provenance. `TestDropOwnParagraph`'s two-excerpt case drops the claim's own excerpt
+  paragraph while the other excerpt's same-page paragraph survives.
 - **Every href in `site/review.html` resolves to a file under `site/`.** `TestWriteSiteHrefsResolve`
   drives `writeSite` with a fake sources tree (one PDF per link class) and asserts each `sources/`
   href lands on a copied file and both pages sit at the site root — an unresolved href is exactly the

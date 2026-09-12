@@ -75,25 +75,32 @@ func TestScanDerivesCanonicalIDs(t *testing.T) {
 // TestCanonicalDoc pins the passage-id → canonical-doc-id inverse for every passage shape (hearing,
 // submission + attachment, qon, report) and that a malformed id resolves to ok=false. The doc ids must
 // be exactly those Scan mints (TestScanDerivesCanonicalIDs), or a resolved quote would miss its
-// manifest entry — except report.pdf, whose id is the passage-prefix convention, not a Scan output.
+// manifest entry — except a report excerpt PDF, whose id is the passage-prefix convention, not a Scan
+// output. A report excerpt id (the second "#") resolves to its OWN PDF: with the two-excerpt reports
+// list, "report" → report.pdf and "report-productivity" → report-productivity.pdf; with no list, each
+// stem falls back to "<stem>.pdf".
 func TestCanonicalDoc(t *testing.T) {
+	reports := []Report{{File: "report.pdf"}, {File: "report-productivity.pdf"}}
 	cases := []struct {
 		pid, doc, loc string
 		ok            bool
+		reports       []Report
 	}{
 		{"2025-03-13/4_public-galleries-association-of-victoria#t48",
-			"hearing:2025-03-13/4_public-galleries-association-of-victoria", "line 48", true},
-		{"submission-19#p9", "submission:19", "p.9", true},
-		{"submission-09#p3", "submission:9", "p.3", true}, // zero-padded number folds to 9
-		{"submission-33.1#p5", "submission:33/attachment-1", "p.5", true},
-		{"qon-abc-2025-03-21#p2", "qon:abc/2025-03-21", "p.2", true},
-		{"report#p2#0", "report.pdf", "p.2", true},   // report as its own source; paragraph index dropped
-		{"report#p13#4", "report.pdf", "p.13", true}, // locator is the page alone
-		{"no-hash-fragment", "", "", false},
-		{"submission-notanumber#p1", "", "", false},
+			"hearing:2025-03-13/4_public-galleries-association-of-victoria", "line 48", true, reports},
+		{"submission-19#p9", "submission:19", "p.9", true, reports},
+		{"submission-09#p3", "submission:9", "p.3", true, reports}, // zero-padded number folds to 9
+		{"submission-33.1#p5", "submission:33/attachment-1", "p.5", true, reports},
+		{"qon-abc-2025-03-21#p2", "qon:abc/2025-03-21", "p.2", true, reports},
+		{"report#p2#0", "report.pdf", "p.2", true, reports},                              // base excerpt; paragraph index dropped
+		{"report#p13#4", "report.pdf", "p.13", true, reports},                            // locator is the page alone
+		{"report-productivity#p221#3", "report-productivity.pdf", "p.221", true, reports}, // second excerpt → its own PDF
+		{"report#p2#0", "report.pdf", "p.2", true, nil},                                  // no reports list: "<stem>.pdf" fallback
+		{"no-hash-fragment", "", "", false, reports},
+		{"submission-notanumber#p1", "", "", false, reports},
 	}
 	for _, c := range cases {
-		doc, loc, ok := CanonicalDoc(c.pid)
+		doc, loc, ok := CanonicalDoc(c.pid, c.reports)
 		if ok != c.ok || doc != c.doc || loc != c.loc {
 			t.Errorf("CanonicalDoc(%q) = (%q,%q,%v), want (%q,%q,%v)",
 				c.pid, doc, loc, ok, c.doc, c.loc, c.ok)

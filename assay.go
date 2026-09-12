@@ -676,7 +676,7 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 		rows[i] = brief.Row{ID: parsed[i].id, Path: parsed[i].path, Text: parsed[i].text,
 			Faith: chosen.Verdict, FaithReason: chosen.Evidence, Spread: spread, Dissent: dissent,
 			Gap: chosen.Gap, SoWhat: chosen.SoWhat, Route: parsed[i].route, Section: c.refs[parsed[i].id]}
-		details[parsed[i].id] = tree.Leaf{Reason: chosen.Evidence, Quotes: buildLeafQuotes(chosen.Quotes, chosen.QuotePassages, c.docLabels)}
+		details[parsed[i].id] = tree.Leaf{Reason: chosen.Evidence, Quotes: buildLeafQuotes(chosen.Quotes, chosen.QuotePassages, c.docLabels, c.reports)}
 		vs[i] = chosen.Verdict
 	}
 
@@ -696,7 +696,7 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 			Faith: rec.Verdict, FaithReason: fd.CriticFinding, Spread: spread, Dissent: dissent,
 			Gap: fd.Gap, SoWhat: fd.SoWhat, Route: routeOr(rec.Route, parsed[i].route),
 			Section: c.refs[parsed[i].id]}
-		details[parsed[i].id] = tree.Leaf{Reason: fd.CriticFinding, Quotes: buildLeafQuotes(fd.Quotes, fd.QuotePassages, c.docLabels)}
+		details[parsed[i].id] = tree.Leaf{Reason: fd.CriticFinding, Quotes: buildLeafQuotes(fd.Quotes, fd.QuotePassages, c.docLabels, c.reports)}
 		vs[i] = rec.Verdict
 	}
 
@@ -753,7 +753,14 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 			// for a non-report corpus (dropOwnParagraph keeps every non-report passage), so group cache
 			// reuse is unaffected there; for the report corpus, same-page claims still share a prefix
 			// that differs only by each claim's own dropped paragraph.
-			ps := dropOwnParagraph(parsed[i].text, pageOfPath(parsed[i].path), shared)
+			// The claim's own excerpt (which report PDF its leaf routes to) scopes the self-exclusion, so a
+			// two-excerpt corpus drops the source paragraph from the right one; "" for a single-report or
+			// no-manifest run, which matches any excerpt.
+			excerpt := ""
+			if rep, ok := manifest.ReportFor(c.reports, parsed[i].id); ok {
+				excerpt = reportStem(rep.File)
+			}
+			ps := dropOwnParagraph(parsed[i].text, excerpt, pageOfPath(parsed[i].path), shared)
 			t := c.progressStart(i, len(raw), "faithfulness")
 			chosen, spread, samples := c.faithJudgeRepeat(parsed[i].text, ps)
 			emit(i, chosen, spread, samples, retrieve.IDs(ps), t)
@@ -892,10 +899,13 @@ func (c cfg) passagesForClaim(id, text, path, srcPath string, fullSrc *[]retriev
 // fact stated on p2 and restated on p4 corroborates itself across the boundary. With no restatement
 // anywhere the source paragraph is the only match dropped and the rest neither pin the claim down nor
 // repeat it, so the verdict is `uncorroborated` (absent), never a distortion — spec/TREE.md § Single-
-// source judging has a direction. It fires only for report-as-its-own-source passages
-// (retrieve.SourceReport) and only when the claim's page is known (>0): for a hearing/submission corpus
-// the passage that carries a claim is the grounding target and must be kept.
-func dropOwnParagraph(claim string, claimPage int, ps []retrieve.Passage) []retrieve.Passage {
+// source judging has a direction. It fires only for report-as-its-own-source passages (the report id
+// shape, reportExcerpt) and only when the claim's page is known (>0): for a hearing/submission corpus
+// the passage that carries a claim is the grounding target and must be kept. `claimExcerpt` scopes the
+// exclusion to the claim's own report excerpt (manifest.ReportFor by its claim id), so a two-excerpt
+// corpus drops the source paragraph from the RIGHT PDF and never a same-page paragraph of the other;
+// "" (no excerpt resolved) matches any excerpt, the single-report behaviour.
+func dropOwnParagraph(claim, claimExcerpt string, claimPage int, ps []retrieve.Passage) []retrieve.Passage {
 	if claimPage <= 0 {
 		return ps
 	}
@@ -905,7 +915,8 @@ func dropOwnParagraph(claim string, claimPage int, ps []retrieve.Passage) []retr
 	}
 	own, ownScore := -1, 0
 	for i, p := range ps {
-		if p.Source != retrieve.SourceReport || reportPage(p.ID) != claimPage {
+		stem, page, isReport := reportExcerpt(p.ID)
+		if !isReport || page != claimPage || (claimExcerpt != "" && stem != claimExcerpt) {
 			continue
 		}
 		seen := map[string]bool{}
@@ -954,23 +965,34 @@ func pageOfPath(path string) int {
 	return n
 }
 
-// reportPage parses the printed page from a report passage id "report#p<N>#<n>", returning 0 for any
-// other id shape — so dropOwnPage never mistakes a hearing or submission id for a page match.
-func reportPage(id string) int {
-	_, frag, ok := strings.Cut(id, "#")
-	if !ok {
-		return 0
+// reportExcerpt parses a report passage id "<excerpt>#p<N>#<n>" into its excerpt file stem and printed
+// page, ok false for any other id shape. A report id alone carries a SECOND "#" (the paragraph ordinal
+// after the page); a hearing "<date>/<session>#t<n>" or submission "submission-9#p3" has one, so
+// dropOwnParagraph never mistakes one for a report page match. The stem is what scopes the exclusion to
+// the claim's own excerpt in a multi-excerpt corpus ("report", "report-productivity").
+func reportExcerpt(id string) (stem string, page int, ok bool) {
+	base, frag, cut := strings.Cut(id, "#")
+	if !cut || base == "" {
+		return "", 0, false
 	}
-	page, _, _ := strings.Cut(frag, "#")
-	if !strings.HasPrefix(page, "p") {
-		return 0
+	pageTok, idx, cut := strings.Cut(frag, "#")
+	if !cut || !strings.HasPrefix(pageTok, "p") {
+		return "", 0, false
 	}
-	n, err := strconv.Atoi(page[1:])
+	if _, err := strconv.Atoi(idx); err != nil {
+		return "", 0, false
+	}
+	n, err := strconv.Atoi(pageTok[1:])
 	if err != nil {
-		return 0
+		return "", 0, false
 	}
-	return n
+	return base, n, true
 }
+
+// reportStem is the excerpt file stem of a report PDF filename, the key reportExcerpt and CanonicalDoc
+// share: "report-productivity.pdf" → "report-productivity". "" (no report claims the claim's id) stays
+// "", which dropOwnParagraph reads as "match any excerpt".
+func reportStem(file string) string { return strings.TrimSuffix(file, filepath.Ext(file)) }
 
 // loadOracle reads the -retrieve=oracle map: a JSON object of claim-id → list of passage-id.
 func loadOracle(path string) (map[string][]string, error) {
@@ -1641,14 +1663,14 @@ func normQuote(s string) string {
 // "(passage <id>, unresolved)" marker (the quote is never dropped). An empty id — the backfill could
 // not pin the quote to exactly one passage — renders "(passage unresolved)". With no labels loaded
 // (no -manifest) it returns "", so the leaf shows the bare quote unchanged.
-func resolveQuoteProv(pid string, labels map[string]string) string {
+func resolveQuoteProv(pid string, labels map[string]string, reports []manifest.Report) string {
 	if len(labels) == 0 {
 		return ""
 	}
 	if pid == "" {
 		return "(passage unresolved)"
 	}
-	doc, loc, ok := manifest.CanonicalDoc(pid)
+	doc, loc, ok := manifest.CanonicalDoc(pid, reports)
 	if !ok {
 		return "(passage " + pid + ", unresolved)"
 	}
@@ -1665,14 +1687,14 @@ func resolveQuoteProv(pid string, labels map[string]string) string {
 // buildLeafQuotes pairs each verified quote with its resolved provenance suffix for a tree leaf.
 // `passageIDs` is parallel to `quotes`; a missing entry (a shorter or absent list) leaves that quote
 // with no id, which resolveQuoteProv renders as unresolved rather than dropping it.
-func buildLeafQuotes(quotes, passageIDs []string, labels map[string]string) []tree.Quote {
+func buildLeafQuotes(quotes, passageIDs []string, labels map[string]string, reports []manifest.Report) []tree.Quote {
 	out := make([]tree.Quote, len(quotes))
 	for i, q := range quotes {
 		pid := ""
 		if i < len(passageIDs) {
 			pid = passageIDs[i]
 		}
-		out[i] = tree.Quote{Text: q, Prov: resolveQuoteProv(pid, labels)}
+		out[i] = tree.Quote{Text: q, Prov: resolveQuoteProv(pid, labels, reports)}
 	}
 	return out
 }
@@ -3770,7 +3792,7 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 			rows[i] = brief.Row{ID: ids[i], Path: paths[i], Text: texts[i],
 				Faith: r.Verdict, FaithReason: det.CriticFinding, Spread: spread, Dissent: dissent,
 				Gap: det.Gap, SoWhat: det.SoWhat, Route: routeOr(r.Route, routes[i])}
-			leaf := tree.Leaf{Reason: det.CriticFinding, Quotes: buildLeafQuotes(det.Quotes, det.QuotePassages, c.docLabels)}
+			leaf := tree.Leaf{Reason: det.CriticFinding, Quotes: buildLeafQuotes(det.Quotes, det.QuotePassages, c.docLabels, c.reports)}
 			if applySchemaGate(&rows[i], det.CriticFinding) {
 				leaf.Reason = schemaLeafFlag(det.CriticFinding)
 			}
@@ -3833,7 +3855,7 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 				Faith: fv, Substance: sv, Grounding: evv,
 				FaithReason: det.Faith.CriticFinding, GroundReason: det.Evidence.Finding,
 				Gap: det.Faith.Gap, SoWhat: det.Faith.SoWhat, Route: routeOr(r.Route, routes[i])}
-			leaf := tree.Leaf{Reason: det.Faith.CriticFinding, Quotes: buildLeafQuotes(det.Faith.Quotes, det.Faith.QuotePassages, c.docLabels)}
+			leaf := tree.Leaf{Reason: det.Faith.CriticFinding, Quotes: buildLeafQuotes(det.Faith.Quotes, det.Faith.QuotePassages, c.docLabels, c.reports)}
 			if applySchemaGate(&rows[i], det.Faith.CriticFinding) {
 				leaf.Reason = schemaLeafFlag(det.Faith.CriticFinding)
 				fv = rows[i].Faith

@@ -266,7 +266,10 @@ not its whole page: `dropOwnParagraph` (assay.go) removes the single report pass
 that shares the most words with it — the paragraph the claim was decomposed from — so the claim cannot
 confirm itself, while a qualifier one paragraph over in the same § survives and can still ground it.
 The page-wide exclusion this replaced dropped every same-§ passage, so a fact restated one paragraph
-over read `absent`; cross-page restatement corroborates as before. Refuter: `TestDropOwnParagraph`.
+over read `absent`; cross-page restatement corroborates as before. In a multi-excerpt corpus the drop
+is scoped to the claim's own excerpt (the one its claim id routes to, `manifest.ReportFor`), keyed on
+the excerpt stem a report passage id carries (`report`, `report-productivity`), so a same-page
+paragraph of the OTHER excerpt is never mistaken for the claim's source. Refuter: `TestDropOwnParagraph`.
 
 Refuters: `TestSingleSourceDirection` in `assay_test.go` pins three shapes drawn from the quocirca
 corpus — E1 (a specific claim against a vaguer restatement), E23 (nested percentages), K37 (the claim

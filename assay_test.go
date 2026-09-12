@@ -1466,7 +1466,11 @@ func TestResolveQuoteProv(t *testing.T) {
 	labels := map[string]string{
 		"submission:19": "Theatre Network Australia",
 		"hearing:2025-03-13/4_public-galleries-association-of-victoria": "Public Galleries Association Of Victoria",
+		"report.pdf":              "AI Index 2026, coding",
+		"report-productivity.pdf": "AI Index 2026, labor impact",
 	}
+	// Two report excerpts, so a report passage id resolves to its OWN PDF, not a hardcoded report.pdf.
+	reports := []manifest.Report{{File: "report.pdf"}, {File: "report-productivity.pdf"}}
 	cases := []struct {
 		pid, want string
 		labels    map[string]string
@@ -1474,13 +1478,15 @@ func TestResolveQuoteProv(t *testing.T) {
 		{"submission-19#p9", "— submission:19, Theatre Network Australia, p.9", labels},
 		{"2025-03-13/4_public-galleries-association-of-victoria#t48",
 			"— hearing:2025-03-13/4_public-galleries-association-of-victoria, Public Galleries Association Of Victoria, line 48", labels},
-		{"submission-99#p1", "(passage submission-99#p1, unresolved)", labels}, // doc not in manifest
-		{"garbage", "(passage garbage, unresolved)", labels},                   // unparseable id
-		{"", "(passage unresolved)", labels},                                   // backfill left it empty
-		{"submission-19#p9", "", nil},                                          // no -manifest: bare quote
+		{"report#p2#0", "— report.pdf, AI Index 2026, coding, p.2", labels},                                    // base excerpt
+		{"report-productivity#p221#3", "— report-productivity.pdf, AI Index 2026, labor impact, p.221", labels}, // second excerpt → its own PDF
+		{"submission-99#p1", "(passage submission-99#p1, unresolved)", labels},                                 // doc not in manifest
+		{"garbage", "(passage garbage, unresolved)", labels},                                                   // unparseable id
+		{"", "(passage unresolved)", labels},                                                                   // backfill left it empty
+		{"submission-19#p9", "", nil},                                                                          // no -manifest: bare quote
 	}
 	for _, c := range cases {
-		if got := resolveQuoteProv(c.pid, c.labels); got != c.want {
+		if got := resolveQuoteProv(c.pid, c.labels, reports); got != c.want {
 			t.Errorf("resolveQuoteProv(%q) = %q, want %q", c.pid, got, c.want)
 		}
 	}
@@ -1708,7 +1714,7 @@ func TestDropOwnParagraph(t *testing.T) {
 	restate := retrieve.Passage{ID: "report#p10#1", Source: retrieve.SourceReport,
 		Text: "Buyers should maintain an up-to-date view of their fleet through continuous audits."}
 
-	got := dropOwnParagraph(claim, 5, []retrieve.Passage{sourcePara, sameSecQualifier, samePageUnrelated, restate})
+	got := dropOwnParagraph(claim, "report", 5, []retrieve.Passage{sourcePara, sameSecQualifier, samePageUnrelated, restate})
 	if containsID(got, "report#p5#0") {
 		t.Fatalf("the claim's own paragraph must be dropped, got %v", ids(got))
 	}
@@ -1729,18 +1735,35 @@ func TestDropOwnParagraph(t *testing.T) {
 		Text: "Quantum-resilient planning is now on the print security agenda for mature buyers."}
 	offSec := retrieve.Passage{ID: "report#p3#0", Source: retrieve.SourceReport,
 		Text: "Trust controls connect users, devices, and documents securely across the estate."}
-	lone := dropOwnParagraph(loneClaim, 5, []retrieve.Passage{lonePara, offSec})
+	lone := dropOwnParagraph(loneClaim, "report", 5, []retrieve.Passage{lonePara, offSec})
 	if len(lone) != 1 || lone[0].ID != "report#p3#0" {
 		t.Fatalf("lone claim: only the off-§ non-restatement should remain, got %v", ids(lone))
 	}
 
 	// Inert for a hearing corpus (the claim-bearing passage is the grounding target) and for page 0.
 	hearing := retrieve.Passage{ID: "2025-03-13/x#t1", Source: retrieve.SourceHearing, Text: claim}
-	if kept := dropOwnParagraph(claim, 5, []retrieve.Passage{hearing}); len(kept) != 1 {
+	if kept := dropOwnParagraph(claim, "report", 5, []retrieve.Passage{hearing}); len(kept) != 1 {
 		t.Fatalf("hearing corpus: the claim-bearing passage must be kept, got %v", ids(kept))
 	}
-	if kept := dropOwnParagraph(claim, 0, []retrieve.Passage{sourcePara}); len(kept) != 1 {
+	if kept := dropOwnParagraph(claim, "report", 0, []retrieve.Passage{sourcePara}); len(kept) != 1 {
 		t.Fatalf("page 0: want everything kept, got %v", ids(kept))
+	}
+
+	// Two-excerpt refuter: excerpts share a page number but mint distinct ids ("report#p1#0" vs
+	// "report-productivity#p1#0"), so self-exclusion scoped to the claim's own excerpt drops the RIGHT
+	// PDF's paragraph and leaves the other excerpt's same-page paragraph to stand.
+	prodClaim := "AI raised experienced developers' pull-request throughput."
+	prodPara := retrieve.Passage{ID: "report-productivity#p1#0", Source: "report-productivity",
+		Text: "AI raised experienced developers' pull-request throughput by twenty-six percent in the field study."}
+	codingSamePage := retrieve.Passage{ID: "report#p1#0", Source: "report",
+		Text: "AI coding agents raised developers' pull-request merge rates across the benchmark suites."}
+	kept := dropOwnParagraph(prodClaim, "report-productivity", 1,
+		[]retrieve.Passage{prodPara, codingSamePage})
+	if containsID(kept, "report-productivity#p1#0") {
+		t.Fatalf("multi-excerpt: the claim's own excerpt paragraph must be dropped, got %v", ids(kept))
+	}
+	if !containsID(kept, "report#p1#0") {
+		t.Fatalf("multi-excerpt: the OTHER excerpt's same-page paragraph must survive, got %v", ids(kept))
 	}
 	if got := pageOfPath("p13=Key findings"); got != 13 {
 		t.Errorf("pageOfPath(p13=…) = %d, want 13", got)

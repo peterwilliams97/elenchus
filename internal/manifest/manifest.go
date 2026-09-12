@@ -402,11 +402,16 @@ func idPrefix(id string) string {
 //	"<date>/<session>#t<n>"   → "hearing:<date>/<session>",              locator "line <n>"
 //	"submission-<num>#p<n>"   → "submission:<N>[/attachment-<k>]",       locator "p.<n>"   (num "09" or "09.1")
 //	"qon-<org>-<date>#p<n>"   → "qon:<org>/<date>",                      locator "p.<n>"
+//	"<excerpt>#p<page>#<n>"   → the excerpt's PDF (from `reports`),       locator "p.<page>"
 //
-// ok is false when the id matches none of these shapes; a `#p<n>` is a paragraph ordinal and a
-// `#t<n>` a speaker-turn ordinal, not a PDF page — the locator wording follows the report's own
-// "page or transcript line" naming, not the ordinal's kind.
-func CanonicalDoc(pid string) (docID, locator string, ok bool) {
+// A report passage id carries a SECOND "#" (the page then the paragraph ordinal), which is what tells
+// it from the single-"#" hearing/submission/qon shapes. Its base is the excerpt file stem — "report",
+// "report-productivity" — and `reports` (the manifest's `reports:` list) maps that stem to its PDF; a
+// stem no entry names falls back to "<stem>.pdf", so a flat single-report corpus with no list still
+// resolves "report" → "report.pdf". ok is false when the id matches none of these shapes; a `#p<n>`
+// is a paragraph ordinal and a `#t<n>` a speaker-turn ordinal, not a PDF page — the locator wording
+// follows the report's own "page or transcript line" naming, not the ordinal's kind.
+func CanonicalDoc(pid string, reports []Report) (docID, locator string, ok bool) {
 	base, frag, hasFrag := strings.Cut(pid, "#")
 	if !hasFrag || base == "" || frag == "" {
 		return "", "", false
@@ -433,11 +438,12 @@ func CanonicalDoc(pid string) (docID, locator string, ok bool) {
 			return "", "", false
 		}
 		return "qon:" + m[1] + "/" + m[2], "p." + strings.TrimPrefix(frag, "p"), true
-	case base == "report":
-		// The report as its own source: "report#p<page>#<n>" → report.pdf at the printed page. The
-		// paragraph index after the page is provenance-irrelevant, so the locator is the page alone.
+	case strings.ContainsRune(frag, '#'):
+		// A report excerpt as its own source: "<excerpt>#p<page>#<n>" → the excerpt's PDF at the printed
+		// page. The paragraph index after the page is provenance-irrelevant, so the locator is the page
+		// alone; the excerpt stem is resolved to its PDF through the manifest's reports list.
 		page, _, _ := strings.Cut(frag, "#")
-		return "report.pdf", "p." + strings.TrimPrefix(page, "p"), true
+		return reportPDF(base, reports), "p." + strings.TrimPrefix(page, "p"), true
 	default:
 		// Hearing: "<date>/<session>#t<n>" — the only shape carrying a "/" in its base and a "t" turn.
 		if strings.ContainsRune(base, '/') && strings.HasPrefix(frag, "t") {
@@ -445,6 +451,20 @@ func CanonicalDoc(pid string) (docID, locator string, ok bool) {
 		}
 		return "", "", false
 	}
+}
+
+// reportPDF resolves a report-excerpt id base (its file stem, e.g. "report-productivity") to the PDF
+// filename a claim's deep-link opens, by matching the stem against `reports` (a report's File minus its
+// extension). No entry matches — a flat single-report corpus loads no list, or the stem is unknown —
+// falls back to "<base>.pdf", the naming convention the excerpts follow, so "report" resolves to
+// "report.pdf" with or without a list.
+func reportPDF(base string, reports []Report) string {
+	for _, r := range reports {
+		if strings.TrimSuffix(r.File, filepath.Ext(r.File)) == base {
+			return r.File
+		}
+	}
+	return base + ".pdf"
 }
 
 func prettySession(stem string) string {

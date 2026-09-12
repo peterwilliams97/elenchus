@@ -258,6 +258,48 @@ func TestLoadQoN(t *testing.T) {
 	}
 }
 
+// TestReportPassagesTwoExcerpts pins that a corpus of two report excerpts (the real committed AI Index
+// 2026 pair: sources/report.txt and report-productivity.txt) mints excerpt-scoped ids and Sources — the
+// base and Source are the file stem, so the two excerpts share no id even on a common page number. This
+// is the id-collision half of the multi-report refuter: before the stem carried the id, both excerpts
+// minted "report#p1#0" and one shadowed the other in the passage set.
+func TestReportPassagesTwoExcerpts(t *testing.T) {
+	const dir = "../../examples/ai-index-2026-coding/sources"
+	base, prod := dir+"/report.txt", dir+"/report-productivity.txt"
+	for _, f := range []string{base, prod} {
+		if _, err := os.Stat(f); err != nil {
+			t.Skipf("two-excerpt corpus not present: %v", err)
+		}
+	}
+	check := func(path, stem string) map[string]bool {
+		ix, err := Load(path)
+		if err != nil {
+			t.Fatalf("Load(%s): %v", path, err)
+		}
+		ids := map[string]bool{}
+		for _, p := range ix.Passages {
+			if !strings.HasPrefix(p.ID, stem+"#p") {
+				t.Fatalf("%s: id %q lacks the %q excerpt stem", path, p.ID, stem)
+			}
+			if p.Source != stem {
+				t.Fatalf("%s: passage %q Source=%q, want the excerpt stem %q", path, p.ID, p.Source, stem)
+			}
+			ids[p.ID] = true
+		}
+		if len(ids) == 0 {
+			t.Fatalf("%s: no passages parsed", path)
+		}
+		return ids
+	}
+	baseIDs := check(base, "report")
+	prodIDs := check(prod, "report-productivity")
+	for id := range prodIDs {
+		if baseIDs[id] {
+			t.Fatalf("id collision across excerpts: %q minted by both", id)
+		}
+	}
+}
+
 // ── test helpers ───────────────────────────────────────────────────────────────
 
 func idsOf(ps []Passage) string {

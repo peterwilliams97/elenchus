@@ -57,7 +57,7 @@ const (
 	SourceHearing    = "hearing"
 	SourceSubmission = "submission"
 	SourceQoN        = "qon"    // a response to questions on notice (paragraphs, like a submission)
-	SourceReport     = "report" // the assayed report itself, as its own source (single-doc, page-split)
+	SourceReport     = "report" // the assayed report as its own source; a report passage's Source is its excerpt stem, "report" for the base excerpt
 )
 
 // searchText is what ranking and embedding see: the question (when present) then the answer. Text
@@ -184,27 +184,40 @@ func passagesForFile(path string) ([]Passage, error) {
 		return submissionPassages(path)
 	case strings.Contains(path, "/qon/"):
 		return qonPassages(path)
-	case strings.HasSuffix(path, "report.txt"):
+	case isReportExcerpt(path):
 		return reportPassages(path)
 	default:
 		return splitFile(path)
 	}
 }
 
-// reportPassages splits the assayed report (the single-document, report-as-its-own-source corpus:
+// isReportExcerpt reports whether a corpus file is a report excerpt — the assayed report itself, held
+// as its own source. The excerpts sit at the sources root (submissions/qon/papers live in their own
+// subdirectories), named `report.txt` or `report-<slug>.txt` alongside the `report.pdf` /
+// `report-<slug>.pdf` a claim's deep-link opens; the manifest's `reports:` list names those PDFs. The
+// base excerpt is `report.txt`; a multi-excerpt corpus adds `report-productivity.txt` and the like.
+func isReportExcerpt(path string) bool {
+	stem := strings.TrimSuffix(filepath.Base(path), ".txt")
+	return stem == "report" || strings.HasPrefix(stem, "report-")
+}
+
+// reportPassages splits an assayed-report excerpt (the report-as-its-own-source corpus:
 // sources/MANIFEST.md) into page-tagged paragraph passages. It is neither Hansard nor a submission —
-// there are no speaker turns — so it splits on the pdftotext form feed into printed pages, then on
-// blank lines into paragraphs. The id `report#p<page>#<n>` carries the printed page so a verified
-// quote's provenance resolves to report.pdf at that page (manifest.CanonicalDoc). Page is the
-// 1-based form-feed index, which equals the printed footer page for a report whose PDF has no
-// front-matter offset. Source=report lets the self-consistency check (assay.go `dropOwnParagraph`)
-// drop the one paragraph a claim was decomposed from, so a claim is judged against the rest of the
-// report — including other paragraphs on its own page — not against the sentence it was lifted from.
+// there are no speaker turns — so it splits on the pdftotext form feed into pages, then on blank lines
+// into paragraphs. The id base and `Source` are both the excerpt's file stem — "report" for the base
+// excerpt, "report-productivity" for a second — so a two-excerpt corpus mints distinct ids (no
+// collision on a shared page number) and `manifest.CanonicalDoc` resolves each base to its own PDF.
+// Page is the 1-based form-feed index, which equals the printed footer page for a report whose PDF has
+// no front-matter offset. The report shape (a second `#` after the page) lets the self-consistency
+// check (assay.go `dropOwnParagraph`) drop, from the claim's OWN excerpt, the one paragraph the claim
+// was decomposed from, so a claim is judged against the rest of that excerpt — not the sentence it was
+// lifted from.
 func reportPassages(path string) ([]Passage, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
+	stem := strings.TrimSuffix(filepath.Base(path), ".txt")
 	var out []Passage
 	for page, pageText := range strings.Split(string(data), "\f") {
 		printed := page + 1 // pdftotext page 1 → printed page 1; no front-matter offset here
@@ -215,8 +228,8 @@ func reportPassages(path string) ([]Passage, error) {
 				continue
 			}
 			out = append(out, Passage{
-				ID:      fmt.Sprintf("report#p%d#%d", printed, n),
-				Session: "report", Speaker: "report", Role: SourceReport, Source: SourceReport, Text: p,
+				ID:      fmt.Sprintf("%s#p%d#%d", stem, printed, n),
+				Session: stem, Speaker: stem, Role: SourceReport, Source: stem, Text: p,
 			})
 			n++
 		}
