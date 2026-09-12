@@ -30,6 +30,18 @@ examples/vic-lceic/site/
 examples/vic-lceic/site.zip
 examples/vic-lceic/current/index.html
 
+# Quocirca Print Security Landscape 2026 (RICOH excerpt) — copyrighted vendor report held for
+# analysis, not redistribution ("No part of this document may be reproduced", report.pdf p15). The
+# derived claims-machine.txt / argument.txt are tracked; the PDF is not. Exclude the corpus contents
+# (not the dir), so the MANIFEST can be re-included — git cannot un-ignore a file under an excluded dir.
+examples/quocirca-2026/sources/*
+!examples/quocirca-2026/sources/MANIFEST.md
+# The -review site and the judge chains both hold verbatim report quotes, so they carry the same
+# no-redistribution terms as the PDF. Rebuilt from the tracked claims/argument files with the render
+# command in CLAUDE.md § Running it; the chains are a judge run (has a cost), kept locally only.
+examples/quocirca-2026/site/
+examples/quocirca-2026/evidence/
+
 # Local API key export — never commit (holds a live ANTHROPIC_API_KEY)
 /setkey.sh
 /demo-dan.log

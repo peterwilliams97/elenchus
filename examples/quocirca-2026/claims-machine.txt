@@ -1,0 +1,141 @@
+# claims-machine.txt — atomic claims decomposed from the Quocirca Print Security Landscape 2026
+# (RICOH excerpt, July 2026). Report → argument-tree corpus; the argument side is argument.txt.
+#
+# This is the CLAIM side of the assay. The only held SOURCE is report.pdf itself (sources/MANIFEST.md),
+# so the only automated check this corpus enables is INTERNAL CONSISTENCY: does the report actually
+# state the claim at its `ref` page, and do figures restated across pages agree. It does NOT ground
+# the survey figures — their truth-maker is the study microdata, which is not held, so every
+# `route=survey` claim grounds to `unverifiable` by design (sources/MANIFEST.md "Not held").
+#
+# Line format (pipe-delimited, 5 fields):
+#   <id> | route=<r> | ref=§<section heading> p<printed-page> | <claim> | src=<locator + note>
+#
+# route= (what could settle the claim; see CLAUDE.md axis boundary):
+#   survey     — a statistic FROM the 2026 study. Truth-maker = survey microdata (NOT HELD →
+#                grounding unverifiable). report.pdf settles only internal consistency (is the number
+#                printed here; do restatements agree). This is the corpus's dominant class.
+#   evidence   — a non-survey factual world-claim (an acquisition, a product/standard capability, a
+#                firm-history fact, a figure-reading). Truth-maker external, mostly a not-held vendor
+#                briefing or prior edition; report.pdf settles internal consistency only.
+#   evaluative — Quocirca opinion / value judgement ("under-prioritised", "stands out", "foundational").
+#                Not truth-apt; checkable only as "did the report say it", never grounded. Not judged.
+#   data-gap   — a claim about the report's own numeric limits (the rounding caveat).
+#
+# src= names the held locator (report.pdf + printed page) and, where the real truth-maker is not held,
+# names it so a grounding run's `unverifiable` is legible. `restates <id>` marks a deliberate
+# cross-page duplicate: the pair is an internal-consistency check, not an accident — the figures must
+# agree. § headings are the report's own (unnumbered) bold headings; printed page = footer number.
+
+# ══ §Executive summary — p2–3 ══
+E1   | route=survey     | ref=§Executive summary p2                              | Two-thirds (67%) of organisations in the UK, France, Germany, and the US have experienced print-related data losses in the past year. | src=report.pdf p2; truth-maker: 2026 survey microdata (not held)
+E2   | route=survey     | ref=§Executive summary p2                              | 80% of organisations remain heavily reliant on printing to support their business operations. | src=report.pdf p2; truth-maker: survey microdata (not held)
+E3   | route=evaluative | ref=§Executive summary p2                              | The only sustainable response is to increase resilience through a layered, continuously managed print security strategy that protects devices, users, documents, and workflows as part of the wider enterprise security environment. | src=report.pdf p2
+E4   | route=evaluative | ref=§Executive summary p2                              | The research uncovers a widening 'security divide' between organisations that have prioritised print security modernisation and those that lag behind. | src=report.pdf p2
+E5   | route=evidence   | ref=§Executive summary p2                              | Organisations classified as security leaders in Quocirca's Print Security Maturity Index have implemented at least six areas from a list of security solutions. | src=report.pdf p2; truth-maker: Maturity Index definition + area list (not held)
+E6   | route=survey     | ref=§Executive summary p2                              | Security leaders experience fewer data losses than laggards (56%, compared with 73%). | src=report.pdf p2; truth-maker: survey microdata (not held); leaders/laggards per E5
+E7   | route=survey     | ref=§Executive summary p2                              | Print security leaders are more likely to report they are very satisfied with print security capabilities from their supplier (48%) than laggards (23%). | src=report.pdf p2; truth-maker: survey microdata (not held)
+E8   | route=survey     | ref=§Print remains a growing security vulnerability p2 | The proportion experiencing at least one data loss due to a print-related security breach has increased from 56% in 2025 to 67% today. | src=report.pdf p2; restates E1 (67%); 2025 baseline in prior edition (not held)
+E9   | route=survey     | ref=§Print remains a growing security vulnerability p2 | 43% report multiple data losses, compared to 34% a year ago. | src=report.pdf p2; truth-maker: survey microdata (not held)
+E10  | route=survey     | ref=§Print remains a growing security vulnerability p2 | 6% are suffering 'many' data losses. | src=report.pdf p2; truth-maker: survey microdata (not held)
+E11  | route=survey     | ref=§Print remains a growing security vulnerability p2 | On average, each print-related breach costs £1 million. | src=report.pdf p2; truth-maker: survey microdata (not held)
+E12  | route=evaluative | ref=§Print remains a growing security vulnerability p2 | There is no easy 'silver bullet' solution to the print security threat. | src=report.pdf p2
+E13  | route=evaluative | ref=§Print remains a growing security vulnerability p2 | Improving print security posture requires a multi-layered approach: standardised secure print infrastructure, robust identity and access management with mandatory authentication, and solutions that prevent sensitive document printing in unsecured home environments. | src=report.pdf p2
+E14  | route=survey     | ref=§Mixed-fleet environments continue to present a risk vector p2 | 64% of respondents are currently operating a multivendor fleet, a rise from 59% in 2025. | src=report.pdf p2; truth-maker: survey microdata (not held); 2025 baseline not held
+E15  | route=survey     | ref=§Mixed-fleet environments continue to present a risk vector p2 | 36% are operating a standardised, single-vendor fleet, down from 41%. | src=report.pdf p2; truth-maker: survey microdata (not held); complements E14 (should sum ~100%)
+E16  | route=survey     | ref=§Mixed-fleet environments continue to present a risk vector p2 | Data loss is more common among those with more complex environments (69%) than among those with standardised fleets (64%). | src=report.pdf p2; truth-maker: survey microdata (not held)
+E17  | route=survey     | ref=§Mixed-fleet environments continue to present a risk vector p2 | 45% of those with mixed fleets report two or more incidents, compared to 37% of those with single-vendor fleets. | src=report.pdf p2; truth-maker: survey microdata (not held)
+E18  | route=survey     | ref=§Identity is becoming central to print security p2 | 41% say integrating user identity management platforms (such as Active Directory and Azure AD) with print infrastructure is extremely important, up from 34% in 2024. | src=report.pdf p2; truth-maker: survey microdata (not held); 2024 baseline not held
+E19  | route=survey     | ref=§Identity is becoming central to print security p2 | A further 43% say identity integration is very important. | src=report.pdf p2; truth-maker: survey microdata (not held)
+E20  | route=survey     | ref=§Identity is becoming central to print security p3 | The share rating identity integration extremely important rises to 52% among print security leaders. | src=report.pdf p3; truth-maker: survey microdata (not held)
+E21  | route=survey     | ref=§Widespread AI integration presents both risk and reassurance p3 | 54% are very or extremely concerned about AI-driven attacks. | src=report.pdf p3; truth-maker: survey microdata (not held); cf. K32 (54% AI-leveraged print threats) — same or distinct metric?
+E22  | route=survey     | ref=§Widespread AI integration presents both risk and reassurance p3 | 47% believe agentic AI represents a threat for which they are not yet prepared. | src=report.pdf p3; truth-maker: survey microdata (not held)
+E23  | route=survey     | ref=§Widespread AI integration presents both risk and reassurance p3 | 85% say it is very or somewhat important that suppliers develop AI-driven security capabilities. | src=report.pdf p3; truth-maker: survey microdata (not held)
+E24  | route=evidence   | ref=§Widespread AI integration presents both risk and reassurance p3 | The vendors included in this report are Brother, Canon, HP, Konica Minolta, Ricoh, Sharp, Toshiba, and Xerox. | src=report.pdf p3
+
+# ══ §Key findings — p4–5 (the finding-level bullets KF1–KF10; see argument.txt) ══
+# ── KF1: Print manufacturers continue to advance their security offerings (p4) ──
+K1   | route=evaluative | ref=§Key findings p4 | Print manufacturers continue to advance their security offerings, positioning security as an endpoint, identity, and workflow discipline rather than a device feature set. | src=report.pdf p4
+K2   | route=evaluative | ref=§Key findings p4 | HP stands out for its zero trust print architecture, hardware-enforced protection, and post-quantum readiness. | src=report.pdf p4
+K3   | route=evidence   | ref=§Key findings p4 | Xerox offers a broad, integrated portfolio spanning device, fleet, user, workflow, and content security, strengthened by its Lexmark acquisition. | src=report.pdf p4; truth-maker: Lexmark acquisition (world-fact, not held); rest evaluative
+K4   | route=evaluative | ref=§Key findings p4 | Canon is investing in layered controls, secure-by-design products, and machine learning to reduce configuration risk. | src=report.pdf p4
+K5   | route=evaluative | ref=§Key findings p4 | Konica Minolta is advancing cloud-based governance through Shield Guard, independent assurance, and Microsoft-aligned cloud print. | src=report.pdf p4
+K6   | route=evaluative | ref=§Key findings p4 | Ricoh emphasises managed services, assessment-led remediation, and device-agnostic fleet visibility. | src=report.pdf p4
+K7   | route=evaluative | ref=§Key findings p4 | Sharp combines advanced hardware security with IT-led cybersecurity services, SOC capability, and SME-focused security education. | src=report.pdf p4
+# ── KF2: Print security remains under-prioritised despite continued reliance (p4) ──
+K8   | route=survey     | ref=§Key findings p4 | 80% describe their organisation as reliant on print to support their activities. | src=report.pdf p4; restates E2 (80%); truth-maker: survey microdata (not held)
+K9   | route=survey     | ref=§Key findings p4 | Only 31% of respondents identify office print infrastructure as a top security risk. | src=report.pdf p4; truth-maker: survey microdata (not held)
+K10  | route=survey     | ref=§Key findings p4 | Print infrastructure ranks seventh as a security risk, behind wider IT concerns such as cloud, AI, and email. | src=report.pdf p4; truth-maker: survey microdata (not held)
+K11  | route=evaluative | ref=§Key findings p4 | Print security remains under-prioritised despite continued reliance, and many organisations may be underestimating the exposure created by print endpoints, print servers, and document workflows. | src=report.pdf p4
+# ── KF3: Print driver deployment is an overlooked security exposure (p4) ──
+K12  | route=survey     | ref=§Key findings p4 | Almost a third (31%) cite outdated drivers as a risk. | src=report.pdf p4; truth-maker: survey microdata (not held)
+K13  | route=survey     | ref=§Key findings p4 | 28% say vendor-provided drivers may introduce vulnerabilities. | src=report.pdf p4; truth-maker: survey microdata (not held)
+K14  | route=survey     | ref=§Key findings p4 | 34% cite the challenge of integrating print drivers with cloud identity management and zero trust security frameworks. | src=report.pdf p4; truth-maker: survey microdata (not held)
+K15  | route=evaluative | ref=§Key findings p4 | Emerging approaches such as Windows Protected Print show the direction of travel towards more secure, driverless print architectures, but adoption remains early. | src=report.pdf p4
+# ── KF4: Multivendor fleets face higher print security pressure (p4) ──
+K16  | route=survey     | ref=§Key findings p4 | AI-driven cyber threats are the top print infrastructure security concern, cited by 31% of respondents. | src=report.pdf p4; truth-maker: survey microdata (not held)
+K17  | route=survey     | ref=§Key findings p4 | The share citing AI-driven cyber threats as a top concern rises to 40% in the UK. | src=report.pdf p4; truth-maker: survey microdata (not held)
+K18  | route=survey     | ref=§Key findings p4 | Multivendor-fleet users are more likely than standardised-fleet users to identify AI-driven threats (33% vs 28%). | src=report.pdf p4; truth-maker: survey microdata (not held)
+K19  | route=survey     | ref=§Key findings p4 | Multivendor-fleet users are more likely to cite firmware and hardware vulnerability management (30% vs 25%). | src=report.pdf p4; truth-maker: survey microdata (not held)
+K20  | route=survey     | ref=§Key findings p4 | Multivendor-fleet users are more likely to cite insider threats (29% vs 21%). | src=report.pdf p4; truth-maker: survey microdata (not held)
+# ── KF5: Print-related data loss remains widespread and costly (p4) ──
+K21  | route=survey     | ref=§Key findings p4 | Two-thirds (67%) of organisations report at least one print-related breach in the last year. | src=report.pdf p4; restates E1/E8 (67%); truth-maker: survey microdata (not held)
+K22  | route=survey     | ref=§Key findings p4 | The average cost of a print-related data breach now exceeds £1 million. | src=report.pdf p4; restates E11 (£1m); truth-maker: survey microdata (not held)
+K23  | route=survey     | ref=§Key findings p4 | Print security leaders report lower data loss rates (56%) than followers (72%) and laggards (73%). | src=report.pdf p4; leaders 56%/laggards 73% restate E6; introduces followers (72%) as a third tier
+# ── KF6: Measures are in place but there are significant gaps for most (p4) ──
+K24  | route=survey     | ref=§Key findings p4 | Secure pull printing is now used by 51% of organisations and has become the most universal policy. | src=report.pdf p4; truth-maker: survey microdata (not held)
+K25  | route=survey     | ref=§Key findings p4 | Zero trust architecture is used by 33% of organisations, down from 37% previously (2025). | src=report.pdf p4; truth-maker: survey microdata (not held); 2025 baseline not held
+K26  | route=evaluative | ref=§Key findings p4 | Most measures are led by large firms, and SMBs and midmarket companies are likely to be leaving their systems exposed. | src=report.pdf p4
+# ── KF7: Identity integration is becoming foundational to print security (p5) ──
+K27  | route=survey     | ref=§Key findings p5 | 41% say integrating identity management platforms such as Active Directory and Azure AD with print infrastructure is extremely important, up from 34% in 2024. | src=report.pdf p5; restates E18 (41%/34%); truth-maker: survey microdata (not held)
+K28  | route=survey     | ref=§Key findings p5 | A further 43% say identity integration is very important. | src=report.pdf p5; restates E19 (43%); truth-maker: survey microdata (not held)
+K29  | route=survey     | ref=§Key findings p5 | The share rating identity integration extremely important rises to 52% among print security leaders. | src=report.pdf p5; restates E20 (52%); truth-maker: survey microdata (not held)
+K30  | route=evaluative | ref=§Key findings p5 | User identity is becoming the control layer that connects people, devices, and documents. | src=report.pdf p5
+# ── KF8: AI is reshaping IT security as both threat and defence (p5) ──
+K31  | route=survey     | ref=§Key findings p5 | Almost half (49%) are extremely or very concerned that AI will create further security risks to IT infrastructure as a whole. | src=report.pdf p5; truth-maker: survey microdata (not held)
+K32  | route=survey     | ref=§Key findings p5 | 54% are concerned that AI may be leveraged to create more sophisticated print-related threats, up from 40% in 2025. | src=report.pdf p5; cf. E21 (54% AI-driven attacks) — verify same/distinct metric; 2025 baseline not held
+K33  | route=survey     | ref=§Key findings p5 | 55% now consider it very important that providers use AI and machine learning to identify potential security threats and cyberattacks, compared with 41% in 2025 and 34% in 2024. | src=report.pdf p5; truth-maker: survey microdata (not held); 2024/2025 baselines not held
+# ── KF9: Quantum resilience is moving onto the print security agenda (p5) ──
+K34  | route=survey     | ref=§Key findings p5 | Over half (57%) say quantum-resilient security planning is very important. | src=report.pdf p5; truth-maker: survey microdata (not held)
+K35  | route=survey     | ref=§Key findings p5 | A further 30% consider quantum-resilient security planning somewhat important. | src=report.pdf p5; truth-maker: survey microdata (not held)
+K36  | route=evaluative | ref=§Key findings p5 | Quantum-resilient planning is most pressing among US and UK organisations, large enterprises, finance firms, and print security leaders. | src=report.pdf p5
+K37  | route=evaluative | ref=§Key findings p5 | While print-specific quantum threats may not be immediate, suppliers have an opportunity to provide post-quantum roadmaps, device-refresh guidance, and education. | src=report.pdf p5
+# ── KF10: The security divide creates a clear call to action (p5) ──
+K38  | route=evaluative | ref=§Key findings p5 | Organisations with a more mature, proactive approach to print security are more likely to use managed print services, report higher satisfaction with their security posture, and experience fewer print-related data breaches. | src=report.pdf p5
+K39  | route=evaluative | ref=§Key findings p5 | Buyers should move from reactive controls to continuous governance, while print vendors should help close the divide through assessment-led services, identity controls, fleet visibility, AI-enabled protection, and future-ready security roadmaps. | src=report.pdf p5; ROOT proposition (see argument.txt)
+
+# ══ §Vendor Landscape — p7–8 ══
+V1   | route=evaluative | ref=§Vendor Landscape p7 | Quocirca's vendor assessment scores strategy and completeness of offering on a scale of 1 to 5 (1 weak, 5 very strong), using an unweighted model. | src=report.pdf p7
+V2   | route=evidence   | ref=§Vendor Landscape / Strategy criteria p7 | The strategy criteria are: strategy and vision; maturity of offerings; partnerships and alliances; market credibility; channel enablement; geographic reach; and investment and dedicated resources. | src=report.pdf p7
+V3   | route=evidence   | ref=§Vendor Landscape / Completeness of offering criteria p7 | The completeness-of-offering criteria are: breadth and depth of service offering; hardware security; document security; network security; certification; security services; software integration; vulnerability and remediation; threat intelligence; application of AI; and analytics and reporting. | src=report.pdf p7
+V4   | route=evidence   | ref=§Vendor Landscape (Figure 1) p8 | Quocirca categorises vendors in the Print Security Vendor Landscape 2026 as Leaders or Major players. | src=report.pdf p8
+V5   | route=evidence   | ref=§Vendor Landscape (Figure 1) p8 | In Figure 1 the Leaders are HP Inc., Xerox, Canon, Ricoh, Sharp, and Konica Minolta. | src=report.pdf p8 Figure 1 (figure reading)
+V6   | route=evidence   | ref=§Vendor Landscape (Figure 1) p8 | In Figure 1 the Major players are Brother and Toshiba. | src=report.pdf p8 Figure 1 (figure reading)
+V7   | route=evidence   | ref=§Vendor Landscape (Figure 1) p8 | In Figure 1 HP Inc. is positioned strongest of all vendors on both strategy and completeness of offering. | src=report.pdf p8 Figure 1 (figure reading; fine ordering is approximate)
+
+# ══ §Vendor profile: Ricoh — p11–14 (target vendor; mostly Quocirca opinion + Ricoh-attested capability) ══
+R1   | route=evidence   | ref=§Vendor profile: Ricoh / Quocirca opinion p11 | Ricoh is positioned as a leader in Quocirca's Print Security 2026 Vendor Assessment. | src=report.pdf p11; consistent with V5
+R2   | route=evaluative | ref=§Vendor profile: Ricoh / Quocirca opinion p11 | Ricoh's strengths sit primarily in the breadth of its managed-services-led approach and in platform capabilities that help customers maintain policy and visibility across distributed fleets. | src=report.pdf p11
+R3   | route=evidence   | ref=§Vendor profile: Ricoh / Quocirca opinion p11 | Ricoh's approach centres on a six-phase lifecycle: discovery, assessment, planning, remediation, metrics and reporting, and maintenance. | src=report.pdf p11; truth-maker: Ricoh briefing (not held)
+R4   | route=evidence   | ref=§Vendor profile: Ricoh / Quocirca opinion p11 | Ricoh acquired MTI Technology in Europe, enhancing its cyber and data security services footprint. | src=report.pdf p11; truth-maker: world-fact / Ricoh briefing (not held)
+R5   | route=evidence   | ref=§Vendor profile: Ricoh / Quocirca opinion p11 | natif.ai supports intelligent document processing capabilities that can be embedded into workflow solutions such as DocuWare and RICOH Streamline NX. | src=report.pdf p11; truth-maker: Ricoh briefing (not held)
+R6   | route=evaluative | ref=§Vendor profile: Ricoh / Quocirca opinion p11 | Ricoh's roadmap, including planned AI-enabled DLP in Streamline NX, indicates a shift toward more proactive policy enforcement and content-led security. | src=report.pdf p11
+R7   | route=evidence   | ref=§Vendor profile: Ricoh / Device security controls p12 | Ricoh highlights role-based access control, support for multi-factor authentication, encryption for data in transit, and firmware and application signing. | src=report.pdf p12; truth-maker: Ricoh briefing (not held)
+R8   | route=evidence   | ref=§Vendor profile: Ricoh / Device security controls p12 | Ricoh supports TLS 1.3 and TPM 2.0, contributing to a hardware-rooted security posture with trusted boot and improved key protection. | src=report.pdf p12; truth-maker: Ricoh briefing (not held)
+R9   | route=evidence   | ref=§Vendor profile: Ricoh / Device security controls p12 | Ricoh emphasises secure lifecycle measures such as HDD overwrite and certified end-of-life data cleansing services. | src=report.pdf p12; truth-maker: Ricoh briefing (not held)
+R10  | route=evidence   | ref=§Vendor profile: Ricoh / Zero trust alignment p12 | Ricoh supports multiple deployment models for secure print: offline direct print, client-based secure print, and cloud-based secure print. | src=report.pdf p12; truth-maker: Ricoh briefing (not held)
+R11  | route=evidence   | ref=§Vendor profile: Ricoh / Zero trust alignment p12 | Ricoh references micro-segmentation and modern authentication, including integration with multiple identity providers and standards such as OpenID Connect. | src=report.pdf p12; truth-maker: Ricoh briefing (not held)
+R12  | route=evidence   | ref=§Vendor profile: Ricoh / Fleet visibility and policy automation p13 | Ricoh's Workplace Intelligence and IoT Command Center provide device- and vendor-agnostic monitoring and analytics across distributed fleets, including configuration-drift management, batch policy updates, and firmware orchestration. | src=report.pdf p13; truth-maker: Ricoh briefing (not held)
+R13  | route=evidence   | ref=§Vendor profile: Ricoh / Monitoring, logging, and SIEM p13 | Ricoh's @Remote capability underpins managed-services monitoring through a secure connection for device status and service alerts. | src=report.pdf p13; truth-maker: Ricoh briefing (not held)
+R14  | route=evidence   | ref=§Vendor profile: Ricoh / Authentication and identity integration p13 | Ricoh offers authentication options including PIN, smartphone-based authentication, biometric methods, FIDO2, and PKI smart cards. | src=report.pdf p13; truth-maker: Ricoh briefing (not held)
+R15  | route=evidence   | ref=§Vendor profile: Ricoh / Cloud print and remote worker security p13 | Across cloud print and remote-worker scenarios Ricoh highlights encryption at the protocol and application layers, including IPPS, TLS 1.2, and TLS 1.3, and stronger encryption within RICOH Streamline NX. | src=report.pdf p13; truth-maker: Ricoh briefing (not held)
+R16  | route=evidence   | ref=§Vendor profile: Ricoh / Cloud print and remote worker security p13 | RICOH Streamline NX and RICOH CloudStream provide features that support a zero trust architecture. | src=report.pdf p13; truth-maker: Ricoh briefing (not held)
+R17  | route=evidence   | ref=§Vendor profile: Ricoh / Lifecycle hardening, patching, and certificates p13 | Ricoh highlights mechanisms such as Automatic Remote Firmware Update and Always Current Technology, alongside platform-based monitoring of firmware versions against reference baselines. | src=report.pdf p13; truth-maker: Ricoh briefing (not held)
+R18  | route=evidence   | ref=§Vendor profile: Ricoh / Content security and DLP roadmap p13 | Ricoh's planned AI/ML-enabled DLP service within Streamline NX is intended to automate classification and apply rule-based actions such as allow, deny, review, archive, and notification workflows. | src=report.pdf p13; roadmap/planned; truth-maker: Ricoh briefing (not held)
+R19  | route=evidence   | ref=§Vendor profile: Ricoh / Strengths p14 | Through its Technology Centres and Security Services, Ricoh offers support in 200 countries and territories. | src=report.pdf p14; truth-maker: Ricoh briefing (not held)
+R20  | route=evidence   | ref=§Vendor profile: Ricoh / Strengths p14 | Ricoh Managed Services are device-agnostic for print security vulnerability analysis and remediation. | src=report.pdf p14; truth-maker: Ricoh briefing (not held)
+R21  | route=evidence   | ref=§Vendor profile: Ricoh / Strengths p14 | Ricoh assures that its circular remanufactured models achieve the same security standards as new products. | src=report.pdf p14; truth-maker: Ricoh briefing (not held)
+
+# ══ §About Quocirca — p15 ══
+Q1   | route=evidence   | ref=§About Quocirca p15 | Quocirca is a global market insight and research firm specialising in the convergence of print and digital technologies in the future workplace. | src=report.pdf p15
+Q2   | route=evidence   | ref=§About Quocirca p15 | Since 2006, Quocirca has advised clients on major shifts in the print services and solutions market. | src=report.pdf p15
+Q3   | route=data-gap   | ref=§Disclaimer p15 | The report states that, due to rounding, numbers may not add up precisely to the totals provided and percentages may not precisely reflect the absolute figures. | src=report.pdf p15; bounds any internal-consistency arithmetic check (e.g. E14+E15, E9/E10)

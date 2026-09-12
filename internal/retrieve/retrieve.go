@@ -56,7 +56,8 @@ type Passage struct {
 const (
 	SourceHearing    = "hearing"
 	SourceSubmission = "submission"
-	SourceQoN        = "qon" // a response to questions on notice (paragraphs, like a submission)
+	SourceQoN        = "qon"    // a response to questions on notice (paragraphs, like a submission)
+	SourceReport     = "report" // the assayed report itself, as its own source (single-doc, page-split)
 )
 
 // searchText is what ranking and embedding see: the question (when present) then the answer. Text
@@ -183,9 +184,43 @@ func passagesForFile(path string) ([]Passage, error) {
 		return submissionPassages(path)
 	case strings.Contains(path, "/qon/"):
 		return qonPassages(path)
+	case strings.HasSuffix(path, "report.txt"):
+		return reportPassages(path)
 	default:
 		return splitFile(path)
 	}
+}
+
+// reportPassages splits the assayed report (the single-document, report-as-its-own-source corpus:
+// sources/MANIFEST.md) into page-tagged paragraph passages. It is neither Hansard nor a submission —
+// there are no speaker turns — so it splits on the pdftotext form feed into printed pages, then on
+// blank lines into paragraphs. The id `report#p<page>#<n>` carries the printed page so a verified
+// quote's provenance resolves to report.pdf at that page (manifest.CanonicalDoc). Page is the
+// 1-based form-feed index, which equals the printed footer page for a report whose PDF has no
+// front-matter offset. Source=report lets the self-consistency check (assay.go:passagesForClaim)
+// drop a claim's own paragraph, so a claim is judged against the rest of the report, not itself.
+func reportPassages(path string) ([]Passage, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var out []Passage
+	for page, pageText := range strings.Split(string(data), "\f") {
+		printed := page + 1 // pdftotext page 1 → printed page 1; no front-matter offset here
+		n := 0
+		for _, para := range paraSplit.Split(pageText, -1) {
+			p := strings.TrimSpace(para)
+			if len([]rune(p)) < 40 {
+				continue
+			}
+			out = append(out, Passage{
+				ID:      fmt.Sprintf("report#p%d#%d", printed, n),
+				Session: "report", Speaker: "report", Role: SourceReport, Source: SourceReport, Text: p,
+			})
+			n++
+		}
+	}
+	return out, nil
 }
 
 // qonPassages splits a response to questions on notice into paragraph passages, tagged Source=qon. A

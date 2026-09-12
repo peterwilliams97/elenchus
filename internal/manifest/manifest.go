@@ -184,6 +184,78 @@ func LoadLabels(path string) (map[string]string, error) {
 	return labels, nil
 }
 
+// reportOffsetLine and sectionEntryLine parse the report-link resolution block a report manifest may
+// carry: the printed→PDF page offset, and a name→printed-page table so a claim citing a NAMED section
+// ("§Executive summary") deep-links to a page the code does not hold. Neither shape starts with "- `",
+// so LoadHeld and LoadLabels never mistake a section row for a held document.
+var (
+	reportOffsetLine = regexp.MustCompile(`^report_page_offset:\s*(-?\d+)$`)
+	sectionEntryLine = regexp.MustCompile(`^\s+(.+?):\s*(\d+)\s*$`)
+	singleSourceLine = regexp.MustCompile(`^single_source:\s*true\s*$`)
+)
+
+// LoadSingleSource reports the manifest's `single_source: true` declaration — a corpus that holds the
+// report itself as its only source, so the only automated check is internal consistency and there is no
+// second document a claim could be corroborated against. It changes what a leaf `absent` means: not "no
+// held source carries this" (a grounding miss) but "said once in the report, not repeated elsewhere",
+// which the tree renders `uncorroborated` and derives as weakened, not failed. A missing manifest or an
+// absent line yields false, no error.
+func LoadSingleSource(path string) (bool, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	for ln := range strings.SplitSeq(string(data), "\n") {
+		if singleSourceLine.MatchString(strings.TrimSpace(ln)) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+// LoadReportLinks reads the review page's report-link rules from a MANIFEST.md so they live in the
+// manifest, not the code (spec/SERVE.md): `report_page_offset:` (the printed→PDF offset, 0 when
+// absent — a report whose printed page equals its PDF page) and a `sections:` table mapping a named
+// section heading to its printed page (empty when absent). A numbered §-ref carries its own page and
+// needs no table; a named one is looked up here. A missing manifest yields the zero offset and an
+// empty table, no error.
+func LoadReportLinks(path string) (offset int, sections map[string]int, err error) {
+	sections = map[string]int{}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return 0, sections, nil
+		}
+		return 0, nil, err
+	}
+	inSections := false
+	for _, ln := range strings.Split(string(data), "\n") {
+		if m := reportOffsetLine.FindStringSubmatch(strings.TrimSpace(ln)); m != nil {
+			offset, _ = strconv.Atoi(m[1])
+			inSections = false
+			continue
+		}
+		if strings.TrimSpace(ln) == "sections:" {
+			inSections = true
+			continue
+		}
+		if inSections {
+			if m := sectionEntryLine.FindStringSubmatch(ln); m != nil {
+				n, _ := strconv.Atoi(m[2])
+				sections[strings.TrimSpace(m[1])] = n
+				continue
+			}
+			if strings.TrimSpace(ln) != "" {
+				inSections = false // a non-indented, non-empty line closes the block
+			}
+		}
+	}
+	return offset, sections, nil
+}
+
 // CanonicalDoc maps a retrieval passage id (minted by internal/retrieve) back to the canonical
 // document id this manifest uses, plus a human locator. The three passage shapes and their canonical
 // forms — the inverse of Scan's id construction, so a resolved doc id is exactly what LoadHeld/
@@ -223,6 +295,11 @@ func CanonicalDoc(pid string) (docID, locator string, ok bool) {
 			return "", "", false
 		}
 		return "qon:" + m[1] + "/" + m[2], "p." + strings.TrimPrefix(frag, "p"), true
+	case base == "report":
+		// The report as its own source: "report#p<page>#<n>" → report.pdf at the printed page. The
+		// paragraph index after the page is provenance-irrelevant, so the locator is the page alone.
+		page, _, _ := strings.Cut(frag, "#")
+		return "report.pdf", "p." + strings.TrimPrefix(page, "p"), true
 	default:
 		// Hearing: "<date>/<session>#t<n>" — the only shape carrying a "/" in its base and a "t" turn.
 		if strings.ContainsRune(base, '/') && strings.HasPrefix(frag, "t") {

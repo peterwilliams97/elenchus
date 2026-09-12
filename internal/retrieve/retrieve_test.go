@@ -274,3 +274,37 @@ func firstN(s string, n int) string {
 	}
 	return s[:n]
 }
+
+// TestReportPassages pins the report-as-its-own-source split against the real committed Quocirca
+// excerpt (examples/quocirca-2026/sources/report.txt) — no synthetic input. Every passage is tagged
+// Source=report (the tag dropOwnParagraph keys on), its id carries the printed page, and the page in
+// the id agrees with CanonicalDoc's locator. The Executive summary's thesis sentence must land on
+// page 2, so a claim decomposed from it is excluded from its own page and judged against the rest.
+func TestReportPassages(t *testing.T) {
+	const report = "../../examples/quocirca-2026/sources/report.txt"
+	if _, err := os.Stat(report); err != nil {
+		t.Skipf("report corpus not present: %v", err)
+	}
+	ix, err := Load(report)
+	if err != nil {
+		t.Fatalf("Load(%s): %v", report, err)
+	}
+	if len(ix.Passages) < 20 {
+		t.Fatalf("want a substantial single-report corpus, got %d passages", len(ix.Passages))
+	}
+	var thesisPage string
+	for _, p := range ix.Passages {
+		if p.Source != SourceReport {
+			t.Fatalf("passage %s: Source=%q, want %q", p.ID, p.Source, SourceReport)
+		}
+		if !strings.HasPrefix(p.ID, "report#p") {
+			t.Fatalf("passage id %q lacks the report#p<page> shape", p.ID)
+		}
+		if strings.Contains(p.Text, "layered, continuously managed print security strategy") {
+			thesisPage = p.ID
+		}
+	}
+	if !strings.HasPrefix(thesisPage, "report#p2#") {
+		t.Errorf("Executive summary thesis landed at %q, want a report#p2# passage", thesisPage)
+	}
+}

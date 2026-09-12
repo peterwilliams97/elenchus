@@ -1,0 +1,141 @@
+# argument.txt — the Quocirca Print Security Landscape 2026 (RICOH excerpt) as an argument tree
+# (spec/ARGUMENT.md).
+#
+# title: Print Security Landscape, 2026 — How AI, Identity, and Quantum are reshaping the threat landscape (Quocirca, RICOH excerpt, July 2026)
+#
+# Refinement: root → recommendation → finding → atomic claim (ids in claims-machine.txt).
+# This file carries CONTENT and STRUCTURE only. Judgements are DERIVED bottom-up from a merged chain
+# (spec/TREE.md), never authored — there is none here.
+#
+# Line format (indentation = depth; a child sits one level below its parent):
+#   <id>[ ?]  | <content, the report's words, short>  | <edge / provenance note>
+# A bare id at claim depth (deepest level) is an ATOMIC-CLAIM LEAF; its text, route and source live in
+# claims-machine.txt and are not repeated here.
+#
+# Edge markers (spec/ARGUMENT.md § Edges):
+#   (default)  load-bearing, subject-for-subject: the recommendation directly acts on / remedies the
+#              finding, or the finding decomposes to the claim.
+#   ?          the report does NOT establish this edge. It presents the recommendation but never says
+#              which finding it rests on; where a rec's basis is the whole divide thesis rather than
+#              one finding, the rec is childless-? with candidate findings named in the note. A
+#              question for a human, not a guess.
+#   [opinion]  a route=evaluative leaf — never judged; contributes nothing to a parent's hold/fail.
+#
+# ATTACHMENT — read this, it differs from the LCEIC example. This report's recommendations are
+# CROSS-CUTTING syntheses (the Recommendations section, pp9–10, cites no finding by name), and its
+# findings are cross-cutting too: several recs plainly rest on the same finding. spec/ARGUMENT.md's
+# partition ("every finding lands in exactly one place") is kept anyway — each finding is attached to
+# the ONE recommendation it most directly remedies, subject for subject — so the count stays checkable.
+# The cost is that a recommendation whose plain basis is a finding already claimed by another rec is
+# left childless-? with that finding named as a candidate (S1, S4, S5). Two findings no single rec
+# rests on (KF1 vendor landscape; KF10 the call-to-action, which no single rec rests on) hang under `base`.
+# KF5 is split into KF5a (widespread/costly) and KF5b (maturity's measurable impact) because the one
+# key-findings bullet states two findings that remedy two different recommendations (B4 and B2).
+#
+# Each finding's claim children are the atomic claims that constitute it, taken from BOTH the Key
+# findings bullet (K-ids) and the Executive summary passage that restates the same finding (E-ids) —
+# so the internal-consistency check bites: the finding rests on the report asserting the figure in
+# both places, and the two must agree.
+#
+# NOT in this tree, by design: the report's apparatus and vendor content are checkable claims in
+# claims-machine.txt but are not premises of the buyer/supplier case, so they are not leaves here —
+# E5 (Maturity Index definition, though it is pulled in under KF5b, which rests on it), E12/E13
+# (evaluative method asides), E24 (vendor list), the Vendor Landscape methodology (V1–V7), the Ricoh
+# vendor profile (R1–R21), and About Quocirca (Q1–Q3).
+#
+# ROOT is the report's OWN words (not synthesised): §Executive summary p2 — the study's thesis, that
+# print infrastructure remains a significant vulnerability and the only sustainable response is a
+# layered, continuously managed print security strategy. The recommendation groups below are what that
+# strategy resolves into: supplier recommendations (S-ids) and buyer recommendations (B-ids).
+
+root  | Despite heightened awareness of cybersecurity threats, print infrastructure remains a significant vulnerability for many organisations; the only sustainable response is to increase resilience through a layered, continuously managed print security strategy that protects devices, users, documents, and workflows as part of the wider enterprise security environment.  | verbatim = §Executive summary p2
+
+    # ── Supplier recommendations (§Recommendations / Supplier recommendations, p9) ──
+    S1 ?  | Lead with security outcomes, not feature checklists.  | p9; basis is the whole divide thesis, not one finding — candidates KF5b (maturity → outcomes), KF10 (call to action), both attached elsewhere
+    S2  | Address fleet complexity as a strategic security problem.  | p9; remedies KF4 (multivendor fleets), subject for subject
+        KF4  | Multivendor fleets face higher print security pressure.  | §Key findings p4
+            K16
+            K17
+            K18
+            K19
+            K20
+            E14
+            E15
+            E16
+            E17
+    S3  | Make AI and quantum readiness credible and actionable.  | p9; remedies KF9 (quantum); also addresses AI (KF8, attached to B5 under partition)
+        KF9  | Quantum resilience is moving onto the print security agenda.  | §Key findings p5
+            K34
+            K35
+            K36
+            K37
+    S4 ?  | Elevate education into a core security service.  | p9; rests on organisations underestimating print exposure — candidate KF2, attached to B1; also KF6
+    S5 ?  | Reframe managed print around continuous security governance.  | p9; "continuous governance" is the call to action (KF10, in base), not a single finding — candidate KF6
+    S6  | Prioritise segments with the greatest exposure and weakest maturity.  | p9; remedies KF6 (SMBs/midmarket left exposed), subject for subject
+        KF6  | A range of measures are in place, but there are significant gaps for most.  | §Key findings p4
+            K24
+            K25
+            K26
+    S7  | Integrate print security into enterprise security operations.  | p9; remedies KF7 (identity as control layer); S7 is broader (also SIEM/SOC/DLP)
+        KF7  | Identity integration is becoming foundational to print security.  | §Key findings p5
+            K27
+            K28
+            K29
+            K30
+            E18
+            E19
+            E20
+
+    # ── Buyer recommendations (§Recommendations / Buyer recommendations, p10) ──
+    B1  | Elevate print security to the enterprise risk agenda.  | p10; remedies KF2 (print under-prioritised / ranks 7th)
+        KF2  | Print security remains under-prioritised despite continued reliance.  | §Key findings p4
+            K8
+            K9
+            K10
+            K11
+            E2
+    B2  | Build a layered control model based on maturity, not minimum compliance.  | p10; remedies KF5b (maturity → lower breach rates)
+        KF5b  | Print security maturity has a measurable impact on data-loss rates.  | §Key findings p4 (split from the KF5 bullet)
+            K23
+            E6
+            E7
+            E5
+    B3  | Establish continuous assessment and remediation.  | p10; remedies KF3 (driver exposure; B3 names driver exposure explicitly)
+        KF3  | Print driver deployment is an overlooked security exposure.  | §Key findings p4
+            K12
+            K13
+            K14
+            K15
+    B4  | Quantify the cost of inaction.  | p10; remedies KF5a (£1m average breach cost)
+        KF5a  | Print-related data loss remains widespread and costly.  | §Key findings p4 (split from the KF5 bullet)
+            K21
+            K22
+            E1
+            E8
+            E9
+            E10
+            E11
+    B5  | Prepare for AI-driven threats and post-quantum transition.  | p10; remedies KF8 (AI threat & defence); also addresses quantum (KF9, attached to S3)
+        KF8  | AI is reshaping IT security as both threat and defence.  | §Key findings p5
+            K31
+            K32
+            K33
+            E21
+            E22
+            E23
+
+    # ── base: findings no single recommendation rests on (kept in the tree; ? edge to root) ──
+    base ?  | The report's descriptive base — the vendor landscape and its own call to action, which support the case as a whole, not one recommendation.  | root child on ? edge (spec/ARGUMENT.md § base)
+        KF1  | Print manufacturers continue to advance their security offerings.  | §Key findings p4; vendor-landscape summary, no rec rests on it
+            K1
+            K2
+            K3
+            K4
+            K5
+            K6
+            K7
+        KF10  | The security divide creates a clear call to action.  | §Key findings p5; supports all recs, not one
+            K38
+            K39
+            E3
+            E4

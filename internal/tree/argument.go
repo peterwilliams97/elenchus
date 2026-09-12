@@ -188,7 +188,10 @@ func (n *ArgNode) Judgement() string {
 // leafJudgement maps one pooled leaf to its contribution. An opinion is never judged. A contested (or
 // tied `split`) leaf crosses the support divide across runs, so it opens its parent. unverifiable is
 // "can't check" — neither support nor its refusal — so it opens too. A collapsed verdict fails; a
-// narrowed one (partial/overstated) or a same-side wobble weakens; only faithful-and-settled holds.
+// narrowed one (partial/overstated), a same-side wobble, or an `uncorroborated` leaf weakens; only
+// faithful-and-settled holds. `uncorroborated` is a single-source corpus's remap of `absent` (assay.go
+// rewrites it there): the report says it once and no second document repeats it — a weakening, not the
+// grounding failure `absent` is when other sources were held and checked.
 func leafJudgement(r *brief.Row) string {
 	if brief.IsOpinion(*r) {
 		return jOpinion
@@ -202,7 +205,7 @@ func leafJudgement(r *brief.Row) string {
 			return jWeakened
 		}
 		return jHolds
-	case "partial", "overstated":
+	case "partial", "overstated", "uncorroborated":
 		return jWeakened
 	case "unverifiable":
 		return jOpen
@@ -240,10 +243,11 @@ func fromSev(s int) string {
 	}
 }
 
-// isRecommendation reports an `R…`-numbered node — the recommendations the root block summarises, one
-// line each. The atomic-claim leaves and findings are `F…`; the descriptive base is `base`.
-func isRecommendation(id string) bool {
-	return len(id) >= 2 && (id[0] == 'R' || id[0] == 'r') && '0' <= id[1] && id[1] <= '9'
+// isBase reports the descriptive `base` node — the one root child that is not a recommendation. Every
+// other direct child of the root is a recommendation, whatever its id prefix: LCEIC numbers them
+// `R1`–`R11`, Quocirca `S1`–`S7` / `B1`–`B5`, so the count must not hinge on an `R…` spelling.
+func isBase(id string) bool {
+	return id == "base"
 }
 
 // decidingChild names the child whose contribution set the node's judgement — the first child at the
@@ -296,7 +300,7 @@ func ArgumentTitle(argText string) string {
 // internal node's conjunction. `title` is the report name (ArgumentTitle); `what` is the
 // corpus-specific "what this page checks / which sources are held" sentence the caller builds from the
 // manifest — this package stays corpus-agnostic, so it takes the sentence rather than the held set.
-func ArgumentPage(root *ArgNode, details map[string]Leaf, title, what string) (page, rootBlock string) {
+func ArgumentPage(root *ArgNode, details map[string]Leaf, title, what string, singleSource bool) (page, rootBlock string) {
 	rootBlock = argRootBlock(root)
 	var b strings.Builder
 	fmt.Fprintf(&b, argHead, html.EscapeString(title))
@@ -317,7 +321,7 @@ func ArgumentPage(root *ArgNode, details map[string]Leaf, title, what string) (p
 	for _, c := range root.Children {
 		renderNodeCard(&b, c, details)
 	}
-	b.WriteString(keyHTML)
+	b.WriteString(keyHTML(singleSource))
 	b.WriteString("</main>\n")
 	b.WriteString(argScript)
 	b.WriteString("</body></html>\n")
@@ -339,7 +343,7 @@ func rootTally(root *ArgNode) string {
 	var openUnstated, openContested int
 	recs := 0
 	for _, c := range root.Children {
-		if !isRecommendation(c.ID) {
+		if isBase(c.ID) {
 			continue
 		}
 		recs++
@@ -443,12 +447,12 @@ func plural(n int, one, many string) string {
 }
 
 // baseSentence counts the findings the descriptive `base` node carries — every finding no
-// recommendation rests on — as one sentence beneath the tally. It sums the direct children of every
-// non-recommendation root child, so a report with no base node yields "" (nothing to say).
+// recommendation rests on — as one sentence beneath the tally. It sums the direct children of the
+// `base` root child, so a report with no base node yields "" (nothing to say).
 func baseSentence(root *ArgNode) string {
 	n := 0
 	for _, c := range root.Children {
-		if !isRecommendation(c.ID) {
+		if isBase(c.ID) {
 			n += len(c.Children)
 		}
 	}
@@ -460,8 +464,8 @@ func baseSentence(root *ArgNode) string {
 }
 
 // argRootBlock is the one screen above the tree: the root proposition, the root's tally paragraph and
-// the base sentence, then one line per recommendation (R1–R11) — its proposition and judgement, plus
-// the child that decides it when it does not hold. It ends with a trailing newline.
+// the base sentence, then one line per recommendation — every root child but `base` — its proposition
+// and judgement, plus the child that decides it when it does not hold. It ends with a trailing newline.
 func argRootBlock(root *ArgNode) string {
 	var b strings.Builder
 	fmt.Fprintln(&b, root.Content)
@@ -471,7 +475,7 @@ func argRootBlock(root *ArgNode) string {
 	}
 	b.WriteString("\n")
 	for _, c := range root.Children {
-		if !isRecommendation(c.ID) {
+		if isBase(c.ID) {
 			continue
 		}
 		j := c.Judgement()
@@ -641,18 +645,27 @@ details.card details.card{margin:.5rem .8rem}
 
 // keyHTML is the verdict key and the two-pane link, at the foot of the page. It is generic to the
 // argument tree — the verdict semantics, not this corpus — so it lives here rather than being passed
-// in. Each line leads with the badge it defines, so the key doubles as the colour legend.
-const keyHTML = `<div class="key">
+// in. Each line leads with the badge it defines, so the key doubles as the colour legend. On a
+// single-source corpus (manifest `single_source: true`) it adds the `uncorroborated` line, the remap
+// of a leaf `absent` when the report is its own only source: said once, not repeated elsewhere. The
+// badge takes the weakened colour because that is how such a leaf derives (leafJudgement).
+func keyHTML(singleSource bool) string {
+	uncorroborated := ""
+	if singleSource {
+		uncorroborated = `<span class="badge b-weakened">uncorroborated</span> said once in the report, not repeated elsewhere.<br>` + "\n"
+	}
+	return `<div class="key">
 <b>R</b> = recommendation, <b>F</b> = finding. Each badge shows its class as a word, so the colour is redundant.<br>
 <span class="badge b-holds">holds</span> every claim underneath was found in a source saying what the report says.<br>
 <span class="badge b-weakened">weakened</span> found, but the source says less.<br>
-<span class="badge b-open">open</span> the report doesn't say what this rests on, or the sources don't settle a claim.<br>
+` + uncorroborated + `<span class="badge b-open">open</span> the report doesn't say what this rests on, or the sources don't settle a claim.<br>
 <span class="badge b-fails">fails</span> a claim it rests on was not found in any held source.<br>
 <span class="badge b-opinion">opinion</span> the Committee's own view; not checked.<br>
 <span class="badge b-contested">contested</span> a claim the runs could not settle.
 </div>
 <p class="nav"><a href="review.html">Open the two-pane reading — the report on the left, this tree on the right</a> · <a href="sources/report.pdf">the report as published</a></p>
 `
+}
 
 // argScript is the page's only JavaScript: it opens every card when the URL carries ?open=all, and
 // wires the Expand-all button to open or close them all. One statement block — the page is otherwise

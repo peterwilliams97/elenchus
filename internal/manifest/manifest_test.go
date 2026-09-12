@@ -72,9 +72,10 @@ func TestScanDerivesCanonicalIDs(t *testing.T) {
 	}
 }
 
-// TestCanonicalDoc pins the passage-id → canonical-doc-id inverse for all three passage shapes plus a
-// submission attachment, and that a malformed id resolves to ok=false. The doc ids must be exactly
-// those Scan mints (TestScanDerivesCanonicalIDs), or a resolved quote would miss its manifest entry.
+// TestCanonicalDoc pins the passage-id → canonical-doc-id inverse for every passage shape (hearing,
+// submission + attachment, qon, report) and that a malformed id resolves to ok=false. The doc ids must
+// be exactly those Scan mints (TestScanDerivesCanonicalIDs), or a resolved quote would miss its
+// manifest entry — except report.pdf, whose id is the passage-prefix convention, not a Scan output.
 func TestCanonicalDoc(t *testing.T) {
 	cases := []struct {
 		pid, doc, loc string
@@ -86,6 +87,8 @@ func TestCanonicalDoc(t *testing.T) {
 		{"submission-09#p3", "submission:9", "p.3", true}, // zero-padded number folds to 9
 		{"submission-33.1#p5", "submission:33/attachment-1", "p.5", true},
 		{"qon-abc-2025-03-21#p2", "qon:abc/2025-03-21", "p.2", true},
+		{"report#p2#0", "report.pdf", "p.2", true},   // report as its own source; paragraph index dropped
+		{"report#p13#4", "report.pdf", "p.13", true}, // locator is the page alone
 		{"no-hash-fragment", "", "", false},
 		{"submission-notanumber#p1", "", "", false},
 	}
@@ -137,5 +140,72 @@ func TestLoadLabels(t *testing.T) {
 	}
 	if s, err := LoadLabels(filepath.Join(root, "nope.md")); err != nil || len(s) != 0 {
 		t.Errorf("missing manifest should be empty/no-error, got %d, %v", len(s), err)
+	}
+}
+
+// TestLoadReportLinks pins the report-link rule parser: the printed→PDF offset and the named-section
+// page table, both read from manifest prose that is not a held-document bullet (so LoadHeld ignores
+// them). The manifest text here is config, not a source document — no fabricated corpus. It also
+// checks a numbered-only manifest (LCEIC shape) yields its offset and an empty table, and that a
+// missing file is the zero offset with no error.
+func TestLoadReportLinks(t *testing.T) {
+	dir := t.TempDir()
+	named := filepath.Join(dir, "NAMED.md")
+	if err := os.WriteFile(named, []byte(`# m
+- `+"`report.pdf`"+` — Quocirca report
+
+report_page_offset: 0
+
+sections:
+  Executive summary: 2
+  Key findings: 4
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	off, secs, err := LoadReportLinks(named)
+	if err != nil || off != 0 || secs["Executive summary"] != 2 || secs["Key findings"] != 4 {
+		t.Fatalf("named manifest: off=%d secs=%v err=%v", off, secs, err)
+	}
+	// The section rows must not be read as held documents.
+	if held, _ := LoadHeld(named); len(held) != 1 || !held["report.pdf"] {
+		t.Fatalf("section rows leaked into held set: %v", held)
+	}
+
+	numbered := filepath.Join(dir, "NUM.md")
+	if err := os.WriteFile(numbered, []byte("# m\n\nreport_page_offset: 18\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if off, secs, _ := LoadReportLinks(numbered); off != 18 || len(secs) != 0 {
+		t.Fatalf("numbered manifest: off=%d secs=%v, want 18 and empty", off, secs)
+	}
+
+	if off, secs, err := LoadReportLinks(filepath.Join(dir, "nope.md")); err != nil || off != 0 || len(secs) != 0 {
+		t.Fatalf("missing manifest: off=%d secs=%v err=%v, want 0/empty/nil", off, secs, err)
+	}
+}
+
+// TestLoadSingleSource pins the single_source declaration parser: a manifest carrying `single_source:
+// true` reads true, one without it reads false (the LCEIC multi-source shape), and a missing file reads
+// false with no error. The flag is what makes a leaf `absent` render `uncorroborated` downstream.
+func TestLoadSingleSource(t *testing.T) {
+	dir := t.TempDir()
+	with := filepath.Join(dir, "SINGLE.md")
+	if err := os.WriteFile(with, []byte("# m\n\nsingle_source: true\n\nreport_page_offset: 0\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := LoadSingleSource(with); err != nil || !ok {
+		t.Fatalf("single_source manifest: ok=%v err=%v, want true/nil", ok, err)
+	}
+
+	without := filepath.Join(dir, "MULTI.md")
+	if err := os.WriteFile(without, []byte("# m\n\nreport_page_offset: 18\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := LoadSingleSource(without); err != nil || ok {
+		t.Fatalf("multi-source manifest: ok=%v err=%v, want false/nil", ok, err)
+	}
+
+	if ok, err := LoadSingleSource(filepath.Join(dir, "nope.md")); err != nil || ok {
+		t.Fatalf("missing manifest: ok=%v err=%v, want false/nil", ok, err)
 	}
 }

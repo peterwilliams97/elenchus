@@ -86,9 +86,12 @@ type cfg struct {
 	zip           bool                // -zip: write site.zip beside site/ after -review builds it
 	siteDir       string              // site/ sink under the example dir, when -review is set
 	sourcesDir    string              // -manifest's parent dir; the on-disk PDF tree the site copies from
+	reportOffset  int                 // -manifest report_page_offset: printed page N → report.pdf page N+offset
+	reportSecs    map[string]int      // -manifest sections: named § heading → printed page, for review deep-links
 	rootTitle     string              // report title for the root block's line 1, from the claims file "# title:" header
 	rootDate      string              // report date for the root block's line 1, from the claims file "# date:" header
 	sourceDocs    int                 // M: documents held per the manifest; the root block's "checked against M" figure
+	singleSource  bool                // -manifest single_source: report is its own only source; leaf 'absent' → 'uncorroborated'
 	runs          int                 // chains merged under -from; >1 adds the root block's stability line. 0/1 = single run
 	usage         *usageCounters
 	tally         *runTally
@@ -236,6 +239,17 @@ func main() {
 		}
 		c.docLabels = labels                      // canonical doc id → witness/author, for a rendered quote's provenance
 		c.sourcesDir = filepath.Dir(manifestFile) // MANIFEST.md sits at sources/; its dir is the href prefix
+		offset, secs, err := manifest.LoadReportLinks(manifestFile)
+		if err != nil {
+			fatal("load manifest report-link rules: " + err.Error())
+		}
+		c.reportOffset = offset // printed→PDF page offset for report deep-links (0 when undeclared)
+		c.reportSecs = secs     // named § → printed page, so a named-section claim deep-links
+		single, err := manifest.LoadSingleSource(manifestFile)
+		if err != nil {
+			fatal("load manifest single_source: " + err.Error())
+		}
+		c.singleSource = single // report is its own only source: leaf 'absent' renders 'uncorroborated'
 	}
 
 	// -review builds the PDF-linked review page from the rendered argument page; both links and the
@@ -730,14 +744,19 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 	// first read the cache instead of re-billing the passages.
 	for _, group := range groupBySharedPassages(claimPassages, eligible) {
 		shared := unionPassages(claimPassages, group)
-		pids := retrieve.IDs(shared)
 		for _, i := range group {
 			if done[i] {
 				continue
 			}
+			// Exclude the claim's own § here, on the shared union, not before grouping: the union
+			// re-pools passages across the group, so a claim's own page re-enters via a group-mate's
+			// retrieval unless it is dropped from what THIS claim is judged against. A no-op for a
+			// non-report corpus (dropOwnPage keeps every non-report passage), so group cache reuse is
+			// unaffected there; for the report corpus, same-page claims still share a filtered prefix.
+			ps := dropOwnPage(pageOfPath(parsed[i].path), shared)
 			t := c.progressStart(i, len(raw), "faithfulness")
-			chosen, spread, samples := c.faithJudgeRepeat(parsed[i].text, shared)
-			emit(i, chosen, spread, samples, pids, t)
+			chosen, spread, samples := c.faithJudgeRepeat(parsed[i].text, ps)
+			emit(i, chosen, spread, samples, retrieve.IDs(ps), t)
 		}
 	}
 	c.present(rows, tally(vs), mdFaith(results), func() { c.termFaith(results) }, details)
@@ -858,6 +877,67 @@ func (c cfg) passagesForClaim(id, text, path, srcPath string, fullSrc *[]retriev
 		return nil, true
 	}
 	return res.Passages, false
+}
+
+// dropOwnPage removes, from a report claim's retrieved passages, every passage on the claim's own
+// printed page (its §), so the claim is judged against the REST of the report rather than the page it
+// was lifted from — which would confirm every claim trivially. Page granularity, not the exact
+// paragraph, because a decomposed atomic claim is rarely a verbatim substring of its source paragraph
+// (dropped clauses, punctuation), so a substring test would leak the source and silently self-confirm.
+// It aligns with the corpus's cross-page restatement design (sources/MANIFEST.md): a fact stated on
+// p2 and restated on p4 corroborates itself across the boundary, and page exclusion keeps exactly that
+// cross-page evidence while dropping the same-page source. It fires only for report-as-its-own-source
+// passages (retrieve.SourceReport) and only when the claim's page is known (>0): for a
+// hearing/submission corpus the passage that carries a claim is the grounding target and must be kept.
+func dropOwnPage(claimPage int, ps []retrieve.Passage) []retrieve.Passage {
+	if claimPage <= 0 {
+		return ps
+	}
+	kept := ps[:0]
+	for _, p := range ps {
+		if p.Source == retrieve.SourceReport && reportPage(p.ID) == claimPage {
+			continue
+		}
+		kept = append(kept, p)
+	}
+	return kept
+}
+
+// pageOfPath reads the printed page a claim sits on from the leading "p<N>=" segment of its §-path
+// (claims-machine-full.txt encodes it there), returning 0 when the path carries no page — the signal
+// dropOwnPage reads as "no self-page to exclude".
+func pageOfPath(path string) int {
+	seg := path
+	if i := strings.IndexByte(seg, '/'); i >= 0 {
+		seg = seg[:i]
+	}
+	key, _, _ := strings.Cut(seg, "=")
+	if !strings.HasPrefix(key, "p") {
+		return 0
+	}
+	n, err := strconv.Atoi(key[1:])
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+// reportPage parses the printed page from a report passage id "report#p<N>#<n>", returning 0 for any
+// other id shape — so dropOwnPage never mistakes a hearing or submission id for a page match.
+func reportPage(id string) int {
+	_, frag, ok := strings.Cut(id, "#")
+	if !ok {
+		return 0
+	}
+	page, _, _ := strings.Cut(frag, "#")
+	if !strings.HasPrefix(page, "p") {
+		return 0
+	}
+	n, err := strconv.Atoi(page[1:])
+	if err != nil {
+		return 0
+	}
+	return n
 }
 
 // loadOracle reads the -retrieve=oracle map: a JSON object of claim-id → list of passage-id.
@@ -1556,17 +1636,14 @@ func buildLeafQuotes(quotes, passageIDs []string, labels map[string]string) []tr
 	return out
 }
 
-// printedToPDF offsets a report's printed page to its page in report.pdf: printed page N sits at PDF
-// page N+18 (examples/vic-lceic/report-summary.md). The argument page prints the printed page; the
-// review links open the PDF, so the offset is applied here and nowhere else.
-const printedToPDF = 18
-
 // review link/scan patterns. The three provenance forms are the resolveQuoteProv suffixes rendered
 // into the argument page as plain text; each trailing (\n|<) is the delimiter the match stops at (Go
 // has no look-ahead) and is re-emitted unchanged. subFilePDF pulls the submission number and
 // attachment flag from a PDF filename so the redaction suffix and zero-padding need not be guessed.
+// reReportLink captures a whole §-ref — the label (numbered "2.1.1" or named "Executive summary") in
+// group 2 and its trailing printed page in group 3 — so reportPDFPage can resolve a page for either.
 var (
-	reReportLink = regexp.MustCompile(`report: (§[\d.]+ p(\d+))`)
+	reReportLink = regexp.MustCompile(`report: (§([^<\n]+?) p(\d+))`)
 	reSubLink    = regexp.MustCompile(`— (submission:(\d+)(/attachment-1)?), (.+?), p\.(\d+)(\n|<)`)
 	reQonLink    = regexp.MustCompile(`— (qon:([a-z]+)/(\d{4}-\d{2}-\d{2})), (.+?), (\d{4}-\d{2}-\d{2}), p\.(\d+)(\n|<)`)
 	reHearLink   = regexp.MustCompile(`— (hearing:[^\s,]+), (.+?), (line \d+)(\n|<)`)
@@ -1574,6 +1651,39 @@ var (
 	reStyleBlock = regexp.MustCompile(`(?s)<style>(.*?)</style>`)
 	reBodyBlock  = regexp.MustCompile(`(?s)<body>(.*?)</body>`)
 )
+
+// reportPDFPage resolves a review report-link's PDF page from a §-ref label and its inline printed
+// page, applying the manifest's rules. A numbered label ("2.1.1") is self-locating: its page is the
+// inline one. A named label ("Executive summary") is looked up in the manifest's sections table, since
+// the code cannot know where a named heading sits; a named label absent from the table returns
+// ok=false so the ref is left unlinked rather than pointed at a guessed page. The printed page is then
+// offset to the PDF page (report_page_offset), the single place the offset is applied.
+func reportPDFPage(label string, inlinePrinted, offset int, sections map[string]int) (int, bool) {
+	printed := inlinePrinted
+	if !numberedSection(label) {
+		p, ok := sections[strings.TrimSpace(label)]
+		if !ok {
+			return 0, false
+		}
+		printed = p
+	}
+	return printed + offset, true
+}
+
+// numberedSection reports whether a §-ref label is a section NUMBER (digits and dots, e.g. "2.1.1")
+// rather than a section NAME ("Executive summary") — the two resolve their page differently.
+func numberedSection(label string) bool {
+	label = strings.TrimSpace(label)
+	if label == "" {
+		return false
+	}
+	for _, r := range label {
+		if !('0' <= r && r <= '9') && r != '.' {
+			return false
+		}
+	}
+	return true
+}
 
 // renderReview turns the rendered argument page into review.html: a left <iframe name="doc"> PDF
 // viewer and, on the right, the argument body with its plain-text report sections and quote
@@ -1587,7 +1697,7 @@ var (
 // links can point at the site while the scan reads the real corpus. `title` is the report name that
 // becomes review.html's <title>. It is the Go port of the retired current/build-review.py, and returns
 // a one-line link tally for the caller to report.
-func renderReview(page, srcPrefix, scanDir, title string) (out, counts string) {
+func renderReview(page, srcPrefix, scanDir, title string, offset int, sections map[string]int) (out, counts string) {
 	// submission number (+attachment flag) → pdf filename, scanned from disk so the redaction suffix
 	// and zero-padding don't have to be guessed.
 	type subKey struct {
@@ -1621,12 +1731,16 @@ func renderReview(page, srcPrefix, scanDir, title string) (out, counts string) {
 	// link is hidden behind a disclosure triangle. index.html keeps them closed; only review.html opens.
 	body = strings.ReplaceAll(body, `<details class=`, `<details open class=`)
 
-	// 1. claim § → report PDF at the page (printed page + printedToPDF).
+	// 1. claim § → report PDF at the page, resolved by the manifest's report-link rules (offset +
+	// named-section table), not by code. A named section not in the table leaves the ref unlinked.
 	body = reReportLink.ReplaceAllStringFunc(body, func(s string) string {
 		m := reReportLink.FindStringSubmatch(s)
+		inline, _ := strconv.Atoi(m[3])
+		pdfPage, ok := reportPDFPage(m[2], inline, offset, sections)
+		if !ok {
+			return s // named section with no table entry: leave the ref as plain text, don't guess
+		}
 		nReport++
-		printed, _ := strconv.Atoi(m[2])
-		pdfPage := printed + printedToPDF
 		return fmt.Sprintf(`report: <a href="%s/report.pdf?p=%d#page=%d" target="doc">%s</a>`,
 			srcPrefix, pdfPage, pdfPage, m[1])
 	})
@@ -1780,8 +1894,8 @@ var reSitePDF = regexp.MustCompile(`(?:href|src)="sources/([^"?#]*\.pdf)`)
 // same page written as index.html); `sourcesDir` is the on-disk sources tree the copies are read
 // from. `title` is the report name (ArgumentTitle) that becomes review.html's <title>. Returns
 // renderReview's link tally plus the copied/missing PDF count. See spec/SERVE.md.
-func buildSite(page, sourcesDir, siteDir, title string) (string, error) {
-	review, linkCounts := renderReview(page, "sources", sourcesDir, title)
+func buildSite(page, sourcesDir, siteDir, title string, offset int, sections map[string]int) (string, error) {
+	review, linkCounts := renderReview(page, "sources", sourcesDir, title, offset, sections)
 	copied, missing, err := writeSite(review, page, sourcesDir, siteDir)
 	if err != nil {
 		return "", err
@@ -3650,6 +3764,17 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.auditPath, err)
 		}
 	}
+	// A single-source corpus (manifest single_source: true) holds the report as its own only source, so
+	// a leaf 'absent' is not a grounding miss against some other held document — there is none — but a
+	// claim the report states once and no second document repeats. Rename it 'uncorroborated' before it
+	// reaches the tree, where it derives as weakened, not failed (leafJudgement, spec/ARGUMENT.md).
+	if c.singleSource {
+		for i := range rows {
+			if rows[i].Faith == "absent" {
+				rows[i].Faith = "uncorroborated"
+			}
+		}
+	}
 	argText := mustRead(c.argumentFile)
 	root, err := tree.BuildArgument(argText, rows)
 	if err != nil {
@@ -3668,7 +3793,7 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 	if counts := sourceCountsLine(c.held); counts != "" {
 		what += " Sources held: " + counts + "."
 	}
-	page, rootBlock := tree.ArgumentPage(root, details, title, what)
+	page, rootBlock := tree.ArgumentPage(root, details, title, what, c.singleSource)
 	if c.indexHTMLPath != "" {
 		if err := os.WriteFile(c.indexHTMLPath, []byte(page), 0o644); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.indexHTMLPath, err)
@@ -3677,7 +3802,7 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 		}
 	}
 	if c.siteDir != "" {
-		if counts, err := buildSite(page, c.sourcesDir, c.siteDir, title); err != nil {
+		if counts, err := buildSite(page, c.sourcesDir, c.siteDir, title, c.reportOffset, c.reportSecs); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: cannot build site %s: %v\n", c.siteDir, err)
 		} else {
 			fmt.Fprintf(os.Stderr, "site: %s — %s\n", c.siteDir, counts)

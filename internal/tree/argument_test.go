@@ -1,9 +1,10 @@
 package tree
 
 // argument_test pins the argument tree's derivation rule (spec/ARGUMENT.md § Internal judgement) and
-// the `?`-edge override the CLI adds on top of it. The three refuters are: one contested leaf opens
-// the root; a `?` edge opens the recommendation it hangs under; an all-holds tree holds to the root.
-// Two further tests pin opinion propagation and the rendered page shape. Fixtures sit at the foot.
+// the `?`-edge override the CLI adds on top of it: a contested leaf opens the root; a `?` edge opens
+// the recommendation it hangs under; an all-holds tree holds to the root; opinion propagation; the
+// rendered page shape; the recommendation count is every root child but `base` (any id prefix); and an
+// `uncorroborated` leaf weakens rather than fails under a single-source corpus. Fixtures sit at the foot.
 
 import (
 	"strings"
@@ -131,7 +132,7 @@ func TestArgumentPage(t *testing.T) {
 	})
 	page, rootBlock := ArgumentPage(root,
 		map[string]Leaf{"F30": {Reason: "the source says so"}},
-		"The Cultural Industries Inquiry", "This page checks the report against its sources.")
+		"The Cultural Industries Inquiry", "This page checks the report against its sources.", false)
 	for _, want := range []string{
 		"Victoria's industries matter",
 		"Of 1 recommendation, 0 hold, 1 is open — 1 because the report doesn't say what they rest on.",
@@ -184,7 +185,7 @@ func TestArgumentCardPage(t *testing.T) {
 		{ID: "F2", Text: "claim two", Faith: "absent"},
 		{ID: "F3", Text: "claim three", Faith: "faithful"},
 	})
-	page, _ := ArgumentPage(root, nil, "Report", "what")
+	page, _ := ArgumentPage(root, nil, "Report", "what", false)
 
 	thesis := strings.Index(page, `<section class="thesis">`)
 	r1 := strings.Index(page, "First recommendation.")
@@ -255,7 +256,7 @@ func TestArgRootTallyNotConjunction(t *testing.T) {
 		{ID: "F2", Text: "f2", Faith: "faithful"},
 		{ID: "F3", Text: "f3", Faith: "absent"},
 	})
-	_, rootBlock := ArgumentPage(root, nil, "", "")
+	_, rootBlock := ArgumentPage(root, nil, "", "", false)
 	tally := strings.Split(rootBlock, "\n")[1] // line 0 is the content, line 1 is the tally paragraph
 	for _, want := range []string{"Of 3 recommendations", "2 hold (R1, R2)", "1 fails (R3: no held source supports F3)"} {
 		if !strings.Contains(tally, want) {
@@ -264,6 +265,81 @@ func TestArgRootTallyNotConjunction(t *testing.T) {
 	}
 	if strings.Contains(tally, "Judgement: fails") || strings.TrimSpace(tally) == "fails" {
 		t.Errorf("root must render the tally, not the bare verdict fails: %q", tally)
+	}
+}
+
+// TestArgRootTallyCountsNonRRecommendations: a recommendation is any root child but `base`, whatever
+// its id prefix. Quocirca numbers its recommendations S1–S7 / B1–B5, none with an `R…` spelling; the
+// tally must count all four here (two S, two B) and exclude the `base` node's finding, not fall to
+// zero on the missing `R`. Mutating an S id to `base` would drop it from the count.
+func TestArgRootTallyCountsNonRRecommendations(t *testing.T) {
+	root := mustBuild(t, joinLines(
+		"root  | Root.  | x",
+		"    S1  | Supplier rec one.  | x",
+		"        F1  | Finding one.  | x",
+		"            F1",
+		"    S2  | Supplier rec two.  | x",
+		"        F2  | Finding two.  | x",
+		"            F2",
+		"    B1  | Buyer rec one.  | x",
+		"        F3  | Finding three.  | x",
+		"            F3",
+		"    B2  | Buyer rec two.  | x",
+		"        F4  | Finding four.  | x",
+		"            F4",
+		"    base  | Descriptive base.  | x",
+		"        F5  | A finding no rec rests on.  | x",
+		"            F5",
+	), []brief.Row{
+		{ID: "F1", Text: "f1", Faith: "faithful"},
+		{ID: "F2", Text: "f2", Faith: "faithful"},
+		{ID: "F3", Text: "f3", Faith: "faithful"},
+		{ID: "F4", Text: "f4", Faith: "faithful"},
+		{ID: "F5", Text: "f5", Faith: "faithful"},
+	})
+	_, rootBlock := ArgumentPage(root, nil, "", "", false)
+	lines := strings.Split(rootBlock, "\n")
+	if want := "Of 4 recommendations"; !strings.Contains(lines[1], want) {
+		t.Errorf("tally missing %q:\n%s", want, lines[1])
+	}
+	if want := "1 finding supports no recommendation."; !strings.Contains(lines[2], want) {
+		t.Errorf("base sentence missing %q:\n%s", want, lines[2])
+	}
+}
+
+// TestArgUncorroboratedWeakensNotFails is the single_source refuter: a leaf verdict `uncorroborated`
+// (assay.go's remap of `absent` when the report is its own only source) weakens its recommendation, it
+// does not fail it — the contrast is the same fixture with `absent`, which fails. The page shows the
+// verdict word `uncorroborated` on the leaf and, with singleSource=true, the key line explaining it.
+func TestArgUncorroboratedWeakensNotFails(t *testing.T) {
+	arg := joinLines(
+		"root  | Root.  | x",
+		"    R1  | Rec one.  | x",
+		"        F1  | Finding one.  | x",
+		"            F1",
+	)
+	unc := mustBuild(t, arg, []brief.Row{{ID: "F1", Text: "f1", Faith: "uncorroborated"}})
+	if got := childByID(unc, "R1").Judgement(); got != jWeakened {
+		t.Fatalf("uncorroborated leaf should weaken its recommendation, got %q", got)
+	}
+	// The contrast: absent (a corpus with other held sources) fails the same recommendation.
+	abs := mustBuild(t, arg, []brief.Row{{ID: "F1", Text: "f1", Faith: "absent"}})
+	if got := childByID(abs, "R1").Judgement(); got != jFails {
+		t.Fatalf("absent leaf should fail its recommendation, got %q", got)
+	}
+
+	page, _ := ArgumentPage(unc, nil, "Report", "what", true)
+	for _, want := range []string{
+		`<span class="badge b-weakened">uncorroborated</span>`, // the leaf badge: weakened colour, verdict word
+		"said once in the report, not repeated elsewhere",      // the key line
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("single_source page missing %q", want)
+		}
+	}
+	// Without single_source the key must not carry the uncorroborated line.
+	if plain, _ := ArgumentPage(unc, nil, "Report", "what", false); strings.Contains(plain, "said once in the report") {
+		t.Errorf("multi-source key should not carry the uncorroborated line")
 	}
 }
 

@@ -1641,3 +1641,80 @@ func getOK(t *testing.T, url string) []byte {
 	}
 	return b
 }
+
+// TestDropOwnPage pins the report self-consistency filter: every passage on the claim's own printed
+// page (its §) is dropped so the claim is judged against the rest of the report, while a passage that
+// restates the fact on another page survives — that surviving cross-page restatement is what an
+// internal-consistency verdict rests on. The filter fires only for Source=report passages; a
+// hearing/submission passage on the "same page" is the grounding target and must pass through. It
+// keys on the id's page, so a same-page paragraph the claim does NOT contain verbatim is still dropped.
+func TestDropOwnPage(t *testing.T) {
+	ownPara := retrieve.Passage{ID: "report#p2#0", Source: retrieve.SourceReport,
+		Text: "Two-thirds (67%) of organisations have experienced print-related data losses in the past year."}
+	samePageOther := retrieve.Passage{ID: "report#p2#3", Source: retrieve.SourceReport,
+		Text: "The research uncovers a widening security divide."}
+	restate := retrieve.Passage{ID: "report#p4#1", Source: retrieve.SourceReport,
+		Text: "The proportion has increased from 56% in 2025 to 67% today."}
+	hearingHit := retrieve.Passage{ID: "2025-03-13/x#t1", Source: retrieve.SourceHearing,
+		Text: "Two-thirds (67%) of organisations have experienced print-related data losses."}
+
+	got := dropOwnPage(2, []retrieve.Passage{ownPara, samePageOther, restate})
+	if len(got) != 1 || got[0].ID != "report#p4#1" {
+		t.Fatalf("report corpus: want only the off-page restatement kept, got %v", ids(got))
+	}
+	// A non-report corpus is untouched, even on the claim's page.
+	if kept := dropOwnPage(2, []retrieve.Passage{hearingHit}); len(kept) != 1 {
+		t.Fatalf("hearing corpus: the claim-bearing passage must be kept, got %v", ids(kept))
+	}
+	// Unknown page (0) excludes nothing.
+	if kept := dropOwnPage(0, []retrieve.Passage{ownPara}); len(kept) != 1 {
+		t.Fatalf("page 0: want everything kept, got %v", ids(kept))
+	}
+	if got := pageOfPath("p13=Key findings"); got != 13 {
+		t.Errorf("pageOfPath(p13=…) = %d, want 13", got)
+	}
+	if got := pageOfPath("sec=No page"); got != 0 {
+		t.Errorf("pageOfPath(no page) = %d, want 0", got)
+	}
+}
+
+func ids(ps []retrieve.Passage) []string {
+	out := make([]string, len(ps))
+	for i, p := range ps {
+		out[i] = p.ID
+	}
+	return out
+}
+
+// TestRenderReviewReportLinks is the refuter for manifest-driven report deep-links: a NAMED section
+// resolves its page through the manifest's sections table, a NUMBERED section through its own inline
+// page plus the offset, and both are the manifest's to decide, not the code's. Case 1 (quocirca shape,
+// offset 0) is the stated refuter — "§Executive summary" deep-links to page 2 — and a named section
+// absent from the table is left unlinked rather than guessed. Case 2 (LCEIC shape, offset 18) pins
+// that numbered refs still land at printed+18, so vic-lceic keeps working.
+func TestRenderReviewReportLinks(t *testing.T) {
+	page := `<html><head><style>x{}</style></head><body>` +
+		`<p class="meta">report: §Executive summary p2</p>` +
+		`<p class="meta">report: §2.1.1 p7</p>` +
+		`<p class="meta">report: §Unlisted Section p9</p>` +
+		`</body></html>`
+
+	out, _ := renderReview(page, "sources", t.TempDir(), "t", 0, map[string]int{"Executive summary": 2})
+	if !strings.Contains(out, `sources/report.pdf?p=2#page=2`) {
+		t.Errorf("named §Executive summary did not deep-link to page 2:\n%s", out)
+	}
+	if !strings.Contains(out, `sources/report.pdf?p=7#page=7`) {
+		t.Errorf("numbered §2.1.1 p7 (offset 0) did not link to page 7")
+	}
+	if strings.Contains(out, "Unlisted Section</a>") || strings.Contains(out, `p=9#page=9`) {
+		t.Errorf("named section absent from the table must stay unlinked, got a link:\n%s", out)
+	}
+
+	out2, _ := renderReview(page, "sources", t.TempDir(), "t", 18, nil)
+	if !strings.Contains(out2, `sources/report.pdf?p=25#page=25`) {
+		t.Errorf("numbered §2.1.1 p7 with offset 18 did not land at page 25 (vic-lceic regression)")
+	}
+	if strings.Contains(out2, `p=2#page=2`) {
+		t.Errorf("named §Executive summary with no table must stay unlinked under the LCEIC manifest")
+	}
+}
