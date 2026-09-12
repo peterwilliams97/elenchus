@@ -146,6 +146,37 @@ synthesized; a non-zero `missing` means a link class is broken.
 Every href in `review.html` is **site-relative** — `sources/report.pdf?p=53#page=53`, never
 `../sources/…` — and each links to a PDF copied into `site/sources/` at the same relative path.
 
+### Multiple report excerpts
+
+A report may be decomposed from more than one excerpt PDF — the AI Index 2026 corpus holds the coding
+section (`report.pdf`, printed pp100–102) and the labor-impact section (`report-productivity.pdf`,
+printed pp219–221) as two files. Each claim's report deep-link opens **its own** excerpt, so the
+manifest carries a `reports:` list, one entry per excerpt:
+
+    reports:
+      - file: report.pdf
+        offset: -99
+        prefixes: SEC SW SB TB VC
+        sections:
+          Software: 100
+      - file: report-productivity.pdf
+        offset: -218
+        prefixes: EP
+        sections:
+          Productivity Trends: 219
+
+Each entry gives the PDF `file:`, its printed→PDF page `offset:`, the claim-id `prefixes:` whose leaves
+belong to it (the alphabetic head of the id — `SB6` → `SB`), and its own named-section `sections:`
+table. Which excerpt a §-ref opens is decided by the claim id of the leaf card the ref sits in
+(`manifest.ReportFor`), so `SB6`'s §-ref opens `report.pdf` at `100 − 99 = 1` while `EP8`'s opens
+`report-productivity.pdf` at `219 − 218 = 1`. A claim id no entry claims leaves the ref unlinked
+rather than pointed at the wrong PDF; the left pane lands on the first entry. Every excerpt is copied
+into `site/sources/` because its links carry it, so the site stays self-contained.
+
+The flat single-report form — a top-level `report_page_offset:` and `sections:` table (`spec/CLI.md`,
+`internal/manifest`) — is unchanged: it reads as one `report.pdf` with no `prefixes:`, so it claims
+every leaf. A `reports:` list, when present, overrides the flat keys.
+
 ## `assay serve` — serving the site
 
     assay serve [-port N] [-no-open] <site-dir>
@@ -183,6 +214,13 @@ Every href in `review.html` is **site-relative** — `sources/report.pdf?p=53#pa
   drives `writeSite` and asserts `index.html` is the built page byte-for-byte, `favicon.svg` is
   written and linked, and `review.html` sits beside it — a page rewritten on the way to disk is a page
   no refuter checked.
+- **A two-report corpus links each claim to its own excerpt PDF, at that excerpt's page offset.**
+  `TestRenderReviewMultiReport` (assay package) drives `renderReview` with `report.pdf` (offset −99,
+  prefix `SB`) and `report-productivity.pdf` (offset −218, prefix `EP`) and a page holding one leaf
+  card per report, and asserts `SB6`'s §-ref opens `report.pdf` at page 1 and `EP8`'s opens
+  `report-productivity.pdf` at page 1 — a leaf routed to the wrong file or page is the break a reader
+  clicking the provenance would hit. `TestLoadReportsMulti` (manifest package) pins the `reports:`-list
+  parse and `ReportFor`'s prefix routing; `TestLoadReportsSingle` pins the flat single-report fallback.
 - **Every href in `site/review.html` resolves to a file under `site/`.** `TestWriteSiteHrefsResolve`
   drives `writeSite` with a fake sources tree (one PDF per link class) and asserts each `sources/`
   href lands on a copied file and both pages sit at the site root — an unresolved href is exactly the

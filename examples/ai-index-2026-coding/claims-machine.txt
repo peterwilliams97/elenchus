@@ -1,0 +1,134 @@
+# claims-machine.txt — atomic claims decomposed from the AI Index 2026 coding section
+# (Stanford HAI, AI Index Report 2026, Ch.2 Technical Performance, §2.5 "Software", printed pp100–102).
+# Report → argument-tree corpus; the argument side is argument.txt.
+#
+# This is the CLAIM side of the assay. Held SOURCES are report.pdf itself and seven Wayback captures
+# of the three benchmark leaderboards (sources/MANIFEST.md "Leaderboard captures"). Two checks follow:
+# INTERNAL CONSISTENCY against report.pdf (does the section state the claim at its `ref` page; do the
+# prose figures agree with the figure they restate), and GROUNDING a route=benchmark score against a
+# held capture — which grounds the leaderboard's state at the CAPTURE timestamp, bracketing the
+# report's "as of February 2026" / "early 2026" snapshot rather than reproducing it. So a benchmark
+# claim grounds where a capture carries its value (e.g. SWE-bench 76.80, Terminal-Bench 77.3%, Vibe
+# Code Bench 57.57%) and stays unverifiable where the report's snapshot falls between captures (the
+# Vibe Code Bench v1.1 leader ordering — sources/MANIFEST.md "capture gap").
+#
+# Line format (pipe-delimited, 5 fields):
+#   <id> | route=<r> | ref=§<section heading> p<printed-page> | <claim> | src=<locator + note>
+#
+# route= (what could settle the claim; see CLAUDE.md axis boundary):
+#   benchmark  — a score/result FROM a benchmark leaderboard. Truth-maker = the leaderboard state the
+#                report read (as of Feb 2026 / early 2026), now HELD as Wayback captures that bracket
+#                that date (sources/MANIFEST.md). report.pdf still settles internal consistency (is the
+#                number printed here; does the prose agree with its figure). This is the corpus's
+#                dominant class.
+#   evidence   — a non-score factual world-claim (a benchmark's definition, a novelty claim, a
+#                figure-reading). Truth-maker external, not held; report.pdf settles internal
+#                consistency only.
+#   evaluative — an AI Index interpretive judgement ("attention has shifted", "significantly improved",
+#                "remains a difficult task"). Not truth-apt; checkable only as "did the section say
+#                it", never grounded. Not judged.
+#   data-gap   — a claim about the section's own dating / measurement limits.
+#
+# src= names the held locator (report.pdf + printed page) and the real truth-maker — for benchmark
+# claims, the leaderboard capture that carries it (leaderboards/…) or, where none does, why it stays
+# `unverifiable`. An `INTERNAL:` note flags where the prose
+# figure and the figure it restates appear to disagree — the internal-consistency check a judge run
+# against report.pdf is meant to catch. § headings are the report's own; printed page = footer number.
+
+# ══ §2.5 Performance in Specific Domains — parent framing (p100) ══
+SEC1 | route=evaluative | ref=§2.5 Performance in Specific Domains p100 | As AI models have improved on general reasoning and knowledge benchmarks, attention has shifted to how well they perform on tasks requiring specialized expertise. | src=report.pdf p100
+SEC2 | route=evidence   | ref=§2.5 Performance in Specific Domains p100 | The benchmarks in this section test models in four professional and academic domains: coding, mathematics, finance, and legal reasoning. | src=report.pdf p100; this excerpt holds only the coding subsection
+SEC3 | route=evaluative | ref=§2.5 Performance in Specific Domains p100 | Many of these benchmarks are new, reflecting growing demand for domain-specific evaluation. | src=report.pdf p100
+SEC4 | route=data-gap   | ref=§2.5 Performance in Specific Domains p100 | Unless otherwise noted, the results reflect model performance as of early 2026. | src=report.pdf p100; dates the whole section's figures
+
+# ══ §Software — coding intro (p100) ══
+SW1 | route=evaluative | ref=§Software p100 | Coding benchmarks test whether models can go beyond answering questions about code and actually write, debug, and ship working software. | src=report.pdf p100
+SW2 | route=evidence   | ref=§Software p100 | The coding tasks range from resolving real GitHub issues to building full web applications from scratch. | src=report.pdf p100
+SW3 | route=evaluative | ref=§Software p100 | This range reflects a shift in evaluation toward measuring what models can deliver end to end rather than in isolated snippets. | src=report.pdf p100; the section's stated thesis (argument.txt root)
+
+# ══ §SWE-bench (p100–101) ══
+SB1 | route=evidence   | ref=§SWE-bench p100 | SWE-bench evaluates models on their ability to resolve real-world software issues collected from GitHub. | src=report.pdf p100; truth-maker: SWE-bench Leaderboard — held (leaderboards/swebench-20260205|0226|0403.txt)
+SB2 | route=evidence   | ref=§SWE-bench p100 | Each SWE-bench task gives the model a codebase and an issue description, and the model has to produce a working patch. | src=report.pdf p100
+SB3 | route=evidence   | ref=§SWE-bench p100 | SWE-bench Lite is a smaller, more accessible subset. | src=report.pdf p100
+SB4 | route=evidence   | ref=§SWE-bench p100 | SWE-bench Verified uses human-validated issues to ensure more consistent and accurate grading. | src=report.pdf p100
+SB5 | route=benchmark  | ref=§SWE-bench p100 | On SWE-bench Verified, top models are tightly clustered in the low-to-mid 70s. | src=report.pdf p100 + Figure 2.5.1 p101; as of Feb 2026; truth-maker: SWE-bench Leaderboard — held (leaderboards/swebench-20260226.txt: 76.80 down to a 74–72 cluster)
+SB6 | route=benchmark  | ref=§SWE-bench p100 | As of February 2026, Claude 4.5 Opus (high reasoning) led SWE-bench Verified at approximately 76.8%. | src=report.pdf p100; Figure 2.5.1 top Verified bar reads 76.80% (agrees); truth-maker: leaderboard — held (leaderboards/swebench-20260226.txt top row Claude 4.5 Opus high reasoning 76.80, agrees)
+SB7 | route=benchmark  | ref=§SWE-bench p100 | Several other models, including Kimi K2.5, GPT-5.2, and Gemini 3 Flash (high reasoning), were grouped between 70% and 76% on SWE-bench Verified. | src=report.pdf p100; truth-maker: leaderboard — held (leaderboards/swebench-20260226.txt)
+SB8 | route=evaluative | ref=§SWE-bench p100 | This clustering is a pattern seen across several benchmarks in this chapter, where high-performing models score within a few percentage points of each other. | src=report.pdf p100
+SB9 | route=evidence   | ref=§SWE-bench p101 | Figure 2.5.1 shows the top 10 models for SWE-bench Verified and Lite as of February 2026, with Verified restricted to the mini-SWE-agent-v2 filter so score differences reflect the underlying model rather than the surrounding agent workflow. | src=report.pdf p101 fn21; truth-maker: leaderboard — held (leaderboards/swebench-20260226|0403.txt); the "mini-SWE-agent-v2" filter label is not literal in any capture (swebench.com exposes "mini-SWE-agent")
+
+# ══ §Terminal-Bench (p101–102) ══
+TB1 | route=evidence   | ref=§Terminal-Bench p101 | Terminal-Bench is a benchmark for testing AI agents in real terminal environments. | src=report.pdf p101; truth-maker: Terminal-Bench 2.0 Leaderboard — held (leaderboards/terminal-bench-20260220|0310.txt)
+TB2 | route=evidence   | ref=§Terminal-Bench p101 | Terminal-Bench evaluates how well agents can autonomously handle real-world, end-to-end tasks, from compiling code to training models and setting up servers. | src=report.pdf p101
+TB3 | route=evaluative | ref=§Terminal-Bench p101 | These are the kinds of tasks a developer might do in a day of work, and the benchmark requires an agent to chain together multiple steps without human guidance. | src=report.pdf p101
+TB4 | route=benchmark  | ref=§Terminal-Bench p101 | Accuracy on Terminal-Bench 2.0 increased from 20% in February 2025 to 77.3% in early 2026. | src=report.pdf p101 + Figure 2.5.2 p102 (top point reads 77.30%, agrees); year-on-year; truth-maker: leaderboard — held (leaderboards/terminal-bench-20260310.txt carries 77.3%, dated 2026-02-24); the 20% Feb-2025 baseline is in no held capture (all are 2026)
+TB5 | route=evaluative | ref=§Terminal-Bench p101 | Accuracy on Terminal-Bench 2.0 has significantly improved over the past year. | src=report.pdf p101; interpretive framing of TB4
+
+# ══ §Vibe Code Bench (p102) ══
+VC1 | route=evidence   | ref=§Vibe Code Bench p102 | Vibe Code Bench is the first benchmark designed to test whether AI models can autonomously build complete, end-to-end web applications from scratch. | src=report.pdf p102; "first" = world-claim (not held); scores: Vals.ai — held (leaderboards/vibe-code-20260216.txt=v1.0, vibe-code-v1.1-20260331.txt=v1.1)
+VC2 | route=evidence   | ref=§Vibe Code Bench p102 | Rather than measuring coding assistance, Vibe Code Bench evaluates real software delivery and whether a model can take a prompt and produce a functional application. | src=report.pdf p102
+VC3 | route=evaluative | ref=§Vibe Code Bench p102 | Across models, performance on Vibe Code Bench varies quite a bit. | src=report.pdf p102
+VC4 | route=benchmark  | ref=§Vibe Code Bench p102 | Claude Opus 4.6 (Nonthinking) leads Vibe Code Bench at 56.5%. | src=report.pdf p102; truth-maker: Vals.ai — held (leaderboards/vibe-code-v1.1-20260331.txt confirms Claude Opus 4.6 Nonthinking = 57.57%, resolving the INTERNAL flag toward 57.57%; but the "leads" ranking falls in the MANIFEST capture gap — not grounded); INTERNAL: highest plotted bar in Figure 2.5.3 reads 57.57%, not 56.5% — apparent prose/figure mismatch
+VC5 | route=benchmark  | ref=§Vibe Code Bench p102 | GPT 5.2 follows at nearly 47% on Vibe Code Bench. | src=report.pdf p102; truth-maker: Vals.ai — held (leaderboards/vibe-code-v1.1-20260331.txt); the ~47%/second-place ordering falls in the MANIFEST capture gap — not grounded by a held capture
+VC6 | route=benchmark  | ref=§Vibe Code Bench p102 | Scores drop after GPT 5.3 Codex (41.4%) to under 30%, with several models falling below 15%. | src=report.pdf p102; truth-maker: Vals.ai — held (leaderboards/vibe-code-v1.1-20260331.txt; falls in the MANIFEST capture gap for the exact ordering); INTERNAL: Figure 2.5.3's legend lists "GPT 5.2 Codex" (no "GPT 5.3 Codex") and shows no 41.4% bar — apparent prose/figure name+value mismatch
+VC7 | route=benchmark  | ref=§Vibe Code Bench p102 | The spread between the top and bottom models on Vibe Code Bench is about 46 percentage points. | src=report.pdf p102; truth-maker: Vals.ai — held (leaderboards/vibe-code-v1.1-20260331.txt; full per-model spread not in the chart-only capture text)
+VC8 | route=benchmark  | ref=§Vibe Code Bench p102 | Even the leading model solves only about half of the Vibe Code Bench tasks. | src=report.pdf p102; restates VC4 (~56.5%)
+VC9 | route=evaluative | ref=§Vibe Code Bench p102 | The wide spread and the leader solving only about half of tasks suggest that autonomous application building remains a difficult task. | src=report.pdf p102
+
+# ═════════════════════════════════════════════════════════════════════════════════════════════════
+# SECOND SECTION — Economy §4.4 Jobs, "AI's Labor Impact" → "Productivity Trends" (developer
+# productivity), printed pages 219–221. Held SOURCE: report-productivity.pdf. Ids prefixed EP.
+#
+# This section differs from the coding block above in one way that matters for routing: several of its
+# truth-makers ARE held. The report cites named academic studies by author-year (not live
+# leaderboards), and seven of them were fetched as open PDFs into sources/papers/ (PROVENANCE.md
+# "Citations — 7 held, 9 not held"). So a route=evidence claim whose cited study is held is GROUNDABLE
+# here — the paper sits in the corpus — whereas one whose study is not held grounds to `unverifiable`,
+# exactly as the benchmark claims above do. src= names the study and whether its paper is held.
+#
+# route= reused from the coding block's key (top of file). No route=benchmark here (no leaderboards).
+#   evidence   — an empirical world-claim: a per-study productivity result, or a factual statement the
+#                section makes. Truth-maker = the cited paper. `study-held` = paper in sources/papers/
+#                (groundable); `study-not-held` = paper not fetched (grounds unverifiable).
+#   evaluative — the AI Index's interpretive judgement ("generally positive", "highly context
+#                dependent", "less conclusive"). Not truth-apt; checkable only as "did the section say
+#                it". EP15 is the section's thesis and the root of argument-productivity.txt.
+#   data-gap   — a claim about the section's own dating, scope, or an internal cross-reference.
+#
+# INTERNAL: notes flag a prose figure that appears to disagree with the figure/table it restates — the
+# internal-consistency check a judge run against report-productivity.pdf is meant to catch. Printed
+# page = footer number (219–221 == report-productivity.pdf pages 1–3).
+
+# ══ §4.4 Jobs — "AI's Labor Impact" intro (p219) ══
+EP1  | route=evaluative | ref=§AI's Labor Impact p219 | Shifts in skill demand and talent flows are reshaping how work is organized by driving changes in productivity and hiring. | src=report-productivity.pdf p219
+EP2  | route=evidence   | ref=§AI's Labor Impact p219 | Academic research measures AI's impact both at the micro level (how individual workers perform their jobs using AI tools) and the macro level (how AI adoption affects aggregate productivity and employment). | src=report-productivity.pdf p219; frames the section's two halves
+EP3  | route=evaluative | ref=§AI's Labor Impact p219 | In some settings AI improves productivity — particularly for tasks that are structured, language heavy, or supported by clear feedback loops — while in others gains are marginal or even negative when tools are poorly matched to the task. | src=report-productivity.pdf p219; a component of the thesis (see EP15)
+EP4  | route=evaluative | ref=§AI's Labor Impact p219 | Early macro-level evidence indicates that productivity gains may take longer to materialize and that the labor-market costs may fall disproportionately on junior and entry-level workers. | src=report-productivity.pdf p219
+
+# ══ §Productivity Trends — Micro-level Studies (p219; table = Figure 4.4.27 p220) ══
+EP5  | route=evidence   | ref=§Productivity Trends p219 | A growing number of studies have looked at how AI tools affect individual worker productivity across occupations (Figure 4.4.27). | src=report-productivity.pdf p219 + Figure 4.4.27 p220
+EP6  | route=evaluative | ref=§Productivity Trends p219 | The results are generally positive, but the size and distribution of the gains varies, with the clearest impact on support work, software development, and marketing. | src=report-productivity.pdf p219
+EP7  | route=evidence   | ref=§Productivity Trends p219 | Customer support agents using a conversational AI assistant resolved 14%–15% more issues per hour. | src=report-productivity.pdf p219 + Figure 4.4.27 p220; study: Brynjolfsson et al. 2025 "Generative AI at Work" (QJE) — study-not-held (gated)
+EP8  | route=evidence   | ref=§Productivity Trends p219 | Software developers using GitHub Copilot completed 26% more pull requests. | src=report-productivity.pdf p219 + Figure 4.4.27 p220; study: Cui et al. 2025 — study-held (sources/papers/cui-2025.pdf)
+EP9  | route=evidence   | ref=§Productivity Trends p219 | Marketing teams using multimodal AI for ad creation saw a 50% increase in output per worker. | src=report-productivity.pdf p219 + Figure 4.4.27 p220; study: Ju and Aral 2025 — study-held (sources/papers/ju-aral-2025.pdf)
+EP10 | route=evaluative | ref=§Productivity Trends p219 | One consistent finding across several of these studies is that the less experienced workers tended to benefit the most, suggesting AI tools may help close existing skill gaps. | src=report-productivity.pdf p219; Figure 4.4.27 records this for support agents (30%–35%) and Copilot (junior/less-experienced)
+EP11 | route=evaluative | ref=§Productivity Trends p219 | For work that requires deeper reasoning or judgment, some studies have found AI tools produced little benefit or even slowed workers down. | src=report-productivity.pdf p219
+EP12 | route=evidence   | ref=§Productivity Trends p219 | METR found that experienced open-source developers became 19% slower when using AI assistance, with a disconnect between how helpful the developers thought the tools were and how they actually performed. | src=report-productivity.pdf p219 + Figure 4.4.27 p220; study: Becker et al. 2025 (METR) — study-held (sources/papers/becker-2025-metr.pdf)
+EP13 | route=evidence   | ref=§Productivity Trends p219 | METR has not been able to replicate the slowdown in a later study, attributed to a growing reluctance among developers to work without AI and to developers in late 2025 likely being sped up by AI relative to the original study period. | src=report-productivity.pdf p219; study: Becker et al. 2025 (METR) — study-held (later study not itself cited/held)
+EP14 | route=evidence   | ref=§Productivity Trends p219 | Software engineers who relied heavily on AI for learning showed no measurable speed improvement and faced what researchers call "learning penalties". | src=report-productivity.pdf p219 + Figure 4.4.27 p220 (0%, statistically insignificant); study: Shen and Tamkin — study-held (sources/papers/shen-tamkin-2026.pdf); INTERNAL: prose cites "Shen and Tamkin, 2025"; the reference list dates the paper 2026
+EP15 | route=evaluative | ref=§Productivity Trends p219 | Overall, AI's productivity effects are highly context dependent; the gains are strongest when work can be divided into well-defined, repeatable tasks with clear quality monitoring. | src=report-productivity.pdf p219; the section's thesis and the root of argument-productivity.txt
+EP16 | route=evidence   | ref=Figure 4.4.27 p220 | Authors using LLMs for content saw a +200% change in output volume (releases tripled); new entrants drove the added quantity while pre-AI authors maintained quality. | src=report-productivity.pdf Figure 4.4.27 p220; study: Reimers and Waldfogel 2026 (NBER WP 34777) — study-not-held (gated)
+EP17 | route=evidence   | ref=Figure 4.4.27 p220 | Accountants using AI-based accounting saw a +55% change in throughput (weekly client support), with experienced accountants benefiting most. | src=report-productivity.pdf Figure 4.4.27 p220; study: Ho Choi and Xie 2025 (Stanford GSB working paper) — study-not-held (landing page, no open PDF)
+
+# ══ §Productivity Trends — Macro-level Studies (p220; table = Figure 4.4.28 p221) ══
+EP18 | route=evaluative | ref=§Productivity Trends p220 | At the macro level the evidence is earlier and less conclusive, but there are indicators that AI is starting to register in aggregate productivity data. | src=report-productivity.pdf p220; INTERNAL: the sentence's parenthetical points at "(Figure 4.2)", but the macro-studies table on the next page is Figure 4.4.28 — apparent stale/typo cross-reference
+EP19 | route=evidence   | ref=§Productivity Trends p220 | A study of 12,000 European firms found that AI adoption boosted labor productivity by 4%, with training strengthening the outcome. | src=report-productivity.pdf p220 + Figure 4.4.28 p221; study: Aldasoro et al. 2026 — study-not-held (CEPR VoxEU column, not the paper PDF)
+EP20 | route=evidence   | ref=§Productivity Trends p220 | In the United States, productivity growth reached 2.7% in 2025, nearly double the 1.4% average of the previous decade. | src=report-productivity.pdf p220 + Figure 4.4.28 p221; attributed to Brynjolfsson 2026 — study-not-held (FT article, paywalled)
+EP21 | route=evaluative | ref=§Productivity Trends p220 | Brynjolfsson (2026) frames the 2025 US productivity rise as the early stages of a "J-curve," in which organizations absorb the costs of adopting AI before the larger productivity gains show up in the numbers. | src=report-productivity.pdf p220; study: Brynjolfsson 2026 — study-not-held (FT article, paywalled)
+EP22 | route=evidence   | ref=§Productivity Trends p220 | OECD projections for G7 economies estimate annual productivity gains of 0.2 to 1.3 percentage points over the next decade. | src=report-productivity.pdf p220 + Figure 4.4.28 p221; study: Filippucci et al. 2025 (OECD) — study-not-held (OECD DOI); INTERNAL: prose gives a single 0.2–1.3 pp range, but Figure 4.4.28 splits it by country (US/UK +0.4 to +1.3; Italy/Japan +0.2 to +0.8) — prose collapses two ranges into one
+EP23 | route=evidence   | ref=§Productivity Trends p220 | A survey of 6,000 executives across four countries found widespread adoption but minimal realized productivity gains and a projected 0.7% reduction in employment over the next three years. | src=report-productivity.pdf p220 + Figure 4.4.28 p221; study: Yotzov et al. 2026 (NBER WP 34836) — study-not-held (gated); INTERNAL: prose says "minimal realized productivity gains" while Figure 4.4.28's same row lists a "+1.4% projected productivity boost" — realized vs projected, presented together
+EP24 | route=evidence   | ref=Figure 4.4.28 p221 | Deterioration in AI-exposed labor markets (unemployment risk) began in early 2022, before ChatGPT, with negative entry rates for AI-exposed roles. | src=report-productivity.pdf Figure 4.4.28 p221; study: Frank et al. 2026 — study-held (sources/papers/frank-2026.pdf); employment finding in the macro table
+EP25 | route=evidence   | ref=Figure 4.4.28 p221 | "Canaries in the coal mine": large employment declines for junior workers in exposed fields, of -15% to -16% for early-career workers. | src=report-productivity.pdf Figure 4.4.28 p221; study: Brynjolfsson et al. 2025 (Chandar, Chen) — study-held (sources/papers/brynjolfsson-chandar-chen-2025-canaries.pdf)
+EP26 | route=evidence   | ref=Figure 4.4.28 p221 | "Seniority-biased technological change": AI substitutes for junior labor while leaving senior roles intact, producing a sharp decline in junior employment driven by slower hiring. | src=report-productivity.pdf Figure 4.4.28 p221; study: Hosseini Maasoum and Lichtinger 2025 — study-held (sources/papers/hosseini-lichtinger-2025.pdf)
+EP27 | route=evidence   | ref=Figure 4.4.28 p221 | Back-of-envelope calculations based on self-reported time savings imply a +1.1% to +1.3% labor-productivity increase. | src=report-productivity.pdf Figure 4.4.28 p221; study: St. Louis Fed 2025 (Bick, Blandin, Deming) — study-not-held (stlouisfed.org blog page, not a fixed PDF)
+EP28 | route=evidence   | ref=Figure 4.4.28 p221 | The Penn Wharton Budget Model projects AI's current contribution to total factor productivity at +0.01 percentage points (negligible). | src=report-productivity.pdf Figure 4.4.28 p221; study: Penn Wharton Budget Model 2025 (Arnon) — study-not-held (budgetmodel.wharton.upenn.edu report page)

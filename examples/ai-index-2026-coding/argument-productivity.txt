@@ -1,0 +1,74 @@
+# argument-productivity.txt — AI Index 2026 Economy §4.4 "Productivity Trends" as an argument tree
+# (Stanford HAI, AI Index Report 2026, Ch.4 Economy, §4.4 Jobs → "AI's Labor Impact" →
+# "Productivity Trends", printed pp219–221). Companion to argument.txt (the coding section); same
+# spec (spec/ARGUMENT.md), same file grammar. Leaf ids (EP*) live in claims-machine.txt.
+#
+# title: AI Index Report 2026 — §4.4 Productivity Trends: AI's effect on worker productivity (Stanford HAI, pp219–221)
+#
+# Refinement: root (thesis) → level of evidence (micro / macro) → finding → atomic-claim leaf.
+# CONTENT and STRUCTURE only; judgements are DERIVED bottom-up from a merged chain (spec/TREE.md),
+# never authored — there is none here (no judge run yet).
+#
+# Line format (indentation = depth; a child sits one level below its parent):
+#   <id>[ ?]  | <content, the section's words, short>  | <edge / provenance note>
+# A bare id at the deepest level is an ATOMIC-CLAIM LEAF; its text, route and source live in
+# claims-machine.txt and are not repeated here.
+#
+# Edge markers (spec/ARGUMENT.md § Edges): default = load-bearing; ? = the section does not establish
+# the edge; [opinion] = a route=evaluative leaf (none here — evaluative claims are framing, not leaves;
+# see "NOT in this tree" below).
+#
+# ATTACHMENT — this is NOT a recommendation shape; the section is descriptive-argumentative. The two
+# ROOT CHILDREN are the two LEVELS OF EVIDENCE the section organises itself by (Micro-level Studies,
+# Macro-level Studies). Micro carries TWO findings because the thesis is a two-sided one — the same
+# body of studies shows gains in some work and drag in others, and that split IS the context-
+# dependence the root asserts. Macro carries one finding: a mixed, still-inconclusive aggregate signal.
+#
+# ROOT is the section's OWN stated thesis (not synthesised): §Productivity Trends p219 (EP15), with its
+# intro component EP3 — AI's productivity effect is context dependent, strongest for structured,
+# repeatable, monitorable work and marginal-to-negative for work needing deeper reasoning or judgment.
+# UNLIKE the coding section, several truth-makers here ARE held (7 of the cited studies fetched to
+# sources/papers/, PROVENANCE.md), so the evidence leaves below whose study is held are groundable, not
+# unverifiable-by-design; src= in claims-machine.txt says which.
+
+root  | AI's productivity effects are highly context dependent — the gains are strongest when work can be divided into well-defined, repeatable tasks with clear quality monitoring, and are marginal or even negative for work that requires deeper reasoning or judgment.  | verbatim = §Productivity Trends p219 (EP15) + intro EP3
+
+    # ── Micro-level Studies: how AI tools affect individual worker productivity (p219; Figure 4.4.27 p220) ──
+    # Node id is a single token (the parser reads fields[0] before the first "|"); the level's name
+    # leads the content, and it ties to the two findings below.
+    MICRO  | Micro-level studies — individual-worker productivity across occupations; results generally positive but the size and distribution of the gains varies.  | §Productivity Trends p219 (EP5, EP6)
+        F-GAIN  | Clearest gains are in structured, repeatable work — support +14–15%, software dev +26% (Copilot), marketing +50%, accountants +55%, authors +200% — and the less-experienced workers tend to benefit most.  | §Productivity Trends p219 + Figure 4.4.27 p220 (EP6, EP10)
+            EP7
+            EP8
+            EP9
+            EP16
+            EP17
+        F-DRAG  | For work needing deeper reasoning or judgment, some studies find little benefit or a slowdown — experienced open-source devs 19% slower (METR, not replicated later), heavy-AI learners no speed gain plus "learning penalties".  | §Productivity Trends p219 (EP11)
+            EP12
+            EP13
+            EP14
+
+    # ── Macro-level Studies: aggregate productivity signal (p220; Figure 4.4.28 p221) ──
+    MACRO  | Macro-level studies — the evidence is earlier and less conclusive, but there are indicators AI is starting to register in aggregate productivity data.  | §Productivity Trends p220 (EP18)
+        F-MACRO  | Mixed macro signals — European firms +4%, US productivity 2.7% in 2025 (a "J-curve"), OECD +0.2–1.3pp projected, and back-of-envelope US estimates +1.1–1.3% — set against a 6,000-executive survey showing minimal realized gains and a negligible +0.01pp TFP projection.  | §Productivity Trends p220 + Figure 4.4.28 p221
+            EP19
+            EP20
+            EP22
+            EP23
+            EP27
+            EP28
+
+# NOT in this tree, by design: framing and evaluative claims are checkable in claims-machine.txt but
+# are not premises of the thesis, so they are not leaves here —
+#   • "AI's Labor Impact" intro: EP1 (skill/talent shifts reshape work), EP2 (micro/macro framing),
+#     EP4 (macro costs may fall on junior/entry-level workers — belongs to the employment thread, not
+#     the productivity thesis); EP3 is a thesis component folded into the root, EP15 IS the root.
+#   • Micro framing restated by nodes above: EP5 (studies exist / Figure 4.4.27) and EP6 (generally
+#     positive) → MICRO; EP10 (less-experienced benefit most) → F-GAIN; EP11 (drag framing) → F-DRAG.
+#   • Macro framing / interpretation: EP18 (less conclusive) → MACRO; EP21 (the "J-curve" reading of
+#     EP20) — route=evaluative, an interpretation of the 2.7% figure, never judged.
+#   • Employment (Workforce Impact thread, Figure 4.4.28 p221): EP24 (AI-exposed deterioration pre-
+#     ChatGPT), EP25 ("canaries in the coal mine", -15–16% early-career), EP26 (seniority-biased
+#     change). These sit in the macro table inside the excerpted pages, but the excerpt only BEGINS
+#     the "Workforce Impact" subsection (mid-p221, out of scope); they are about employment, not the
+#     productivity thesis, so they are recorded as claims but not attached here.

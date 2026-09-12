@@ -44,6 +44,17 @@ examples/quocirca-2026/evidence/
 # REPORT.md quotes the flagged leaves verbatim, so it carries the PDF's no-redistribution terms too.
 examples/quocirca-2026/REPORT.md
 
+# AI Index Report 2026 (Stanford HAI) — the coding section excerpt (§2.5 Software, pp100–102) held
+# for analysis, not redistribution. The derived claims-machine.txt / argument.txt are tracked; the
+# extracted report.pdf, its report.txt, and any fetched papers are not. Exclude the corpus contents
+# (not the dir), so the MANIFEST can be re-included — git cannot un-ignore a file under an excluded dir.
+examples/ai-index-2026-coding/sources/*
+!examples/ai-index-2026-coding/sources/MANIFEST.md
+# The -review site and any judge chains hold verbatim report quotes; rebuilt from the tracked
+# claims/argument files. None exist yet (no judge run), but exclude them so a later run stays local.
+examples/ai-index-2026-coding/site/
+examples/ai-index-2026-coding/evidence/
+
 # Local API key export — never commit (holds a live ANTHROPIC_API_KEY)
 /setkey.sh
 /demo-dan.log

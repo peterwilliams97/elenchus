@@ -209,3 +209,87 @@ func TestLoadSingleSource(t *testing.T) {
 		t.Fatalf("missing manifest: ok=%v err=%v, want false/nil", ok, err)
 	}
 }
+
+// TestLoadReportsSingle pins the backward path: a flat single-report manifest (report_page_offset +
+// top-level sections, the shape every existing corpus uses) reads as one report.pdf claiming every
+// leaf, and a missing manifest yields one zero-offset report.pdf. The manifest text is config, not a
+// held document — no fabricated corpus.
+func TestLoadReportsSingle(t *testing.T) {
+	dir := t.TempDir()
+	flat := filepath.Join(dir, "FLAT.md")
+	if err := os.WriteFile(flat, []byte("# m\n\nreport_page_offset: 18\n\nsections:\n  Executive summary: 2\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	reps, err := LoadReports(flat)
+	if err != nil || len(reps) != 1 || reps[0].File != "report.pdf" || reps[0].Offset != 18 ||
+		reps[0].Sections["Executive summary"] != 2 || len(reps[0].Prefixes) != 0 {
+		t.Fatalf("flat manifest: reps=%+v err=%v", reps, err)
+	}
+	// A report with no prefixes claims every leaf.
+	if r, ok := ReportFor(reps, "SB6"); !ok || r.File != "report.pdf" {
+		t.Fatalf("single-report ReportFor: r=%+v ok=%v, want report.pdf/true", r, ok)
+	}
+
+	reps, err = LoadReports(filepath.Join(dir, "nope.md"))
+	if err != nil || len(reps) != 1 || reps[0].File != "report.pdf" || reps[0].Offset != 0 {
+		t.Fatalf("missing manifest: reps=%+v err=%v, want one zero-offset report.pdf", reps, err)
+	}
+}
+
+// TestLoadReportsMulti pins the multi-report path: a `reports:` list reads as one report per entry,
+// each with its own file, offset, prefixes, and sections, and ReportFor routes a claim id to the entry
+// whose prefixes list its prefix. An id no entry claims returns ok=false, so the ref stays unlinked.
+// The two entries mirror the ai-index-2026-coding wiring (report.pdf / report-productivity.pdf).
+func TestLoadReportsMulti(t *testing.T) {
+	dir := t.TempDir()
+	multi := filepath.Join(dir, "MULTI.md")
+	body := `# m
+- ` + "`paper:cui-2025`" + ` — a held study
+
+single_source: false
+
+reports:
+  - file: report.pdf
+    offset: -99
+    prefixes: SEC SW SB TB VC
+    sections:
+      Software: 100
+  - file: report-productivity.pdf
+    offset: -218
+    prefixes: EP
+    sections:
+      Productivity Trends: 219
+`
+	if err := os.WriteFile(multi, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	reps, err := LoadReports(multi)
+	if err != nil || len(reps) != 2 {
+		t.Fatalf("multi manifest: reps=%+v err=%v, want 2 reports", reps, err)
+	}
+	if reps[0].File != "report.pdf" || reps[0].Offset != -99 || reps[0].Sections["Software"] != 100 ||
+		len(reps[0].Prefixes) != 5 {
+		t.Fatalf("report.pdf entry: %+v", reps[0])
+	}
+	if reps[1].File != "report-productivity.pdf" || reps[1].Offset != -218 ||
+		reps[1].Sections["Productivity Trends"] != 219 || len(reps[1].Prefixes) != 1 {
+		t.Fatalf("report-productivity.pdf entry: %+v", reps[1])
+	}
+	// Routing: SB → report.pdf, EP → report-productivity.pdf, an unclaimed prefix → not found.
+	if r, ok := ReportFor(reps, "SB6"); !ok || r.File != "report.pdf" {
+		t.Errorf("SB6 routed to %+v ok=%v, want report.pdf", r, ok)
+	}
+	if r, ok := ReportFor(reps, "EP8"); !ok || r.File != "report-productivity.pdf" {
+		t.Errorf("EP8 routed to %+v ok=%v, want report-productivity.pdf", r, ok)
+	}
+	if _, ok := ReportFor(reps, "ZZ1"); ok {
+		t.Errorf("ZZ1 (no report claims it) should not route")
+	}
+	// The held-document bullet is still read, and the reports list is not mistaken for one.
+	if held, _ := LoadHeld(multi); !held["paper:cui-2025"] || len(held) != 1 {
+		t.Errorf("held set leaked reports rows or dropped the study: %v", held)
+	}
+	if ok, _ := LoadSingleSource(multi); ok {
+		t.Errorf("single_source: false must read false")
+	}
+}

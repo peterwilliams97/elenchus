@@ -1,0 +1,75 @@
+# argument.txt — the AI Index 2026 coding section as an argument tree (spec/ARGUMENT.md).
+# (Stanford HAI, AI Index Report 2026, Ch.2 Technical Performance, §2.5 "Software", pp100–102.)
+#
+# title: AI Index Report 2026 — §2.5 Software (coding): SWE-bench, Terminal-Bench, Vibe Code Bench (Stanford HAI, pp100–102)
+#
+# Refinement: root → benchmark subsection → finding → atomic claim (ids in claims-machine.txt).
+# This file carries CONTENT and STRUCTURE only. Judgements are DERIVED bottom-up from a merged chain
+# (spec/TREE.md), never authored — there is none here (no judge run yet).
+#
+# Line format (indentation = depth; a child sits one level below its parent):
+#   <id>[ ?]  | <content, the section's words, short>  | <edge / provenance note>
+# A bare id at claim depth (deepest level) is an ATOMIC-CLAIM LEAF; its text, route and source live in
+# claims-machine.txt and are not repeated here.
+#
+# Edge markers (spec/ARGUMENT.md § Edges):
+#   (default)  load-bearing: the finding decomposes to the claim, or the benchmark subsection is
+#              constituted by its finding. Every edge here is load-bearing — this is a descriptive
+#              benchmark roundup, and each result sits directly under its own benchmark heading.
+#   ?          the section does NOT establish this edge (unused here).
+#   [opinion]  a route=evaluative leaf — never judged (unused here; the evaluative claims are apparatus
+#              and are not leaves, see "NOT in this tree" below).
+#
+# ATTACHMENT — this is NOT the LCEIC recommendation shape. The section makes no recommendations; it is
+# descriptive. So the three ROOT CHILDREN are the three benchmark subsections (SWE-bench,
+# Terminal-Bench, Vibe Code Bench), which the tree counts as the recommendation tier (root's children).
+# Each subsection has ONE finding — its headline result — and the finding's leaves are the score claims
+# that constitute it. A benchmark's DEFINITION claims (what it measures) are apparatus, not the finding's
+# evidence, so they are not leaves; see "NOT in this tree".
+#
+# ROOT is the section's OWN stated thesis (not synthesised): §Software p100 — coding evaluation is
+# shifting toward measuring what models can deliver end to end rather than in isolated snippets. The
+# three benchmark subsections below are the evidence that thesis resolves into: issue-resolution
+# (SWE-bench), end-to-end terminal work (Terminal-Bench), and full app-building (Vibe Code Bench).
+
+root  | Coding evaluation is shifting toward measuring what models can deliver end to end — writing, debugging, and shipping working software, and building full applications from scratch — rather than in isolated snippets.  | verbatim = §Software p100 (SW1–SW3)
+
+    # ── SWE-bench: resolving real GitHub issues into working patches (p100–101) ──
+    # Node id is a single token (the parser reads fields[0] before the first "|"); the benchmark's
+    # full name leads the content, and it ties to the SB* leaves below.
+    SB  | SWE-bench — resolving real-world GitHub issues into working patches (Verified = human-validated subset).  | §SWE-bench p100
+        F-SB  | On SWE-bench Verified, top models are tightly clustered in the low-to-mid 70s — Claude 4.5 Opus (high reasoning) led at ~76.8% (Feb 2026), the others 70–76%.  | §SWE-bench p100
+            SB5
+            SB6
+            SB7
+
+    # ── Terminal-Bench: autonomous end-to-end terminal tasks (p101–102) ──
+    TB  | Terminal-Bench — autonomously handling real-world, end-to-end terminal tasks (compile code, train models, set up servers).  | §Terminal-Bench p101
+        F-TB  | Terminal-Bench 2.0 accuracy rose from 20% (Feb 2025) to 77.3% (early 2026).  | §Terminal-Bench p101; year-on-year
+            TB4
+
+    # ── Vibe Code Bench: autonomous full web-app building (p102) ──
+    # HELD-SOURCE GAP (F-VC): the two Vals.ai captures held (sources/leaderboards/) bracket but do not
+    # reproduce the report's Figure 2.5.3 snapshot. The 2026-02-16 capture is still Vibe Code Bench
+    # v1.0 (GPT 5.2 leads 41.31%; Claude Opus 4.6 absent); the 2026-03-31 v1.1 capture already has
+    # GPT 5.4 (67.42%) and GPT 5.3 Codex (61.77%) ahead of Claude Opus 4.6 (Nonthinking) (57.57%).
+    # No capture exists between 2026-02-17 and 2026-03-30, and the report's early-v1.1 state — Claude
+    # Opus 4.6 (Nonthinking) LEADING at 57.57% (prose 56.5%), GPT 5.2 second — falls inside that gap.
+    # So the 57.57% value (VC4) is grounded by the 03-31 capture, but F-VC's "leader" ranking is not.
+    VC  | Vibe Code Bench — autonomously building complete, end-to-end web applications from a prompt (real delivery, not coding assistance).  | §Vibe Code Bench p102
+        F-VC  | Performance varies widely — leader ~56.5%, ~46pp top-to-bottom spread, and even the leader solves only about half — so autonomous app-building remains hard.  | §Vibe Code Bench p102
+            VC4
+            VC5
+            VC6
+            VC7
+            VC8
+
+# NOT in this tree, by design: apparatus and evaluative claims are checkable in claims-machine.txt but
+# are not premises of the thesis, so they are not leaves here —
+#   • §2.5 parent framing: SEC1 (attention has shifted), SEC2 (four domains), SEC3 (benchmarks are new),
+#     SEC4 (dated early 2026).
+#   • Software intro: SW1 (what coding benchmarks test) and SW2 (task range) — restated by the root;
+#     SW3 IS the root.
+#   • Benchmark definitions (what each measures): SB1–SB4, SB9 (Figure 2.5.1 method), TB1–TB2, VC1–VC2.
+#   • Evaluative asides: SB8 (cross-benchmark clustering pattern), TB3, TB5 ("significantly improved"),
+#     VC3 (varies a lot), VC9 ("remains difficult") — route=evaluative, never judged.

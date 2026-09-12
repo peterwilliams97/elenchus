@@ -87,8 +87,7 @@ type cfg struct {
 	zip           bool                // -zip: write site.zip beside site/ after -review builds it
 	siteDir       string              // site/ sink under the example dir, when -review is set
 	sourcesDir    string              // -manifest's parent dir; the on-disk PDF tree the site copies from
-	reportOffset  int                 // -manifest report_page_offset: printed page N → report.pdf page N+offset
-	reportSecs    map[string]int      // -manifest sections: named § heading → printed page, for review deep-links
+	reports       []manifest.Report   // -manifest report excerpts: each with its file, page offset, sections, and claim-id prefixes
 	rootTitle     string              // report title for the root block's line 1, from the claims file "# title:" header
 	rootDate      string              // report date for the root block's line 1, from the claims file "# date:" header
 	sourceDocs    int                 // M: documents held per the manifest; the root block's "checked against M" figure
@@ -240,12 +239,11 @@ func main() {
 		}
 		c.docLabels = labels                      // canonical doc id → witness/author, for a rendered quote's provenance
 		c.sourcesDir = filepath.Dir(manifestFile) // MANIFEST.md sits at sources/; its dir is the href prefix
-		offset, secs, err := manifest.LoadReportLinks(manifestFile)
+		reports, err := manifest.LoadReports(manifestFile)
 		if err != nil {
 			fatal("load manifest report-link rules: " + err.Error())
 		}
-		c.reportOffset = offset // printed→PDF page offset for report deep-links (0 when undeclared)
-		c.reportSecs = secs     // named § → printed page, so a named-section claim deep-links
+		c.reports = reports // one report excerpt per PDF; ReportFor routes each leaf to its own by claim-id prefix
 		single, err := manifest.LoadSingleSource(manifestFile)
 		if err != nil {
 			fatal("load manifest single_source: " + err.Error())
@@ -1687,6 +1685,7 @@ func buildLeafQuotes(quotes, passageIDs []string, labels map[string]string) []tr
 // group 2 and its trailing printed page in group 3 — so reportPDFPage can resolve a page for either.
 var (
 	reReportLink = regexp.MustCompile(`report: (§([^<\n]+?) p(\d+))`)
+	reLeafIDSpan = regexp.MustCompile(`<span class="id">([A-Za-z]+\d+)`)
 	reSubLink    = regexp.MustCompile(`— (submission:(\d+)(/attachment-1)?), (.+?), p\.(\d+)(\n|<)`)
 	reQonLink    = regexp.MustCompile(`— (qon:([a-z]+)/(\d{4}-\d{2}-\d{2})), (.+?), (\d{4}-\d{2}-\d{2}), p\.(\d+)(\n|<)`)
 	reHearLink   = regexp.MustCompile(`— (hearing:[^\s,]+), (.+?), (line \d+)(\n|<)`)
@@ -1738,9 +1737,11 @@ func numberedSection(label string) bool {
 // page (`sources`, so links are site-relative); `scanDir` is the on-disk sources tree whose
 // submissions/*.pdf are scanned to recover each submission's real filename — kept separate so the
 // links can point at the site while the scan reads the real corpus. `title` is the report name that
-// becomes review.html's <title>. It is the Go port of the retired current/build-review.py, and returns
-// a one-line link tally for the caller to report.
-func renderReview(page, srcPrefix, scanDir, title string, offset int, sections map[string]int) (out, counts string) {
+// becomes review.html's <title>. `reports` is the manifest's report excerpts: a claim §-ref opens the
+// excerpt its claim-id prefix routes to (manifest.ReportFor), with that excerpt's page offset and
+// named-section table — so a two-report corpus links each claim to its own PDF. It is the Go port of
+// the retired current/build-review.py, and returns a one-line link tally for the caller to report.
+func renderReview(page, srcPrefix, scanDir, title string, reports []manifest.Report) (out, counts string) {
 	// submission number (+attachment flag) → pdf filename, scanned from disk so the redaction suffix
 	// and zero-padding don't have to be guessed.
 	type subKey struct {
@@ -1774,19 +1775,43 @@ func renderReview(page, srcPrefix, scanDir, title string, offset int, sections m
 	// link is hidden behind a disclosure triangle. index.html keeps them closed; only review.html opens.
 	body = strings.ReplaceAll(body, `<details class=`, `<details open class=`)
 
-	// 1. claim § → report PDF at the page, resolved by the manifest's report-link rules (offset +
-	// named-section table), not by code. A named section not in the table leaves the ref unlinked.
-	body = reReportLink.ReplaceAllStringFunc(body, func(s string) string {
-		m := reReportLink.FindStringSubmatch(s)
-		inline, _ := strconv.Atoi(m[3])
-		pdfPage, ok := reportPDFPage(m[2], inline, offset, sections)
-		if !ok {
-			return s // named section with no table entry: leave the ref as plain text, don't guess
+	// 1. claim § → its report excerpt's PDF at the page. Which excerpt a §-ref opens is decided by the
+	// claim id of the leaf card the ref sits in (manifest.ReportFor), found as the nearest preceding
+	// id span — so a multi-report corpus links each claim to its own PDF. The page comes from that
+	// report's offset + named-section table (reportPDFPage), not from code; a named section with no
+	// table entry, or an id no report claims, leaves the ref as plain text rather than guessing a page.
+	idSpans := reLeafIDSpan.FindAllStringSubmatchIndex(body, -1)
+	leafIDBefore := func(pos int) string {
+		id := ""
+		for _, s := range idSpans {
+			if s[0] >= pos {
+				break
+			}
+			id = body[s[2]:s[3]]
 		}
-		nReport++
-		return fmt.Sprintf(`report: <a href="%s/report.pdf?p=%d#page=%d" target="doc">%s</a>`,
-			srcPrefix, pdfPage, pdfPage, m[1])
-	})
+		return id
+	}
+	var b1 strings.Builder
+	prev := 0
+	for _, loc := range reReportLink.FindAllStringSubmatchIndex(body, -1) {
+		b1.WriteString(body[prev:loc[0]])
+		prev = loc[1]
+		whole := body[loc[2]:loc[3]]
+		label := body[loc[4]:loc[5]]
+		inline, _ := strconv.Atoi(body[loc[6]:loc[7]])
+		rep, ok := manifest.ReportFor(reports, leafIDBefore(loc[0]))
+		if ok {
+			if pdfPage, pok := reportPDFPage(label, inline, rep.Offset, rep.Sections); pok {
+				nReport++
+				fmt.Fprintf(&b1, `report: <a href="%s/%s?p=%d#page=%d" target="doc">%s</a>`,
+					srcPrefix, rep.File, pdfPage, pdfPage, whole)
+				continue
+			}
+		}
+		b1.WriteString(body[loc[0]:loc[1]]) // no report claims the id, or named section absent from the table
+	}
+	b1.WriteString(body[prev:])
+	body = b1.String()
 
 	// 2a. submission quote provenance → submission PDF by page.
 	body = reSubLink.ReplaceAllStringFunc(body, func(s string) string {
@@ -1825,6 +1850,13 @@ func renderReview(page, srcPrefix, scanDir, title string, offset int, sections m
 	nUnresolved := strings.Count(body, "(passage unresolved)")
 	total := nReport + nSub + nQon + nHear
 
+	// The left pane lands on the first report excerpt; every clicked link re-points it, and each report
+	// excerpt is copied into site/sources/ because its links carry it (referencedPDFs).
+	iframeSrc := "report.pdf"
+	if len(reports) > 0 && reports[0].File != "" {
+		iframeSrc = reports[0].File
+	}
+
 	out = fmt.Sprintf(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8"><title>%s</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -1838,13 +1870,13 @@ html,body{height:100%%;margin:0}
 </style>
 </head><body>
 <div class="split">
-<iframe id="doc" name="doc" src="%s/report.pdf" title="source document"></iframe>
+<iframe id="doc" name="doc" src="%s/%s" title="source document"></iframe>
 <div class="arg">
 %s
 </div>
 </div>
 </body></html>
-`, html.EscapeString(title), style, srcPrefix, body)
+`, html.EscapeString(title), style, srcPrefix, iframeSrc, body)
 
 	counts = fmt.Sprintf("report=%d submission=%d qon=%d hearing=%d total=%d; unresolved=%d",
 		nReport, nSub, nQon, nHear, total, nUnresolved)
@@ -1937,8 +1969,8 @@ var reSitePDF = regexp.MustCompile(`(?:href|src)="sources/([^"?#]*\.pdf)`)
 // same page written as index.html); `sourcesDir` is the on-disk sources tree the copies are read
 // from. `title` is the report name (ArgumentTitle) that becomes review.html's <title>. Returns
 // renderReview's link tally plus the copied/missing PDF count. See spec/SERVE.md.
-func buildSite(page, sourcesDir, siteDir, title string, offset int, sections map[string]int) (string, error) {
-	review, linkCounts := renderReview(page, "sources", sourcesDir, title, offset, sections)
+func buildSite(page, sourcesDir, siteDir, title string, reports []manifest.Report) (string, error) {
+	review, linkCounts := renderReview(page, "sources", sourcesDir, title, reports)
 	copied, missing, err := writeSite(review, page, sourcesDir, siteDir)
 	if err != nil {
 		return "", err
@@ -3895,7 +3927,7 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 		}
 	}
 	if c.siteDir != "" {
-		if counts, err := buildSite(page, c.sourcesDir, c.siteDir, title, c.reportOffset, c.reportSecs); err != nil {
+		if counts, err := buildSite(page, c.sourcesDir, c.siteDir, title, c.reports); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: cannot build site %s: %v\n", c.siteDir, err)
 		} else {
 			fmt.Fprintf(os.Stderr, "site: %s — %s\n", c.siteDir, counts)

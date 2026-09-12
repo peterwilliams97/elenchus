@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -192,6 +193,8 @@ var (
 	reportOffsetLine = regexp.MustCompile(`^report_page_offset:\s*(-?\d+)$`)
 	sectionEntryLine = regexp.MustCompile(`^\s+(.+?):\s*(\d+)\s*$`)
 	singleSourceLine = regexp.MustCompile(`^single_source:\s*true\s*$`)
+	reportEntryLine  = regexp.MustCompile(`^- file:\s*(.+)$`)
+	reportKeyLine    = regexp.MustCompile(`^(file|offset|prefixes):\s*(.*)$`)
 )
 
 // LoadSingleSource reports the manifest's `single_source: true` declaration — a corpus that holds the
@@ -254,6 +257,141 @@ func LoadReportLinks(path string) (offset int, sections map[string]int, err erro
 		}
 	}
 	return offset, sections, nil
+}
+
+// Report is one report excerpt the corpus holds as a source: the PDF filename a claim's report
+// deep-link opens, the printed→PDF page `Offset` applied to that claim's cited page, the named-section
+// →printed-page `Sections` table a named §-ref resolves against, and the claim-id `Prefixes` whose
+// leaves route to this excerpt. `Prefixes` empty claims every leaf — the single-report corpus, where
+// there is only one PDF to open. A corpus decomposed from two report excerpts (spec/SERVE.md § Multiple
+// report excerpts) carries one Report per excerpt, and `ReportFor` sends each leaf to its own.
+type Report struct {
+	File     string
+	Offset   int
+	Sections map[string]int
+	Prefixes []string
+}
+
+// LoadReports reads the review page's report-link rules (spec/SERVE.md) as one Report per held excerpt.
+// Two manifest shapes yield the same result. The flat single-report form (`report_page_offset:` plus a
+// top-level `sections:` table) produces one Report named report.pdf with no `Prefixes`, so it claims
+// every leaf — the shape every existing corpus uses, unchanged. The multi-report `reports:` list
+// produces one Report per entry, each with its own `file:`, `offset:`, `prefixes:` and `sections:`; a
+// `reports:` list present overrides the flat keys. A missing manifest yields one zero-offset report.pdf,
+// so a corpus with no report-link rules still links its report at the printed page.
+func LoadReports(path string) ([]Report, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []Report{{File: "report.pdf", Sections: map[string]int{}}}, nil
+		}
+		return nil, err
+	}
+	if reports, ok := parseReportsList(strings.Split(string(data), "\n")); ok {
+		return reports, nil
+	}
+	offset, sections, err := LoadReportLinks(path)
+	if err != nil {
+		return nil, err
+	}
+	return []Report{{File: "report.pdf", Offset: offset, Sections: sections}}, nil
+}
+
+// parseReportsList parses a `reports:` block into one Report per `- file:` entry, its `offset:`,
+// `prefixes:` and nested `sections:` filling that entry until the next entry or the block's end. ok is
+// false when no `reports:` block is present, so LoadReports falls back to the flat single-report keys.
+// A line at column 0 ends the block — the report-link rules are the manifest's last section, and a
+// dedented key (e.g. a later top-level directive) is not part of the list.
+func parseReportsList(lines []string) ([]Report, bool) {
+	start := -1
+	for i, ln := range lines {
+		if strings.TrimSpace(ln) == "reports:" {
+			start = i
+			break
+		}
+	}
+	if start < 0 {
+		return nil, false
+	}
+	var reports []Report
+	ci := -1
+	inSections := false
+	for _, ln := range lines[start+1:] {
+		trimmed := strings.TrimSpace(ln)
+		if trimmed == "" {
+			continue
+		}
+		if m := reportEntryLine.FindStringSubmatch(trimmed); m != nil {
+			reports = append(reports, Report{File: strings.TrimSpace(m[1]), Sections: map[string]int{}})
+			ci = len(reports) - 1
+			inSections = false
+			continue
+		}
+		if ci < 0 {
+			break // a line before the first "- file:" — the block has not started as a list
+		}
+		if len(ln) == len(trimmed) {
+			break // dedented to column 0: the reports block is over
+		}
+		if trimmed == "sections:" {
+			inSections = true
+			continue
+		}
+		if m := reportKeyLine.FindStringSubmatch(trimmed); m != nil {
+			inSections = false
+			switch m[1] {
+			case "file":
+				reports[ci].File = strings.TrimSpace(m[2])
+			case "offset":
+				reports[ci].Offset, _ = strconv.Atoi(strings.TrimSpace(m[2]))
+			case "prefixes":
+				reports[ci].Prefixes = strings.Fields(m[2])
+			}
+			continue
+		}
+		if inSections {
+			if sm := sectionEntryLine.FindStringSubmatch(ln); sm != nil {
+				n, _ := strconv.Atoi(sm[2])
+				reports[ci].Sections[strings.TrimSpace(sm[1])] = n
+			}
+		}
+	}
+	if len(reports) == 0 {
+		return nil, false
+	}
+	return reports, true
+}
+
+// ReportFor picks the report a claim leaf's deep-link opens, by the alphabetic prefix of its claim id
+// (`SB6` → "SB", `EP8` → "EP"). A report whose `Prefixes` lists that prefix wins; a report with no
+// `Prefixes` (a single-report corpus) matches every id. ok is false when a multi-report corpus has no
+// report claiming the prefix — the ref is then left unlinked rather than pointed at the wrong PDF.
+func ReportFor(reports []Report, claimID string) (Report, bool) {
+	prefix := idPrefix(claimID)
+	fallback := -1
+	for i := range reports {
+		if len(reports[i].Prefixes) == 0 {
+			fallback = i
+			continue
+		}
+		if slices.Contains(reports[i].Prefixes, prefix) {
+			return reports[i], true
+		}
+	}
+	if fallback >= 0 {
+		return reports[fallback], true
+	}
+	return Report{}, false
+}
+
+// idPrefix returns a claim id's leading non-digit run — the alphabetic prefix a Report's `Prefixes`
+// list keys on. "SB6" → "SB", "EP12" → "EP", "" → "".
+func idPrefix(id string) string {
+	i := 0
+	for i < len(id) && !('0' <= id[i] && id[i] <= '9') {
+		i++
+	}
+	return id[:i]
 }
 
 // CanonicalDoc maps a retrieval passage id (minted by internal/retrieve) back to the canonical

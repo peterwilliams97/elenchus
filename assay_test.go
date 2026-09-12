@@ -17,6 +17,7 @@ import (
 
 	"assay/internal/backend"
 	"assay/internal/backend/fake"
+	"assay/internal/manifest"
 	"assay/internal/retrieve"
 )
 
@@ -1779,7 +1780,8 @@ func TestRenderReviewReportLinks(t *testing.T) {
 		`<p class="meta">report: §Unlisted Section p9</p>` +
 		`</body></html>`
 
-	out, _ := renderReview(page, "sources", t.TempDir(), "t", 0, map[string]int{"Executive summary": 2})
+	single := []manifest.Report{{File: "report.pdf", Offset: 0, Sections: map[string]int{"Executive summary": 2}}}
+	out, _ := renderReview(page, "sources", t.TempDir(), "t", single)
 	if !strings.Contains(out, `sources/report.pdf?p=2#page=2`) {
 		t.Errorf("named §Executive summary did not deep-link to page 2:\n%s", out)
 	}
@@ -1790,12 +1792,47 @@ func TestRenderReviewReportLinks(t *testing.T) {
 		t.Errorf("named section absent from the table must stay unlinked, got a link:\n%s", out)
 	}
 
-	out2, _ := renderReview(page, "sources", t.TempDir(), "t", 18, nil)
+	out2, _ := renderReview(page, "sources", t.TempDir(), "t", []manifest.Report{{File: "report.pdf", Offset: 18}})
 	if !strings.Contains(out2, `sources/report.pdf?p=25#page=25`) {
 		t.Errorf("numbered §2.1.1 p7 with offset 18 did not land at page 25 (vic-lceic regression)")
 	}
 	if strings.Contains(out2, `p=2#page=2`) {
 		t.Errorf("named §Executive summary with no table must stay unlinked under the LCEIC manifest")
+	}
+}
+
+// TestRenderReviewMultiReport is the multi-report refuter: a corpus decomposed from two report
+// excerpts links each claim leaf to its OWN PDF, at that excerpt's page offset. It drives renderReview
+// with two reports — report.pdf (offset -99, prefix SB) and report-productivity.pdf (offset -218,
+// prefix EP) — and a page holding one leaf card per report, and asserts the SB leaf's §-ref opens
+// report.pdf at the offset page while the EP leaf's opens report-productivity.pdf at its own. A leaf
+// routed to the wrong file or page is the exact break a reader clicking the provenance would hit.
+func TestRenderReviewMultiReport(t *testing.T) {
+	reports := []manifest.Report{
+		{File: "report.pdf", Offset: -99, Sections: map[string]int{"Software": 100}, Prefixes: []string{"SEC", "SW", "SB", "TB", "VC"}},
+		{File: "report-productivity.pdf", Offset: -218, Sections: map[string]int{"Productivity Trends": 219}, Prefixes: []string{"EP"}},
+	}
+	page := `<html><head><style>x{}</style></head><body>` +
+		`<details class="card leaf"><summary><span class="id">SB6</span><span class="claim">c</span></summary>` +
+		`<div class="body"><p class="meta">report: §Software p100</p></div></details>` +
+		`<details class="card leaf"><summary><span class="id">EP8</span><span class="claim">c</span></summary>` +
+		`<div class="body"><p class="meta">report: §Productivity Trends p219</p></div></details>` +
+		`</body></html>`
+
+	out, counts := renderReview(page, "sources", t.TempDir(), "t", reports)
+	if !strings.Contains(out, `sources/report.pdf?p=1#page=1`) {
+		t.Errorf("SB6 §Software p100 did not deep-link report.pdf at page 1 (100-99):\n%s", out)
+	}
+	if !strings.Contains(out, `sources/report-productivity.pdf?p=1#page=1`) {
+		t.Errorf("EP8 §Productivity Trends p219 did not deep-link report-productivity.pdf at page 1 (219-218):\n%s", out)
+	}
+	// Each leaf reaches its own excerpt, never the other's: no SB link into the productivity PDF and no
+	// EP link into report.pdf.
+	if strings.Contains(out, `report-productivity.pdf?p=1#page=1" target="doc">§Software`) {
+		t.Errorf("SB6 leaked into the productivity excerpt:\n%s", out)
+	}
+	if !strings.Contains(counts, "report=2") {
+		t.Errorf("both report §-refs should be linked, got counts %q", counts)
 	}
 }
 
