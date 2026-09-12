@@ -1280,8 +1280,17 @@ func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64
 		return
 	}
 
+	// A single_source corpus judges the report against itself, so the "source" passages are other parts
+	// of the same report — the direction rules below tell overstatement from a benign restatement, which
+	// the hearing-transcript framing has no reason to. Off (the whole tree runs against held sources),
+	// the base prompt is unchanged.
+	sys := faithJudgeSys
+	if c.singleSource {
+		sys += faithJudgeSingleSourceRules
+	}
+
 	var j judgeJSON
-	if err := c.callSchema(faithJudgeSys, cached, user, json.RawMessage(judgeSchema), "faith_verdict", temp, &j); err != nil {
+	if err := c.callSchema(sys, cached, user, json.RawMessage(judgeSchema), "faith_verdict", temp, &j); err != nil {
 		return faith{Claim: claim, Verdict: "error", Evidence: err.Error()}
 	}
 	verified, sources, passageIDs, rejects := ground(j)
@@ -1297,7 +1306,7 @@ func (c cfg) faithJudge(claim string, passages []retrieve.Passage, temp *float64
 			"wording, and source_says must not contrast or negate: rephrase in everyday words, as if to " +
 			"someone who hasn't read the report."
 		var j2 judgeJSON
-		if err := c.callSchema(faithJudgeSys, cached, steer, json.RawMessage(judgeSchema), "faith_verdict", temp, &j2); err == nil {
+		if err := c.callSchema(sys, cached, steer, json.RawMessage(judgeSchema), "faith_verdict", temp, &j2); err == nil {
 			j = j2
 			verified, sources, passageIDs, rejects = ground(j)
 		}
@@ -2456,6 +2465,39 @@ quote "52 internal productions based in Victoria":
   report_says: most of the work on those 52 projects was done in Victoria
   source_says: the projects were based in Victoria
 REASON: <=40 words, why this verdict.`
+
+// faithJudgeSingleSourceRules is appended to faithJudgeSys only for a single_source run (the report is
+// its own only source, so the PASSAGES are other parts of the same document, not a witness). The base
+// prompt flags any narrowing or restatement as overstated/contradicted; here a report legitimately
+// states a figure in the executive summary and again, at more or less detail, in the body. These rules
+// give the comparison a direction so a faithful restatement is not scored as a distortion. spec/TREE.md
+// § The rules that gate a verdict is the contract.
+const faithJudgeSingleSourceRules = `
+
+SINGLE-SOURCE DIRECTION — READ THIS BEFORE THE VERDICT RULES ABOVE; where the two conflict, THIS wins.
+The PASSAGES are OTHER parts of the SAME report as the CLAIM, not an outside witness, so a claim and a
+passage are two statements by one author about one dataset. This changes what counts as a distortion:
+the SCOPE DISCIPLINE and "adjacent/broader is not faithful" rules above are for weighing a summary
+against an INDEPENDENT source, and they DO NOT apply here. The comparison has a direction, and only one
+direction is a distortion — the body pinning down what the claim inflated.
+
+- The distortion verdicts ("overstated", "contradicted") require a passage that states the SAME fact
+  with a NARROWER scope or a DIFFERENT value AND is the MORE DETAILED of the two. Absent such a passage,
+  DO NOT reach them — a claim the passages neither pin down nor repeat is "absent", never "overstated".
+- A claim carrying MORE detail than a passage is NOT overstated by it. A passage that summarises,
+  rounds, or drops a qualifier the claim keeps is the VAGUER statement; a summary that drops detail is
+  not a conflict. A report that surveys four countries and elsewhere reports the pooled figure without
+  renaming them has not contradicted the claim that names them. Verdict "faithful".
+- Figures that NEST are consistent, NOT contradictory: "very" (55%) sits inside "very or somewhat"
+  (85%); a component share sits inside the total that contains it. A smaller sub-figure you can see does
+  NOT contradict a larger combined figure the claim states — seeing 55% "very" is positive evidence FOR
+  an 85% "very or somewhat", not against it. NEVER return "contradicted" on a nested figure. Verdict
+  "faithful" when the visible component nests inside the claim's total.
+- A passage that contains the claim NEAR-VERBATIM — same words, same figure, same scope — is
+  "faithful", whatever wording differs elsewhere.
+
+So: find the more-detailed passage that narrows or changes the claim before reaching a distortion
+verdict. A mere restatement, a rounding, a dropped qualifier, or a nested figure is "faithful".`
 
 const evidenceSys = `You are the Evidence Grounder. Decide whether the CLAIM is TRUE, using web
 search to find real, current evidence — the actual truth-makers, not anyone's assertion that it is

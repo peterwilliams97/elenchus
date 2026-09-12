@@ -41,6 +41,8 @@ examples/quocirca-2026/sources/*
 # command in CLAUDE.md § Running it; the chains are a judge run (has a cost), kept locally only.
 examples/quocirca-2026/site/
 examples/quocirca-2026/evidence/
+# REPORT.md quotes the flagged leaves verbatim, so it carries the PDF's no-redistribution terms too.
+examples/quocirca-2026/REPORT.md
 
 # Local API key export — never commit (holds a live ANTHROPIC_API_KEY)
 /setkey.sh

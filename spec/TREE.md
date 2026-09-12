@@ -240,6 +240,29 @@ model and the tree (`spec/CLI.md` § Faithfulness judge and § Retrieval carry t
 Faithfulness itself is scope-disciplined: `faithful` requires the source to state the claim's subject,
 scope, and direction; an adjacent or broader statement is `partial` at best (`gap=scope`).
 
+### Single-source judging has a direction
+
+When the manifest is `single_source: true` the report is its own only source, so the passages a claim
+is judged against are OTHER parts of the same document — two statements by one author, not a claim
+weighed against an outside witness. The comparison has a direction, and only one direction is a
+distortion. The judge prompt carries these rules for single-source runs (`faithJudgeSingleSourceRules`
+in `assay.go`):
+
+- A claim is `overstated` or `contradicted` **only if** another passage states the same fact with
+  **narrower scope or a different value AND is the more detailed statement** — the body pinning down
+  what the claim inflated or altered.
+- A **summary that drops detail is not a conflict**: a passage that rounds, summarises, or drops a
+  qualifier the claim keeps is the vaguer of the two, and the claim carrying more detail is `faithful`.
+- **Figures that nest are consistent**: `very` (55%) sits inside `very or somewhat` (85%), a component
+  share inside the total that contains it. A larger combined figure does not contradict a smaller
+  sub-figure of it — `faithful`.
+- A passage that contains the claim **near-verbatim** — same words, same figure, same scope — is
+  `faithful`, whatever wording differs elsewhere.
+
+Refuters: `TestSingleSourceDirection` in `assay_test.go` pins three shapes drawn from the quocirca
+corpus — E1 (a specific claim against a vaguer restatement), E23 (nested percentages), K37 (the claim
+present near-verbatim) — each `faithful` under these rules, each carrying the rule sentence it rests on.
+
 ## Reading a leaf back to its evidence
 
 Every leaf is traceable. Its chain record names the retrieved passage ids the judge saw, the verified

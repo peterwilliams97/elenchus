@@ -215,6 +215,52 @@ func TestRunEvidencePropositionSubstitution(t *testing.T) {
 	}
 }
 
+// TestSingleSourceDirection pins the three restatement shapes a single_source run must call faithful,
+// drawn from the quocirca corpus the directionless base prompt scored overstated/contradicted:
+//   - E1:  a claim that carries MORE detail (four countries) than a vaguer restatement of the figure;
+//   - E23: a "very or somewhat" total (85%) that nests a "very" sub-figure (55%);
+//   - K37: the claim present near-verbatim in a passage.
+//
+// Each fixture names the rule sentence it rests on; the harness checks each by name and asserts (a)
+// faithJudge returns faithful and (b) that rule reached the judge's system prompt. Adding a fourth
+// shape touches only the table. The negative control below pins that a non-single_source run gets the
+// base prompt untouched — the rules must not leak into a run against held sources.
+func TestSingleSourceDirection(t *testing.T) {
+	for _, tc := range singleSourceFixtures {
+		t.Run(tc.name, func(t *testing.T) {
+			var sawSystem string
+			stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
+				sawSystem = system
+				return faithfulJSON(tc.passageID, tc.quote), nil, nil
+			}
+			c := cfg{singleSource: true, call: stub}
+			ps := []retrieve.Passage{{ID: tc.passageID, Source: retrieve.SourceReport, Text: tc.passage}}
+			got := c.faithJudge(tc.claim, ps, nil)
+			if got.Verdict != "faithful" {
+				t.Errorf("%s: want faithful, got %q", tc.name, got.Verdict)
+			}
+			if !strings.Contains(sawSystem, tc.ruleSentence) {
+				t.Errorf("%s: judge system prompt missing its rule sentence %q", tc.name, tc.ruleSentence)
+			}
+		})
+	}
+
+	// Negative control: with single_source off, the same E1 fixture's judge sees the base prompt and
+	// none of the direction rules — a run against held sources is unchanged.
+	e1 := singleSourceFixtures[0]
+	var sawSystem string
+	stub := func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
+		sawSystem = system
+		return faithfulJSON(e1.passageID, e1.quote), nil, nil
+	}
+	c := cfg{singleSource: false, call: stub}
+	ps := []retrieve.Passage{{ID: e1.passageID, Source: retrieve.SourceReport, Text: e1.passage}}
+	c.faithJudge(e1.claim, ps, nil)
+	if strings.Contains(sawSystem, "SINGLE-SOURCE DIRECTION") {
+		t.Error("base run leaked the single-source direction rules into the judge prompt")
+	}
+}
+
 // TestIntendedProposition is a pure-function unit test for the helper.
 func TestIntendedProposition(t *testing.T) {
 	for _, tc := range []struct {
@@ -1717,4 +1763,52 @@ func TestRenderReviewReportLinks(t *testing.T) {
 	if strings.Contains(out2, `p=2#page=2`) {
 		t.Errorf("named §Executive summary with no table must stay unlinked under the LCEIC manifest")
 	}
+}
+
+// singleSourceFixtures are the three restatement shapes TestSingleSourceDirection pins, drawn from the
+// quocirca single_source corpus that the directionless base prompt scored overstated/contradicted. Each
+// is faithful under `faithJudgeSingleSourceRules` and names the rule sentence it depends on; `passage`
+// is verbatim report wording and `quote` a verbatim span of it, so grounding keeps the faithful verdict.
+// Adding a fourth shape appends one entry here and touches nothing else.
+var singleSourceFixtures = []struct {
+	name         string
+	claim        string
+	passage      string
+	quote        string
+	passageID    string
+	ruleSentence string // must appear, contiguous, in the single_source judge system prompt
+}{
+	{
+		name:         "E1_vaguer_restatement",
+		claim:        "Two-thirds (67%) of organisations in the UK, France, Germany, and the US have experienced print-related data losses in the past year.",
+		passage:      "Two-thirds (67%) of organisations report at least one print-related breach in the last year.",
+		quote:        "Two-thirds (67%) of organisations report at least one print-related breach in the last year.",
+		passageID:    "report#p4#0",
+		ruleSentence: "a summary that drops detail",
+	},
+	{
+		name:         "E23_nested_percentages",
+		claim:        "85% say it is very or somewhat important that suppliers develop AI-driven security capabilities.",
+		passage:      "55% now consider it very important that providers use AI and machine learning to identify potential security threats and cyberattacks, compared with 41% in 2025 and 34% in 2024.",
+		quote:        "55% now consider it very important that providers use AI and machine learning to identify potential security threats and cyberattacks",
+		passageID:    "report#p5#1",
+		ruleSentence: "Figures that NEST are consistent",
+	},
+	{
+		name:         "K37_near_verbatim",
+		claim:        "Print security audits should not be occasional exercises.",
+		passage:      "Establish continuous assessment and remediation. Print security audits should not be occasional exercises. Buyers should maintain an up-to-date view of their fleet.",
+		quote:        "Print security audits should not be occasional exercises.",
+		passageID:    "report#p10#0",
+		ruleSentence: "contains the claim NEAR-VERBATIM",
+	},
+}
+
+// faithfulJSON is a canned faithfulness-judge response in judgeSchema shape, citing one verbatim quote
+// from the named passage — the shared fixture the single_source direction tests drive faithJudge with.
+func faithfulJSON(passageID, quote string) string {
+	p, _ := json.Marshal(passageID)
+	q, _ := json.Marshal(quote)
+	return `{"verdict":"faithful","gap":"none","evidence":[{"passage_id":` + string(p) +
+		`,"quote":` + string(q) + `}],"report_says":"","source_says":"","reason":"the report restates its own figure."}`
 }
