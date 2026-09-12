@@ -4,6 +4,67 @@ Orientation for reading `assay` — where each concern lives and the key symbols
 Line numbers are from HEAD at the time of writing and drift; grep the symbol name if one has
 moved. Authoritative behaviour is the `spec/` files, not this map.
 
+## What this repo actually does
+
+In one line: **it reads a long report against the documents that report is built on, and tells you
+which of the report's claims the sources actually support.**
+
+The problem it addresses: a big report (the worked case is the Victorian LCEIC report on the
+cultural and creative industries) makes hundreds of claims, cites hundreds of source documents
+(hearing transcripts, written submissions, questions-on-notice), and no human has time to check
+every claim against every source. `assay` does that check mechanically.
+
+The pipeline, end to end:
+
+1. **Decompose** — break the report into atomic claims, each tagged with the `§`-heading it sits
+   under.
+2. **Retrieve** — for each claim, pull the specific source passages it is about (BM25 + local
+   embeddings), so the judge sees only the relevant passages, not the whole 25K-token corpus
+   (`internal/retrieve`).
+3. **Judge** — one schema-enforced model call per claim decides faithfulness against *only* those
+   passages: `faithful` / `overstated` / `absent` (checked, not there) / `refuted` / `unverifiable`
+   (the source document isn't in the held set). Every quote the model cites is then verified against
+   its passage with **no model** (`quoteInPassage`), and the run can repeat each claim `-n` times for
+   a stability class (`assay.go` judge path).
+4. **Lay it out as two trees** — the **report tree** groups verdicts by heading; the **argument
+   tree** arranges the same leaves by inferential structure (claim → finding → recommendation → root
+   thesis) with every internal node's verdict *derived bottom-up from its children, never authored*
+   (`internal/tree`, `spec/TREE.md`, `spec/ARGUMENT.md`).
+5. **Publish** — `-review` builds a self-contained two-pane website (source PDF on the left, assay's
+   reading on the right, click a claim → the PDF jumps to that page) and `assay serve` serves it
+   (`spec/SERVE.md`).
+
+The output is a page a human reads: e.g. "of 11 recommendations, 2 hold, 1 is weakened, 6 are open,
+1 fails, 1 is opinion." The point is not to replace the reader but to tell them **where to look** —
+which claims are unsupported and why.
+
+The design's load-bearing idea (`CLAUDE.md`, the "axis boundary"): a claim can be **refuted** by pure
+reasoning, but it can only be **confirmed** by going to the source — grounding always needs the
+truth-maker, never a deduction, however clever. So the tool's whole discipline is knowing which
+verdicts it has actually earned. Older single-file modes — dialectic, faithfulness, evidence, audit
+over one prose file — still ship (`spec/CLI.md`), but the report→argument-tree path above is the
+centre of gravity.
+
+## Naming — `assay` vs `elenchus` (assessed 2026-09-12)
+
+A three-way mismatch, all pointing at `elenchus` as the stale label, not `assay`:
+
+- repo/directory name: **elenchus**; `go.mod` module: **assay** (`go.mod:1`); `README.md` title
+  `# elenchus`, but every sentence under it describes **assay** checking claims against sources.
+- **`assay.go` is the accurate name.** "Assay" = testing a material's true composition against a
+  standard (assaying ore for its metal content) — exactly what the tool now does: test each claim
+  against its truth-maker and report its true content. It matches the module and the binary.
+- **The centre of gravity has moved off elenchus.** Elenchus (Socratic refutation by
+  cross-examination) maps to the dialectic/substance mode — which the project's own axis boundary
+  identifies as the *weakest* leg (reasoning can refute but never confirm grounding). Vocabulary
+  confirms the shift: `faithful` appears in ~88 files, `dialectic` in ~15, `adversar*` in ~12,
+  `elenchus` in ~10 (one being the repo name). "Adversarial" now mostly describes the *testing
+  program* that attacks the tool (`TESTING.md`, `examples/destructive/`), not the tool performing
+  elenchus on a target.
+- **The call is Peter's, not a tidy-up.** Either rename the repo to `assay`, or keep `elenchus` as
+  the umbrella method-name with `assay` the instrument under it — in which case the cheap fix is one
+  README opening line relating the two, so a first-time reader isn't given two names for one thing.
+
 ## Top-level shape
 
 - `assay.go` (~3,900 lines) — the CLI and the **only** code that touches the network (the judge
@@ -164,3 +225,90 @@ there.
 - **`Anthropic-Detecting-and-countering-091026.pdf`** — UNREAD (pending Peter's selection).
 - **`A Model for Organizational Interaction.pdf`** — UNREAD (pending Peter's selection).
 - **`ai_index_report_2026.pdf`** — UNREAD (pending Peter's selection).
+
+## Plan of record — the retrieval segmentation seam (TODO items 2/6/7)
+
+The cross-cut that `TODO.md` items 2, 6, 7 share is narrower than "`retrieve.go` only knows
+hearings." Everything downstream of a `retrieve.Passage` is already corpus-agnostic (`Index`,
+`build`, `bm25Scores`, `Search`, `tokenize`, `Format`, `ByIDs`). Three of the four parsers are
+already generic prose splitters — `submissionPassages`, `qonPassages`, and `reportPassages`
+(`retrieve.go:202`) tag `Source` and leave `Role`/`Context` empty; only `splitFile`
+(`retrieve.go:302`) is Hansard-specific (speaker turns, `parseRoster`, `classify`, Q/A `Context`).
+Role already degrades cleanly: `Format` (`retrieve.go:533`) branches on `Source`, so role-less
+passages render fine and the judge never sees a missing role.
+
+The one coupled point is `passagesForFile` (`retrieve.go:181`): it picks a parser by hardcoded path
+substrings (`/submissions/`, `/qon/`, `report.txt`, else Hansard). That implicit switch is the only
+thing you edit to add a corpus type.
+
+### The seam (item 7 — do first)
+
+Replace the substring switch with an explicit ordered registry:
+
+```go
+type Segmenter interface {
+    Match(path string) bool                           // does this segmenter own the file?
+    Split(path string, data []byte) ([]Passage, error)
+}
+```
+
+`passagesForFile` reads the file once, walks a registered `[]Segmenter` (first `Match` wins), Hansard
+last as default. The four existing parsers become four `Segmenter` values; registration order =
+today's switch order. `Index`/`Search`/`Format` are untouched. This isolates the Hansard
+role/context logic inside one segmenter rather than generalising it.
+
+It is a **behaviour-altering-nothing change**, so (per `../elenchus_material/` master plan) the
+refuter is near-free: golden-test the vic-lceic corpus — capture the current `[]Passage`, refactor,
+assert byte-identical output. The old code is the test.
+
+### After the seam
+
+- **Item 6 (other reports)** — closer to done than first stated: a plain report already flows through
+  `reportPassages` via the `report.txt` suffix. The real blocker is the page-number assumption —
+  `reportPassages` maps `printed page = form-feed index + 1`, valid only "for a report whose PDF has
+  no front-matter offset" (`retrieve.go:199`). A report with a cover/TOC (likely
+  `examples/quocirca-2026/`) makes the `#page=N` links in the `-review` site (`spec/SERVE.md`) off by
+  the offset. Fix: make the page offset a segmenter parameter (or read it from the manifest). Plus
+  ordinary prep — a `MANIFEST.md` and decomposed claims for the new report (real inputs, never
+  synthesised).
+- **Item 2 (critique of code)** — the seam gives it a home, not the work: a code corpus needs a
+  segmenter whose passages are Go declarations (`go/ast`, one passage per top-level decl). Genuinely
+  new — a different producer (code, not hearings), so a different partition with its own segmenter.
+
+### Sequence
+
+7 (seam + golden refuter) → 6 (report-offset parameter + quocirca manifest/claims) → 2 (Go-decl
+segmenter). One refactor unblocks the routing for all three; 6 and 2 then differ only in which
+segmenter they add. If the seam is written up as a contract, it belongs in a new `spec/RETRIEVE.md`
+(there is none today — retrieval is specified inside `spec/CLI.md` §Retrieval).
+
+## Design starting point — is surviving refutation the best validation? (2026-09-12)
+
+A seed for design work, not settled. Peter: "I don't know of a better validation of any claim than
+surviving refutation." The position is mostly right and its exact failure is the line `assay` is
+built on. (This is design rationale — it may graduate to `BACKGROUND.md`.)
+
+- **Where surviving refutation IS the ceiling.** Claims with no reachable truth-maker — theories,
+  forecasts, universals. Popper: science corroborates, never verifies. Nothing beats attacking the
+  claim and watching it stand.
+- **But refutation is asymmetric — a decisive *falsifier*, never a decisive *validator*.** One
+  counterexample kills a universal (modus tollens); survival proves nothing (affirming the
+  consequent). So the honest word is *corroboration* — "not yet shown false, and it stuck its neck
+  out" — not *validation*. Upgrading "un-refuted" to "validated" is the "laundering confidence"
+  failure in `CLAUDE.md`.
+- **For a correspondence claim with an accessible source, retrieval strictly dominates.** "The
+  report cites D on page 12" — open page 12; no amount of armchair refutation substitutes. This is
+  the axis boundary verbatim: reasoning can refute a grounding claim but never confirm one. `assay`
+  doesn't out-argue "the source says X" — it reads the source. The tool is a monument to
+  refutation-survival being insufficient here.
+- **Survival's strength has an invisible bound: the refuter's imagination.** Surviving refutation
+  only means surviving the refutations someone thought to try — a lower bound set by the adversary,
+  not a property of the claim. Hence the repo's own rules: a refuter must name (not count) its cases;
+  Producer and Critic share one `c.model` so a blind spot survives in both; `survives_only_by_
+  conditioning` catches a claim that survived by dodging into unfalsifiability rather than by being
+  true.
+- **The reframe.** Refutation and grounding aren't rival validators — refutation is the cheapest way
+  to establish *falsity* (no lookup), retrieval the only way to establish *positive support*. "Best
+  validation" is claim-type-dependent, and the axis boundary already draws that map. Keeper:
+  **surviving refutation is the best test of a claim's coherence and its nerve; it is never, on its
+  own, evidence the claim is true — for that, the retrieval half exists.**
