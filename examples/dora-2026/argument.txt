@@ -1,0 +1,115 @@
+# argument.txt — the DORA "State of AI-assisted Software Development" report as an argument tree
+# (spec/ARGUMENT.md).
+#
+# title: State of AI-assisted Software Development, 2025 (Google Cloud / DORA, v.2025.2, 142 pp.)
+#
+# Refinement: root → recommendation → finding → atomic claim (ids in claims-machine.txt).
+# This file carries CONTENT and STRUCTURE only. Judgements are DERIVED bottom-up from a merged chain
+# (spec/TREE.md), never authored — there is none here (no judge run yet).
+#
+# Line format (indentation = depth; a child sits one level below its parent):
+#   <id>[ ?]  | <content, the report's words, short>  | <edge / provenance note>
+# A bare id at claim depth (deepest level) is an ATOMIC-CLAIM LEAF; its text, route and source live in
+# claims-machine.txt and are not repeated here. Node ids are single tokens (the parser reads fields[0]
+# before the first "|"), so a finding's full phrasing leads its content column.
+#
+# Edge markers (spec/ARGUMENT.md § Edges):
+#   (default)  load-bearing, subject-for-subject: the recommendation directly acts on / remedies the
+#              finding, or the finding decomposes to the claim.
+#   ?          the report does NOT establish this edge — it presents the recommendation but never rests
+#              it on one named finding (its basis is the whole amplifier thesis). A question for a
+#              human, not a guess; candidate findings are named in the note.
+#   [opinion]  a route=evaluative leaf — never judged; contributes nothing to a parent's hold/fail.
+#
+# ATTACHMENT — read this. This report's spine is unusually clean: its "practical advice" (p63–64) is a
+# list of imperatives, and each imperative names exactly the DORA AI Capability whose moderation finding
+# licenses it. So the SEVEN capabilities are the recommendation tier, each attached subject-for-subject
+# to its one capability finding (F-STANCE … F-PLAT), and each finding's leaf is the single atomic claim
+# that states that moderation result (CM4 … CM10) plus any cross-chapter RESTATEMENT of the same finding
+# — the pair being an internal-consistency check, since report.pdf is the only held source and the
+# figures must agree across chapters (ES/FT/PE restatements below). Two cross-cutting recommendations
+# have no single-capability basis: VSM (R-VSM, its own chapter's moderation finding) attaches to F-VSM,
+# and "treat AI adoption as an organizational transformation" (R-TRANSFORM) is childless-? because the
+# report rests it on the whole systems thesis, not one finding — candidates F-SYSTEM and F-IMPACT are
+# named and attached elsewhere.
+#
+# Two foundational findings that NO recommendation remedies hang under `base`: F-IMPACT (the landscape
+# of AI's estimated effects, Figure 28 — the empirical core the amplifier thesis rests on) and
+# F-SYSTEM (the AI-mirror claim that AI's effect depends on the surrounding system).
+#
+# NOT in this tree, by design: the report's apparatus and context are checkable claims in
+# claims-machine.txt but are not premises of the amplifier case, so they are not leaves here — the
+# adoption/reliance/task/trust statistics (AD1–AD22 except where they restate a finding), the software
+# delivery response distributions (SD14–SD18) and DORA-metric definitions (SD1–SD3), the seven
+# team-profile cluster shares (SD4–SD13, a separate diagnostic framework, not a premise), the external
+# third-party figures (EX2–EX9), the sociocognitive results (EX16–EX22), the metrics-frameworks asides
+# (MF1–MF2), and all demographics/methodology (DG1–DG16, ME1–ME5). CM1–CM3 (model apparatus) and CM11–
+# CM12 (the advice imperatives themselves) are attached as opinion/apparatus where they name a rec.
+#
+# ROOT is the report's OWN words (not synthesised): §Executive summary p3 — the study's headline thesis
+# that AI is an amplifier, and that the greatest returns come not from the tools but from the underlying
+# organizational system. The recommendation groups below are what that thesis resolves into: the seven
+# DORA AI Capabilities, plus VSM and the organizational-transformation posture.
+
+root  | AI's primary role in software development is that of an amplifier — it magnifies the strengths of high-performing organizations and the dysfunctions of struggling ones; the greatest returns come not from the tools themselves but from the underlying organizational system.  | verbatim = §Executive summary p3 (ES1, ES3)
+
+    # ── The seven DORA AI Capabilities (practical advice, p63–64); each remedies one capability finding ──
+    R-STANCE  | Clarify and socialize your AI policies — establish a clear, communicated policy on permitted tools and usage.  | p63; remedies F-STANCE
+        F-STANCE  | A clear and communicated AI stance amplifies AI's positive impact on individual effectiveness and organizational performance, and turns its neutral effect on friction beneficial.  | §Clear and communicated AI stance p52
+            CM4
+            CM11 [opinion]
+
+    R-DATA  | Treat your data as a strategic asset — invest in the quality, accessibility, and unification of internal data sources.  | p63; remedies F-DATA
+        F-DATA  | Healthy data ecosystems amplify AI's positive influence on organizational performance.  | §Healthy data ecosystems p54
+            CM5
+
+    R-ACCESS  | Connect AI to your internal context — give AI tools secure access to internal documentation, codebases, and data.  | p63; remedies F-ACCESS
+        F-ACCESS  | AI-accessible internal data amplifies AI's positive influence on individual effectiveness and code quality.  | §AI-accessible internal data p55
+            CM6
+
+    R-VC  | Embrace and fortify your safety nets — make teams proficient in rollback and revert features.  | p63; remedies F-VC
+        F-VC  | Strong version control practices — commit frequency and rollback use — amplify AI's benefits for individual effectiveness and team performance.  | §Strong version control practices p56
+            CM7
+
+    R-BATCH  | Reduce the size of work items — enforce the discipline of working in small batches.  | p63; remedies F-BATCH
+        F-BATCH  | Working in small batches amplifies AI's positive influence on product performance and turns its neutral effect on friction beneficial (though it slightly reduces AI's individual-effectiveness gains).  | §Working in small batches p58
+            CM8
+
+    R-USER  | Center users' needs in product strategy — keep the user as the product's North Star.  | p64; remedies F-USER
+        F-USER  | A user-centric focus amplifies AI's positive influence on team performance; in its absence, AI adoption has a negative impact on team performance.  | §User-centric focus p60
+            CM9
+            FT1
+
+    R-PLAT  | Invest in your internal platform — treat it as a product and the strategic prerequisite for unlocking AI's organizational value.  | p64; remedies F-PLAT
+        F-PLAT  | A quality internal platform amplifies AI's positive influence on organizational performance (negligible when platform quality is low, strong when high), at the cost of a small but credible increase in delivery instability.  | §Quality internal platforms p62; §The strategic imperative p71
+            CM10
+            PE6
+            PE5
+            PE7 [opinion]
+
+    # ── Cross-cutting recommendation with its own chapter finding ──
+    R-VSM  | Use value stream management to turn AI investment into a competitive advantage.  | §Value stream management p73–78; remedies F-VSM
+        F-VSM  | VSM amplifies AI's impact on organizational performance and independently drives higher team performance, more valuable work, and better product performance.  | §How this appears in our 2025 findings p77
+            VS4
+            VS1
+            VS2
+            VS3
+            VS5 [opinion]
+
+    # ── Cross-cutting recommendation with no single-finding basis ──
+    R-TRANSFORM ?  | Treat AI adoption as an organizational transformation, not a tools purchase — redesign workflows, roles, governance, and culture.  | p5, §The AI mirror p81–82; basis is the whole amplifier thesis, not one finding — candidates F-SYSTEM and F-IMPACT, both attached under base
+        CM12 [opinion]
+
+    # ── base: foundational findings the thesis rests on but no single recommendation remedies ──
+    base  | Foundational findings underlying the amplifier thesis (attached to no single recommendation).  | §Exploring AI's relationship to key outcomes; §The AI mirror
+        F-IMPACT  | Holding traits, environment, and processes equal, higher AI adoption is associated with higher individual effectiveness, code quality, product/team/organizational performance, valuable time and throughput — but also higher delivery instability, and no change in burnout or friction.  | §The results this year p38 (Figure 28)
+            EX10
+            EX11
+            EX13
+            EX14
+            EX15 [opinion]
+        F-SYSTEM  | AI's effect on outcomes depends on the surrounding system; deploying AI tools alone does not transform an organization, and AI acts as both mirror and multiplier of the system it is nested in.  | §The AI mirror p80–86
+            AM2
+            AM1 [opinion]
+            AM3 [opinion]
+            AM4 [opinion]

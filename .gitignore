@@ -64,3 +64,5 @@ examples/ai-index-2026-coding/evidence/
 /diff.txt
 /eval-value.tree
 /eval-value.stderr
+examples/dora-2026/sources/*
+!examples/dora-2026/sources/MANIFEST.md
