@@ -748,12 +748,13 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 			if done[i] {
 				continue
 			}
-			// Exclude the claim's own § here, on the shared union, not before grouping: the union
-			// re-pools passages across the group, so a claim's own page re-enters via a group-mate's
-			// retrieval unless it is dropped from what THIS claim is judged against. A no-op for a
-			// non-report corpus (dropOwnPage keeps every non-report passage), so group cache reuse is
-			// unaffected there; for the report corpus, same-page claims still share a filtered prefix.
-			ps := dropOwnPage(pageOfPath(parsed[i].path), shared)
+			// Exclude the claim's own paragraph here, on the shared union, not before grouping: the
+			// union re-pools passages across the group, so a claim's source paragraph re-enters via a
+			// group-mate's retrieval unless it is dropped from what THIS claim is judged against. A no-op
+			// for a non-report corpus (dropOwnParagraph keeps every non-report passage), so group cache
+			// reuse is unaffected there; for the report corpus, same-page claims still share a prefix
+			// that differs only by each claim's own dropped paragraph.
+			ps := dropOwnParagraph(parsed[i].text, pageOfPath(parsed[i].path), shared)
 			t := c.progressStart(i, len(raw), "faithfulness")
 			chosen, spread, samples := c.faithJudgeRepeat(parsed[i].text, ps)
 			emit(i, chosen, spread, samples, retrieve.IDs(ps), t)
@@ -879,23 +880,55 @@ func (c cfg) passagesForClaim(id, text, path, srcPath string, fullSrc *[]retriev
 	return res.Passages, false
 }
 
-// dropOwnPage removes, from a report claim's retrieved passages, every passage on the claim's own
-// printed page (its §), so the claim is judged against the REST of the report rather than the page it
-// was lifted from — which would confirm every claim trivially. Page granularity, not the exact
-// paragraph, because a decomposed atomic claim is rarely a verbatim substring of its source paragraph
-// (dropped clauses, punctuation), so a substring test would leak the source and silently self-confirm.
-// It aligns with the corpus's cross-page restatement design (sources/MANIFEST.md): a fact stated on
-// p2 and restated on p4 corroborates itself across the boundary, and page exclusion keeps exactly that
-// cross-page evidence while dropping the same-page source. It fires only for report-as-its-own-source
-// passages (retrieve.SourceReport) and only when the claim's page is known (>0): for a
-// hearing/submission corpus the passage that carries a claim is the grounding target and must be kept.
-func dropOwnPage(claimPage int, ps []retrieve.Passage) []retrieve.Passage {
+// dropOwnParagraph removes, from a report claim's retrieved passages, the ONE passage the claim was
+// decomposed from — its own paragraph — so the claim is judged against the REST of the report rather
+// than the sentence it was lifted from, which would confirm every claim trivially. The source paragraph
+// is the report passage on the claim's own printed page (its §) that shares the most distinct words with
+// the claim: an atomic claim overlaps the paragraph it came from more than any other, and word overlap
+// finds it where a substring test cannot (a decomposed claim drops clauses and punctuation, so it is
+// rarely a verbatim substring). Paragraph granularity, not the whole page, so a qualifier that sits in
+// the same § but a DIFFERENT paragraph (the K37 shape) survives and can still ground the claim — the
+// page-wide exclusion this replaces dropped every same-§ passage, so a fact restated one paragraph over
+// read `absent`. It still keeps the corpus's cross-page restatement design (sources/MANIFEST.md): a
+// fact stated on p2 and restated on p4 corroborates itself across the boundary. With no restatement
+// anywhere the source paragraph is the only match dropped and the rest neither pin the claim down nor
+// repeat it, so the verdict is `uncorroborated` (absent), never a distortion — spec/TREE.md § Single-
+// source judging has a direction. It fires only for report-as-its-own-source passages
+// (retrieve.SourceReport) and only when the claim's page is known (>0): for a hearing/submission corpus
+// the passage that carries a claim is the grounding target and must be kept.
+func dropOwnParagraph(claim string, claimPage int, ps []retrieve.Passage) []retrieve.Passage {
 	if claimPage <= 0 {
 		return ps
 	}
-	kept := ps[:0]
-	for _, p := range ps {
-		if p.Source == retrieve.SourceReport && reportPage(p.ID) == claimPage {
+	claimTerms := map[string]bool{}
+	for _, w := range runTokens(claim) {
+		claimTerms[w] = true
+	}
+	own, ownScore := -1, 0
+	for i, p := range ps {
+		if p.Source != retrieve.SourceReport || reportPage(p.ID) != claimPage {
+			continue
+		}
+		seen := map[string]bool{}
+		n := 0
+		for _, w := range runTokens(p.Text) {
+			if claimTerms[w] && !seen[w] {
+				seen[w] = true
+				n++
+			}
+		}
+		if n > ownScore {
+			own, ownScore = i, n
+		}
+	}
+	if own < 0 {
+		return ps
+	}
+	// A fresh slice, not ps[:0]: the caller reuses one shared union across every claim in a group, so an
+	// in-place filter would drop this claim's paragraph from what the NEXT claim is judged against.
+	kept := make([]retrieve.Passage, 0, len(ps)-1)
+	for i, p := range ps {
+		if i == own {
 			continue
 		}
 		kept = append(kept, p)
@@ -2483,7 +2516,8 @@ direction is a distortion — the body pinning down what the claim inflated.
 
 - The distortion verdicts ("overstated", "contradicted") require a passage that states the SAME fact
   with a NARROWER scope or a DIFFERENT value AND is the MORE DETAILED of the two. Absent such a passage,
-  DO NOT reach them — a claim the passages neither pin down nor repeat is "absent", never "overstated".
+  DO NOT reach them — with no conflicting passage retrieved, a claim the passages neither pin down nor
+  repeat is "absent" (rendered "uncorroborated"), never "overstated" or "contradicted".
 - A claim carrying MORE detail than a passage is NOT overstated by it. A passage that summarises,
   rounds, or drops a qualifier the claim keeps is the VAGUER statement; a summary that drops detail is
   not a conflict. A report that surveys four countries and elsewhere reports the pooled figure without

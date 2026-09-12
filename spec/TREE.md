@@ -258,6 +258,15 @@ in `assay.go`):
   sub-figure of it — `faithful`.
 - A passage that contains the claim **near-verbatim** — same words, same figure, same scope — is
   `faithful`, whatever wording differs elsewhere.
+- **With no conflicting passage retrieved**, a claim the passages neither pin down nor repeat is
+  `absent` (rendered `uncorroborated`), never `overstated` or `contradicted`.
+
+The self-exclusion that makes this an internal-consistency check drops the claim's own **paragraph**,
+not its whole page: `dropOwnParagraph` (assay.go) removes the single report passage on the claim's §
+that shares the most words with it — the paragraph the claim was decomposed from — so the claim cannot
+confirm itself, while a qualifier one paragraph over in the same § survives and can still ground it.
+The page-wide exclusion this replaced dropped every same-§ passage, so a fact restated one paragraph
+over read `absent`; cross-page restatement corroborates as before. Refuter: `TestDropOwnParagraph`.
 
 Refuters: `TestSingleSourceDirection` in `assay_test.go` pins three shapes drawn from the quocirca
 corpus — E1 (a specific claim against a vaguer restatement), E23 (nested percentages), K37 (the claim

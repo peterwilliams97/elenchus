@@ -197,8 +197,9 @@ func passagesForFile(path string) ([]Passage, error) {
 // blank lines into paragraphs. The id `report#p<page>#<n>` carries the printed page so a verified
 // quote's provenance resolves to report.pdf at that page (manifest.CanonicalDoc). Page is the
 // 1-based form-feed index, which equals the printed footer page for a report whose PDF has no
-// front-matter offset. Source=report lets the self-consistency check (assay.go:passagesForClaim)
-// drop a claim's own paragraph, so a claim is judged against the rest of the report, not itself.
+// front-matter offset. Source=report lets the self-consistency check (assay.go `dropOwnParagraph`)
+// drop the one paragraph a claim was decomposed from, so a claim is judged against the rest of the
+// report — including other paragraphs on its own page — not against the sentence it was lifted from.
 func reportPassages(path string) ([]Passage, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

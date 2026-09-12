@@ -1688,32 +1688,57 @@ func getOK(t *testing.T, url string) []byte {
 	return b
 }
 
-// TestDropOwnPage pins the report self-consistency filter: every passage on the claim's own printed
-// page (its §) is dropped so the claim is judged against the rest of the report, while a passage that
-// restates the fact on another page survives — that surviving cross-page restatement is what an
-// internal-consistency verdict rests on. The filter fires only for Source=report passages; a
-// hearing/submission passage on the "same page" is the grounding target and must pass through. It
-// keys on the id's page, so a same-page paragraph the claim does NOT contain verbatim is still dropped.
-func TestDropOwnPage(t *testing.T) {
-	ownPara := retrieve.Passage{ID: "report#p2#0", Source: retrieve.SourceReport,
-		Text: "Two-thirds (67%) of organisations have experienced print-related data losses in the past year."}
-	samePageOther := retrieve.Passage{ID: "report#p2#3", Source: retrieve.SourceReport,
-		Text: "The research uncovers a widening security divide."}
-	restate := retrieve.Passage{ID: "report#p4#1", Source: retrieve.SourceReport,
-		Text: "The proportion has increased from 56% in 2025 to 67% today."}
-	hearingHit := retrieve.Passage{ID: "2025-03-13/x#t1", Source: retrieve.SourceHearing,
-		Text: "Two-thirds (67%) of organisations have experienced print-related data losses."}
+// TestDropOwnParagraph pins the report self-consistency filter at PARAGRAPH granularity: the claim's
+// own paragraph — the report passage on its § that shares the most words with it — is dropped so the
+// claim cannot confirm itself, while a DIFFERENT paragraph on the SAME § survives so a qualifier one
+// paragraph over can still ground the claim (the K37 shape the old page-wide exclusion suppressed). A
+// cross-page restatement always survives; the filter is inert for a hearing/submission passage and for
+// an unknown page. Two refuters: a same-§ qualifier is kept (so the claim stays corroboratable), and a
+// claim whose only statement is its own paragraph loses that one match while nothing else on its §
+// repeats it — the "with no conflicting passage retrieved → uncorroborated, never a distortion" rule.
+func TestDropOwnParagraph(t *testing.T) {
+	claim := "Print security audits should not be occasional exercises."
+	sourcePara := retrieve.Passage{ID: "report#p5#0", Source: retrieve.SourceReport,
+		Text: "Print security audits should not be occasional exercises but a continuous programme of assessment and remediation."}
+	sameSecQualifier := retrieve.Passage{ID: "report#p5#2", Source: retrieve.SourceReport,
+		Text: "Continuous assessment means auditing the print fleet on a rolling basis rather than as one-off exercises."}
+	samePageUnrelated := retrieve.Passage{ID: "report#p5#3", Source: retrieve.SourceReport,
+		Text: "Identity integration is becoming foundational to print security across cloud environments."}
+	restate := retrieve.Passage{ID: "report#p10#1", Source: retrieve.SourceReport,
+		Text: "Buyers should maintain an up-to-date view of their fleet through continuous audits."}
 
-	got := dropOwnPage(2, []retrieve.Passage{ownPara, samePageOther, restate})
-	if len(got) != 1 || got[0].ID != "report#p4#1" {
-		t.Fatalf("report corpus: want only the off-page restatement kept, got %v", ids(got))
+	got := dropOwnParagraph(claim, 5, []retrieve.Passage{sourcePara, sameSecQualifier, samePageUnrelated, restate})
+	if containsID(got, "report#p5#0") {
+		t.Fatalf("the claim's own paragraph must be dropped, got %v", ids(got))
 	}
-	// A non-report corpus is untouched, even on the claim's page.
-	if kept := dropOwnPage(2, []retrieve.Passage{hearingHit}); len(kept) != 1 {
+	// Refuter 1 (K37 shape): the same-§ qualifier in a different paragraph survives, so the claim can
+	// still be grounded; the cross-page restatement survives too, and only the single source paragraph
+	// went — a same-page passage the claim did NOT come from is not dropped with it.
+	for _, want := range []string{"report#p5#2", "report#p5#3", "report#p10#1"} {
+		if !containsID(got, want) {
+			t.Fatalf("paragraph exclusion dropped more than the source paragraph: %v missing %s", ids(got), want)
+		}
+	}
+
+	// Refuter 2: a claim whose only statement is its own paragraph. Its source paragraph is the sole
+	// own-§ match; drop it and nothing on the § repeats the claim → uncorroborated, no distortion to
+	// reach. The off-§ passage (a different page) is untouched whatever it says.
+	loneClaim := "Quantum-resilient planning is now on the print security agenda."
+	lonePara := retrieve.Passage{ID: "report#p5#0", Source: retrieve.SourceReport,
+		Text: "Quantum-resilient planning is now on the print security agenda for mature buyers."}
+	offSec := retrieve.Passage{ID: "report#p3#0", Source: retrieve.SourceReport,
+		Text: "Trust controls connect users, devices, and documents securely across the estate."}
+	lone := dropOwnParagraph(loneClaim, 5, []retrieve.Passage{lonePara, offSec})
+	if len(lone) != 1 || lone[0].ID != "report#p3#0" {
+		t.Fatalf("lone claim: only the off-§ non-restatement should remain, got %v", ids(lone))
+	}
+
+	// Inert for a hearing corpus (the claim-bearing passage is the grounding target) and for page 0.
+	hearing := retrieve.Passage{ID: "2025-03-13/x#t1", Source: retrieve.SourceHearing, Text: claim}
+	if kept := dropOwnParagraph(claim, 5, []retrieve.Passage{hearing}); len(kept) != 1 {
 		t.Fatalf("hearing corpus: the claim-bearing passage must be kept, got %v", ids(kept))
 	}
-	// Unknown page (0) excludes nothing.
-	if kept := dropOwnPage(0, []retrieve.Passage{ownPara}); len(kept) != 1 {
+	if kept := dropOwnParagraph(claim, 0, []retrieve.Passage{sourcePara}); len(kept) != 1 {
 		t.Fatalf("page 0: want everything kept, got %v", ids(kept))
 	}
 	if got := pageOfPath("p13=Key findings"); got != 13 {
@@ -1730,6 +1755,15 @@ func ids(ps []retrieve.Passage) []string {
 		out[i] = p.ID
 	}
 	return out
+}
+
+func containsID(ps []retrieve.Passage, id string) bool {
+	for _, p := range ps {
+		if p.ID == id {
+			return true
+		}
+	}
+	return false
 }
 
 // TestRenderReviewReportLinks is the refuter for manifest-driven report deep-links: a NAMED section
