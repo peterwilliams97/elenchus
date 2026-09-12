@@ -16,6 +16,7 @@ import (
 	"html"
 	"strings"
 
+	"assay/internal/adjudicate"
 	"assay/internal/brief"
 )
 
@@ -300,7 +301,10 @@ func ArgumentTitle(argText string) string {
 // internal node's conjunction. `title` is the report name (ArgumentTitle); `what` is the
 // corpus-specific "what this page checks / which sources are held" sentence the caller builds from the
 // manifest — this package stays corpus-agnostic, so it takes the sentence rather than the held set.
-func ArgumentPage(root *ArgNode, details map[string]Leaf, title, what string, singleSource bool) (page, rootBlock string) {
+// `adj` overlays a human's own leaf verdicts (spec/SERVE.md § Adjudications): it renders the human call
+// beside the machine badge on each adjudicated leaf and, beneath the `what` sentence, the agreement
+// count and the disagreements. nil when the corpus carries no adjudications — the page is then unchanged.
+func ArgumentPage(root *ArgNode, details map[string]Leaf, title, what string, singleSource bool, adj *adjudicate.Overlay) (page, rootBlock string) {
 	rootBlock = argRootBlock(root)
 	var b strings.Builder
 	fmt.Fprintf(&b, argHead, html.EscapeString(title))
@@ -308,6 +312,7 @@ func ArgumentPage(root *ArgNode, details map[string]Leaf, title, what string, si
 	if what != "" {
 		fmt.Fprintf(&b, "<p class=\"what\">%s</p>\n", html.EscapeString(what))
 	}
+	b.WriteString(adjStatHTML(adj))
 	b.WriteString(`<button class="toggle" type="button">Expand all</button>` + "\n")
 	// The thesis card is static — the root is not a toggle — so a reader meets the whole case (the
 	// proposition, the recommendation tally, the base sentence) before opening any recommendation.
@@ -319,7 +324,7 @@ func ArgumentPage(root *ArgNode, details map[string]Leaf, title, what string, si
 	}
 	b.WriteString("</section>\n")
 	for _, c := range root.Children {
-		renderNodeCard(&b, c, details)
+		renderNodeCard(&b, c, details, adj)
 	}
 	b.WriteString(keyHTML(singleSource))
 	b.WriteString("</main>\n")
@@ -494,9 +499,9 @@ func argRootBlock(root *ArgNode) string {
 // base — as a closed <details> card: a badge for its DERIVED judgement, its id (with a trailing `?`
 // on a `?` edge), its proposition, and, when it does not hold, the child that decides it in small
 // text. An atomic-claim leaf renders through renderLeafCard.
-func renderNodeCard(b *strings.Builder, n *ArgNode, details map[string]Leaf) {
+func renderNodeCard(b *strings.Builder, n *ArgNode, details map[string]Leaf, adj *adjudicate.Overlay) {
 	if n.row != nil {
-		renderLeafCard(b, n.row, details)
+		renderLeafCard(b, n.row, details, adj)
 		return
 	}
 	j := n.Judgement()
@@ -511,7 +516,7 @@ func renderNodeCard(b *strings.Builder, n *ArgNode, details map[string]Leaf) {
 	}
 	b.WriteString("</summary>\n")
 	for _, c := range n.Children {
-		renderNodeCard(b, c, details)
+		renderNodeCard(b, c, details, adj)
 	}
 	b.WriteString("</details>\n")
 }
@@ -522,13 +527,21 @@ func renderNodeCard(b *strings.Builder, n *ArgNode, details map[string]Leaf) {
 // the full claim, the report section, the judge's reason, and the quotes the claim rests on — each
 // quote's provenance kept in the exact "report: §… / … — <doc>, <witness>, <loc>" text renderReview
 // (assay.go) rewrites into a PDF link.
-func renderLeafCard(b *strings.Builder, row *brief.Row, details map[string]Leaf) {
+func renderLeafCard(b *strings.Builder, row *brief.Row, details map[string]Leaf, adj *adjudicate.Overlay) {
 	r := *row
 	class, word, note := leafBadge(r)
 	b.WriteString(`<details class="card leaf"><summary>`)
 	badgeSpan(b, class, word)
 	if note != "" {
 		fmt.Fprintf(b, `<span class="note">%s</span>`, html.EscapeString(note))
+	}
+	// A human adjudication of this leaf sits beside the machine badge — both calls, no agreement colour
+	// (the count is in the index). "PW: faithful", the initials then the verdict.
+	if adj != nil {
+		if a, ok := adj.By[r.ID]; ok {
+			fmt.Fprintf(b, `<span class="human">%s: %s</span>`,
+				html.EscapeString(a.Initials), html.EscapeString(a.Verdict))
+		}
 	}
 	fmt.Fprintf(b, `<span class="id">%s</span><span class="claim">%s</span></summary>`+"\n",
 		html.EscapeString(r.ID), html.EscapeString(truncate(r.Text, 80)))
@@ -608,6 +621,11 @@ body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Ar
 .page{max-width:60rem;margin:0 auto;padding:2rem 1.25rem 4rem}
 h1{font-size:1.3rem;font-weight:600;line-height:1.3;margin:0 0 .6rem}
 .what{color:#555;margin:0 0 1.25rem;max-width:46rem}
+.adjstat{border:1px solid #e3e3e3;border-radius:8px;background:#fff;padding:.7rem 1rem;margin:0 0 1.25rem;font-size:.92rem}
+.adjstat p{margin:0 0 .4rem;font-weight:500}
+.adjstat ul{margin:0;padding-left:1.2rem;color:#555}
+.adjstat li{margin:.15rem 0}
+.human{font-size:.72rem;font-weight:600;letter-spacing:.02em;padding:.12rem .45rem;border-radius:999px;border:1px solid #999;color:#444;background:#fff;white-space:nowrap}
 .thesis{border:1px solid #ddd;border-radius:8px;background:#fff;padding:1rem 1.15rem;margin:0 0 1.5rem}
 .thesis .prop{font-size:1.05rem;font-weight:500;margin:0 0 .6rem}
 .thesis .tally{margin:0 0 .3rem}
@@ -642,6 +660,31 @@ details.card details.card{margin:.5rem .8rem}
 </style>
 </head><body>
 `
+
+// adjStatHTML renders the adjudication summary beneath the `what` sentence (spec/SERVE.md §
+// Adjudications): "N leaves adjudicated, judge agreed on M", then one line per disagreement naming the
+// human and machine verdicts and the human's reason. Empty when the corpus carries no adjudications, so
+// the page is unchanged without a file.
+func adjStatHTML(adj *adjudicate.Overlay) string {
+	if adj == nil || adj.Result.N == 0 {
+		return ""
+	}
+	var b strings.Builder
+	b.WriteString(`<section class="adjstat">` + "\n")
+	fmt.Fprintf(&b, "<p>%d %s adjudicated, judge agreed on %d.</p>\n",
+		adj.Result.N, plural(adj.Result.N, "leaf", "leaves"), adj.Result.Agreed)
+	if len(adj.Result.Disagreements) > 0 {
+		b.WriteString("<ul>\n")
+		for _, d := range adj.Result.Disagreements {
+			fmt.Fprintf(&b, "<li><b>%s</b> — human %s, judge %s: %s</li>\n",
+				html.EscapeString(d.ID), html.EscapeString(d.Human),
+				html.EscapeString(d.Machine), html.EscapeString(d.Reason))
+		}
+		b.WriteString("</ul>\n")
+	}
+	b.WriteString("</section>\n")
+	return b.String()
+}
 
 // keyHTML is the verdict key and the two-pane link, at the foot of the page. It is generic to the
 // argument tree — the verdict semantics, not this corpus — so it lives here rather than being passed

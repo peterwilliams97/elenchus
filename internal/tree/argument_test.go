@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"assay/internal/adjudicate"
 	"assay/internal/brief"
 )
 
@@ -132,7 +133,7 @@ func TestArgumentPage(t *testing.T) {
 	})
 	page, rootBlock := ArgumentPage(root,
 		map[string]Leaf{"F30": {Reason: "the source says so"}},
-		"The Cultural Industries Inquiry", "This page checks the report against its sources.", false)
+		"The Cultural Industries Inquiry", "This page checks the report against its sources.", false, nil)
 	for _, want := range []string{
 		"Victoria's industries matter",
 		"Of 1 recommendation, 0 hold, 1 is open — 1 because the report doesn't say what they rest on.",
@@ -185,7 +186,7 @@ func TestArgumentCardPage(t *testing.T) {
 		{ID: "F2", Text: "claim two", Faith: "absent"},
 		{ID: "F3", Text: "claim three", Faith: "faithful"},
 	})
-	page, _ := ArgumentPage(root, nil, "Report", "what", false)
+	page, _ := ArgumentPage(root, nil, "Report", "what", false, nil)
 
 	thesis := strings.Index(page, `<section class="thesis">`)
 	r1 := strings.Index(page, "First recommendation.")
@@ -256,7 +257,7 @@ func TestArgRootTallyNotConjunction(t *testing.T) {
 		{ID: "F2", Text: "f2", Faith: "faithful"},
 		{ID: "F3", Text: "f3", Faith: "absent"},
 	})
-	_, rootBlock := ArgumentPage(root, nil, "", "", false)
+	_, rootBlock := ArgumentPage(root, nil, "", "", false, nil)
 	tally := strings.Split(rootBlock, "\n")[1] // line 0 is the content, line 1 is the tally paragraph
 	for _, want := range []string{"Of 3 recommendations", "2 hold (R1, R2)", "1 fails (R3: no held source supports F3)"} {
 		if !strings.Contains(tally, want) {
@@ -297,7 +298,7 @@ func TestArgRootTallyCountsNonRRecommendations(t *testing.T) {
 		{ID: "F4", Text: "f4", Faith: "faithful"},
 		{ID: "F5", Text: "f5", Faith: "faithful"},
 	})
-	_, rootBlock := ArgumentPage(root, nil, "", "", false)
+	_, rootBlock := ArgumentPage(root, nil, "", "", false, nil)
 	lines := strings.Split(rootBlock, "\n")
 	if want := "Of 4 recommendations"; !strings.Contains(lines[1], want) {
 		t.Errorf("tally missing %q:\n%s", want, lines[1])
@@ -328,7 +329,7 @@ func TestArgUncorroboratedWeakensNotFails(t *testing.T) {
 		t.Fatalf("absent leaf should fail its recommendation, got %q", got)
 	}
 
-	page, _ := ArgumentPage(unc, nil, "Report", "what", true)
+	page, _ := ArgumentPage(unc, nil, "Report", "what", true, nil)
 	for _, want := range []string{
 		`<span class="badge b-weakened">uncorroborated</span>`, // the leaf badge: weakened colour, verdict word
 		"said once in the report, not repeated elsewhere",      // the key line
@@ -338,8 +339,47 @@ func TestArgUncorroboratedWeakensNotFails(t *testing.T) {
 		}
 	}
 	// Without single_source the key must not carry the uncorroborated line.
-	if plain, _ := ArgumentPage(unc, nil, "Report", "what", false); strings.Contains(plain, "said once in the report") {
+	if plain, _ := ArgumentPage(unc, nil, "Report", "what", false, nil); strings.Contains(plain, "said once in the report") {
 		t.Errorf("multi-source key should not carry the uncorroborated line")
+	}
+}
+
+// TestArgumentPageAdjudications drives ArgumentPage with a human overlay and pins the two ways the page
+// uses it (spec/SERVE.md § Adjudications): the index reports the agreement count and lists the
+// disagreement with its reason, and an adjudicated leaf shows the human verdict beside the machine
+// badge. Two leaves — F1 the human agrees with (faithful == faithful), F2 not (overstated vs partial).
+func TestArgumentPageAdjudications(t *testing.T) {
+	arg := joinLines(
+		"root  | Root.  | x",
+		"    R1  | Rec one.  | x",
+		"        F1  | Finding one.  | x",
+		"            F1",
+		"        F2  | Finding two.  | x",
+		"            F2",
+	)
+	root := mustBuild(t, arg, []brief.Row{
+		{ID: "F1", Text: "claim one", Faith: "faithful"},
+		{ID: "F2", Text: "claim two", Faith: "partial"},
+	})
+	adjs := []adjudicate.Adjudication{
+		{ID: "F1", Verdict: "faithful", Initials: "PW", Reason: "source says exactly this"},
+		{ID: "F2", Verdict: "overstated", Initials: "PW", Reason: "claim inflates the source"},
+	}
+	machine := map[string]string{"F1": "faithful", "F2": "partial"}
+	page, _ := ArgumentPage(root, nil, "Report", "what", false, adjudicate.NewOverlay(machine, adjs))
+	for _, want := range []string{
+		"2 leaves adjudicated, judge agreed on 1.",
+		"<b>F2</b> — human overstated, judge partial: claim inflates the source",
+		`<span class="human">PW: overstated</span>`, // the disagreeing leaf's human chip
+		`<span class="human">PW: faithful</span>`,   // the agreeing leaf's human chip
+	} {
+		if !strings.Contains(page, want) {
+			t.Errorf("adjudication page missing %q", want)
+		}
+	}
+	// No overlay → no adjudication summary at all.
+	if plain, _ := ArgumentPage(root, nil, "Report", "what", false, nil); strings.Contains(plain, "adjudicated") {
+		t.Errorf("page without an overlay must carry no adjudication summary")
 	}
 }
 

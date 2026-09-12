@@ -1,0 +1,13 @@
+# Human adjudications — quocirca-2026 (spec/SERVE.md § Adjudications)
+# One leaf per line: id | verdict | quote | page | initials | reason
+# quote is a verbatim span from report.pdf grounding the human verdict; page is its report page.
+# `#` comments and blank lines are skipped. No field may contain a `|`.
+
+E1  | faithful     | 67%) of organisations report at least one print-related breach in the last year | p4  | PW | summary drops the country list; more specific is not overstated
+E2  | partial      | describe their organisation as reliant on print to support their activities   | p4  | PW | wording drift only
+E3  | overstated   | only sustainable response is to increase resilience through a layered, continuously managed print security strategy | p2 | PW | "only" stated once, never supported
+E11 | partial      | The average cost of a print-related data breach now exceeds £1 million         | p4  | PW | wording drift only
+E21 | contradicted | 54%) are concerned that AI may be leveraged to create more sophisticated print-related threats | p5 | PW | 54% is print-specific, relabelled as general
+E23 | faithful     | 85% saying it is very or somewhat important that suppliers develop these capabilities | p3 | PW | 55% very nests inside 85% very-or-somewhat
+K22 | partial      | the average print-related breach now exceeding £1 million                      | p10 | PW | wording drift only
+K37 | faithful     | post-quantum roadmaps, guidance on device refresh planning, and education for less mature customers | p5 | PW | qualifier is in the same bullet

@@ -98,6 +98,39 @@ page is otherwise script-free.
 `favicon.svg` is a plain mark — an argument-tree glyph, one node above three, in the page's text
 colour, no brand and no text. Both `index.html` and `review.html` link it.
 
+### Adjudications — the human verdict beside the machine's
+
+A corpus may carry `examples/<x>/adjudications.txt`: a human's own verdicts on leaves they have read,
+so the page can show where the judge agreed with a person and where it did not. It is read from the
+example dir (the parent of the sources tree) whenever the argument page is built, and is optional — a
+corpus without the file renders exactly as before.
+
+One leaf per line, six `|`-delimited fields in order — no field may contain a `|`:
+
+    id | verdict | quote | page | initials | reason
+    E1 | faithful | Two-thirds (67%) of organisations report at least one print-related breach | p4 | PW | summary drops the country list; more specific is not overstated
+
+`#` comment lines and blank lines are skipped; a present line without exactly six fields is an error,
+not a silent mis-parse. `verdict` is the human's call in the same vocabulary as a leaf verdict
+(`faithful`, `partial`, `overstated`, `contradicted`, …); `quote` is the verbatim span the human
+grounded it on; `page` is the report page (`p4` or `4`, empty for none); `initials` name the
+adjudicator; `reason` is one line.
+
+The page uses the file two ways:
+
+- **On the leaf.** An adjudicated leaf's card shows the human verdict and initials beside the machine
+  badge — the reader sees both calls without leaving the leaf. No agreement colour on the leaf; the
+  count lives in the index.
+- **In the index.** A line beneath the `what` sentence reports `N leaves adjudicated, judge agreed on
+  M`, then lists each disagreement — `<id> — human <hv>, judge <mv>: <reason>`. Agreement is exact
+  string equality between the human verdict and the machine's **pooled faithfulness verdict** (the
+  leaf's `Faith`, after the single-source `absent`→`uncorroborated` remap), so an evaluative leaf the
+  tree badges `opinion` is still measured against the judge's underlying faithfulness call. A leaf the
+  tree carries no verdict for counts as a disagreement (`(no verdict)`), never a silent agreement.
+
+The page authors no verdict: the machine verdict is the judge's pooled `Faith`, the human verdict is a
+line in the file, and agreement is only the two strings compared.
+
 ### `review.html` — the two-pane reading
 
 `review.html` is `index.html`'s tree rewritten for the two-pane layout: the tree fills the right
@@ -158,3 +191,10 @@ Every href in `review.html` is **site-relative** — `sources/report.pdf?p=53#pa
   `review.html` (with a `sources/x.pdf` link) and `sources/x.pdf`, starts the handler, and checks
   `GET /review.html` (200, body carries the link) and `GET /sources/x.pdf` (200, byte-identical). A
   404 on either fails — the link class breaking.
+- **Adjudications agree by exact verdict match, and disagreements keep their reason.**
+  `TestAgreeThreeTwo` (adjudicate package) drives `Agree` with three adjudications, two matching the
+  machine verdicts and one not, and asserts `N=3, Agreed=2` with the single disagreement carrying the
+  human's reason; `TestLoad` pins the `|`-delimited parse, skipped comments, the page field, and that a
+  missing file is not an error. `TestArgumentPageAdjudications` (tree package) drives `ArgumentPage`
+  with an overlay and asserts the index reports the count and lists the disagreement, and an adjudicated
+  leaf shows the human verdict beside the machine badge.

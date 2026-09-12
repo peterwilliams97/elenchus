@@ -34,6 +34,7 @@ import (
 	"time"
 	"unicode"
 
+	"assay/internal/adjudicate"
 	"assay/internal/backend"
 	"assay/internal/backend/anthropic"
 	"assay/internal/backend/ollama"
@@ -3869,7 +3870,23 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 	if counts := sourceCountsLine(c.held); counts != "" {
 		what += " Sources held: " + counts + "."
 	}
-	page, rootBlock := tree.ArgumentPage(root, details, title, what, c.singleSource)
+	// Adjudications (spec/SERVE.md § Adjudications): a human's own leaf verdicts, read from the example
+	// dir (the parent of the sources tree), overlaid so the page shows the human call beside the
+	// machine's and the index reports the agreement count. Missing file → nil overlay, page unchanged.
+	adjPath := filepath.Join(filepath.Dir(c.sourcesDir), "adjudications.txt")
+	adjs, err := adjudicate.Load(adjPath)
+	if err != nil {
+		fatal("adjudications: " + err.Error())
+	}
+	machine := make(map[string]string, len(rows))
+	for _, r := range rows {
+		machine[r.ID] = r.Faith // pooled faithfulness verdict, after the single-source remap above
+	}
+	adj := adjudicate.NewOverlay(machine, adjs)
+	page, rootBlock := tree.ArgumentPage(root, details, title, what, c.singleSource, adj)
+	if adj != nil {
+		fmt.Fprintf(os.Stderr, "adjudications: %d leaves, judge agreed on %d\n", adj.Result.N, adj.Result.Agreed)
+	}
 	if c.indexHTMLPath != "" {
 		if err := os.WriteFile(c.indexHTMLPath, []byte(page), 0o644); err != nil {
 			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.indexHTMLPath, err)
