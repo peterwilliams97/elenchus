@@ -240,6 +240,36 @@ model and the tree (`spec/CLI.md` § Faithfulness judge and § Retrieval carry t
 Faithfulness itself is scope-disciplined: `faithful` requires the source to state the claim's subject,
 scope, and direction; an adjacent or broader statement is `partial` at best (`gap=scope`).
 
+### Cite-scoped retrieval
+
+Which passages a claim is judged against is decided by its `cites`, not by the whole corpus:
+
+- A claim that **cites a held document other than the report** is judged against that document (or
+  documents) **alone**; every report passage is excluded from the judge's context for that claim. A
+  `route=benchmark` claim cites a leaderboard capture as its truth-maker, so grounding it against the
+  report restating the same figure would launder the report's own word into a corroboration it never
+  earned — the axis boundary in CLAUDE.md. Retrieval draws from the cited documents so the judge sees
+  the leaderboard, not the report echoing it.
+- A claim with **no external cite** (it cites only report excerpts, or nothing) is judged against the
+  report itself, under the single-source rules below.
+
+Mechanically, `citedExternalBases` (assay.go) resolves a claim's `cites` to the passage-id bases of its
+non-report documents — a report cite is any id matching a manifest report excerpt's PDF filename; the two
+external shapes this corpus uses map `paper:<stem>` → `papers/<stem>` and a `<dir>/<stem>.txt` leaderboard
+id → `<dir>/<stem>`. When that set is non-empty, `passagesForClaim` calls `retrieve.RetrieveFrom`, which
+ranks the whole corpus in fused order then keeps only the passages whose base is in the set. With no
+passage in the cited documents — or none clearing `-floor` — `RetrieveFrom` sets `Below`, so the claim is
+`absent` from code with no model call: the report self-restatement, now excluded, cannot rescue it. The
+leaderboard captures reach the index through `retrieve.leaderboardPassages`, which splits a capture under a
+`leaderboards/` directory into paragraph passages tagged `Source=leaderboard`, keeping each table's rows
+whole so a claim's figure grounds as a verbatim quote.
+
+Refuters: `retrieve.TestCiteScopedRetrieval` pins the exclusion against the real ai-index corpus — a claim
+whose figure the report restates (plain `Retrieve` reaches it), cite-scoped to the leaderboard the claim
+names, returns only that capture and no report passage, and a cite to a document holding no passage falls
+to `Below`. `retrieve.TestLeaderboardPassages` pins the capture ingestion (base, source tag, verbatim
+figure), and `TestCitedExternalBases` (assay_test.go) pins the report-vs-external split of a `cites` field.
+
 ### Single-source judging has a direction
 
 When the manifest is `single_source: true` the report is its own only source, so the passages a claim

@@ -657,7 +657,7 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 			unverif[i] = miss
 			continue
 		}
-		claimPassages[i], below[i] = c.passagesForClaim(id, text, path, srcPath, &fullSrc)
+		claimPassages[i], below[i] = c.passagesForClaim(id, text, path, cites, srcPath, &fullSrc)
 		if !below[i] {
 			eligible = append(eligible, i)
 		}
@@ -761,6 +761,14 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 				excerpt = reportStem(rep.File)
 			}
 			ps := dropOwnParagraph(parsed[i].text, excerpt, pageOfPath(parsed[i].path), shared)
+			// Cite-scoping must survive the group union too: a claim citing an external document retrieved
+			// only that document's passages, but the union re-pools report and other-doc passages from its
+			// group-mates' whole-corpus retrieval, so the report restatement re-enters unless it is dropped
+			// from what THIS claim is judged against (the same hazard dropOwnParagraph handles for the
+			// self-paragraph). Restrict the union to the cited bases (spec/TREE.md § Cite-scoped retrieval).
+			if bases := c.citedExternalBases(parsed[i].cites); len(bases) > 0 {
+				ps = keepBases(ps, bases)
+			}
 			t := c.progressStart(i, len(raw), "faithfulness")
 			chosen, spread, samples := c.faithJudgeRepeat(parsed[i].text, ps)
 			emit(i, chosen, spread, samples, retrieve.IDs(ps), t)
@@ -867,7 +875,7 @@ const retrieveTokenCap = 10000
 // "corpus" passage (loaded once into *fullSrc); with retrieval on it is the fused bm25+embed top
 // passages up to the token budget for the claim text plus its §-heading hint. When `below` is true
 // nothing cleared -floor and the caller records "absent" from code without a model call.
-func (c cfg) passagesForClaim(id, text, path, srcPath string, fullSrc *[]retrieve.Passage) (ps []retrieve.Passage, below bool) {
+func (c cfg) passagesForClaim(id, text, path, cites, srcPath string, fullSrc *[]retrieve.Passage) (ps []retrieve.Passage, below bool) {
 	if c.retrieveMode == "oracle" {
 		// Oracle: the judge sees exactly the gold passages mapped to this claim id (no ranking).
 		return c.index.ByIDs(c.oracle[id]), false
@@ -879,11 +887,48 @@ func (c cfg) passagesForClaim(id, text, path, srcPath string, fullSrc *[]retriev
 		return *fullSrc, false
 	}
 	q := claimQuery(text, path)
+	// A claim that cites a held document OTHER than the report is grounded against those documents
+	// alone, with the report excluded (spec/TREE.md § Cite-scoped retrieval): the report restating a
+	// benchmark figure cannot corroborate a claim about that figure, so retrieval draws from the cited
+	// leaderboard/paper. A claim citing only the report (or nothing) is judged against the report as
+	// before (single-source rules).
+	if bases := c.citedExternalBases(cites); len(bases) > 0 {
+		res := c.index.RetrieveFrom(q, c.maxTokens, c.floor, bases)
+		if res.Below {
+			return nil, true
+		}
+		return res.Passages, false
+	}
 	res := c.index.Retrieve(q, c.maxTokens, c.floor)
 	if res.Below {
 		return nil, true
 	}
 	return res.Passages, false
+}
+
+// citedExternalBases maps a claim's cites field to the passage-id bases (retrieve.passageBase) of the
+// cited documents that are NOT the report — the set RetrieveFrom restricts to. It is empty when the
+// claim cites only report excerpts (or nothing), the signal to judge against the report itself. A report
+// cite is any id matching a manifest report excerpt's PDF filename (`report.pdf`,
+// `report-productivity.pdf`); the two external shapes this corpus uses map to their passage bases:
+// `paper:<stem>` → `papers/<stem>` and a `<dir>/<stem>.txt` leaderboard id → `<dir>/<stem>`.
+func (c cfg) citedExternalBases(cites string) map[string]bool {
+	reportFiles := map[string]bool{}
+	for _, r := range c.reports {
+		reportFiles[r.File] = true
+	}
+	bases := map[string]bool{}
+	for _, id := range citedDocs(cites) {
+		switch {
+		case reportFiles[id]:
+			continue
+		case strings.HasPrefix(id, "paper:"):
+			bases["papers/"+strings.TrimPrefix(id, "paper:")] = true
+		case strings.HasSuffix(id, ".txt"):
+			bases[strings.TrimSuffix(id, ".txt")] = true
+		}
+	}
+	return bases
 }
 
 // dropOwnParagraph removes, from a report claim's retrieved passages, the ONE passage the claim was
@@ -942,6 +987,21 @@ func dropOwnParagraph(claim, claimExcerpt string, claimPage int, ps []retrieve.P
 			continue
 		}
 		kept = append(kept, p)
+	}
+	return kept
+}
+
+// keepBases returns the passages whose id base (retrieve.passageBase, the part before "#") is in
+// `bases` — the cite-scoped subset of a group's shared union. First-seen order is preserved. Its
+// counterpart is dropOwnParagraph: both filter the union down to what one claim may be judged against,
+// dropOwnParagraph removing the claim's own paragraph, keepBases removing every document the claim did
+// not cite (spec/TREE.md § Cite-scoped retrieval).
+func keepBases(ps []retrieve.Passage, bases map[string]bool) []retrieve.Passage {
+	kept := make([]retrieve.Passage, 0, len(ps))
+	for _, p := range ps {
+		if base, _, _ := strings.Cut(p.ID, "#"); bases[base] {
+			kept = append(kept, p)
+		}
 	}
 	return kept
 }

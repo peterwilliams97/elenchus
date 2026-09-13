@@ -173,6 +173,62 @@ func (ix *Index) Retrieve(q Query, maxTokens int, floor float64) Result {
 	return res
 }
 
+// RetrieveFrom is Retrieve restricted to passages whose id base (the part before the first "#") is in
+// `bases` — the passages of the documents a claim cites, and only those. A route=benchmark claim cites
+// a leaderboard capture as its truth-maker, so it must be grounded against that capture, never against
+// the report restating the same figure (spec/TREE.md § Cite-scoped retrieval); the report's passages
+// are simply absent from `bases` and so never reach the judge. The corpus is ranked once, in fused
+// order, then filtered — so the passages kept are the cited docs' best matches for the claim, up to the
+// token budget. The floor is applied over the FILTERED top passage's cosine, so a claim whose cited
+// document contains nothing matching it (its only match being a report self-restatement, now excluded)
+// falls below the floor exactly as an off-corpus claim does; with no passage at all in the cited docs,
+// Below is set and the caller records "absent" with no model call.
+func (ix *Index) RetrieveFrom(q Query, maxTokens int, floor float64, bases map[string]bool) Result {
+	order, _ := ix.fusedOrder(q)
+
+	var cos []float64
+	if ix.HasEmbeddings() {
+		cos = ix.cosines(q.queryText())
+	}
+	res := Result{Ranks: map[string]int{}}
+	tokens, rank := 0, 0
+	topSet := false
+	for _, i := range order {
+		if !bases[passageBase(ix.Passages[i].ID)] {
+			continue
+		}
+		rank++
+		if !topSet {
+			if cos != nil {
+				res.TopCosine = cos[i]
+			}
+			topSet = true
+			if cos != nil && floor > 0 && res.TopCosine < floor {
+				res.Below = true
+				return res // nothing in the cited docs clears the floor: absent, no model call
+			}
+		}
+		if maxTokens > 0 && tokens+ix.docLen[i] > maxTokens && len(res.Passages) > 0 {
+			break
+		}
+		res.Passages = append(res.Passages, ix.Passages[i])
+		res.Ranks[ix.Passages[i].ID] = rank
+		tokens += ix.docLen[i]
+	}
+	if len(res.Passages) == 0 {
+		res.Below = true // the cited docs hold no passage at all: absent from code
+	}
+	return res
+}
+
+// passageBase is a passage id's document part — everything before the first "#" — the key that a claim's
+// cite id resolves to (assay.go citedExternalBases): "leaderboards/swebench-20260226#p1" →
+// "leaderboards/swebench-20260226", "papers/becker-2025-metr#t4" → "papers/becker-2025-metr".
+func passageBase(id string) string {
+	base, _, _ := strings.Cut(id, "#")
+	return base
+}
+
 // fusedOrder returns passage indices in final retrieval order and the best passage's cosine. The
 // order is: hard-filtered (witness/session-named) passages first, then everything else, each block by
 // descending fused score (1/(rrfK+best rank), the max combiner) with a passage-id tie-break for

@@ -54,10 +54,11 @@ type Passage struct {
 // Source values distinguish a hearing-transcript passage (speaker turns) from a written-submission
 // passage (paragraphs). The faithfulness table reports which kind a verified quote came from.
 const (
-	SourceHearing    = "hearing"
-	SourceSubmission = "submission"
-	SourceQoN        = "qon"    // a response to questions on notice (paragraphs, like a submission)
-	SourceReport     = "report" // the assayed report as its own source; a report passage's Source is its excerpt stem, "report" for the base excerpt
+	SourceHearing     = "hearing"
+	SourceSubmission  = "submission"
+	SourceQoN         = "qon"         // a response to questions on notice (paragraphs, like a submission)
+	SourceReport      = "report"      // the assayed report as its own source; a report passage's Source is its excerpt stem, "report" for the base excerpt
+	SourceLeaderboard = "leaderboard" // a benchmark-leaderboard capture; the external truth-maker for a route=benchmark claim
 )
 
 // searchText is what ranking and embedding see: the question (when present) then the answer. Text
@@ -184,11 +185,47 @@ func passagesForFile(path string) ([]Passage, error) {
 		return submissionPassages(path)
 	case strings.Contains(path, "/qon/"):
 		return qonPassages(path)
+	case strings.Contains(path, "/leaderboards/"):
+		return leaderboardPassages(path)
 	case isReportExcerpt(path):
 		return reportPassages(path)
 	default:
 		return splitFile(path)
 	}
+}
+
+// leaderboardPassages splits a benchmark-leaderboard capture (a Wayback snapshot of a ranking table,
+// held under a "leaderboards" directory) into paragraph passages, so a route=benchmark claim can be
+// grounded against the leaderboard's own text rather than the report restating it (spec/TREE.md
+// § Cite-scoped retrieval). A capture is neither Hansard nor a submission: it is a `#`-commented header
+// (URL, capture timestamp, column definitions) then the table rows as one block, or, for a chart-only
+// leaderboard, the page's Takeaways/Results prose. It splits on blank lines like a submission but keeps
+// the table rows whole — the rows sit on consecutive lines with no blank between them, so a claim's
+// quote ("Claude 4.5 Opus (high reasoning) | 76.80") lands verbatim in one passage. The id base is
+// "leaderboards/<stem>" so it matches a claim's cite id `leaderboards/<stem>.txt` with the extension
+// dropped (assay.go citedExternalBases). Paragraphs under 40 runes are dropped as noise.
+func leaderboardPassages(path string) ([]Passage, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	stem := strings.TrimSuffix(filepath.Base(path), ".txt")
+	base := "leaderboards/" + stem
+	text := strings.ReplaceAll(string(data), "\f", "\n\n")
+	var out []Passage
+	turn := 0
+	for _, para := range paraSplit.Split(text, -1) {
+		p := strings.TrimSpace(para)
+		if len([]rune(p)) < 40 {
+			continue
+		}
+		out = append(out, Passage{
+			ID: fmt.Sprintf("%s#p%d", base, turn), Session: stem,
+			Speaker: stem, Role: SourceLeaderboard, Source: SourceLeaderboard, Text: p,
+		})
+		turn++
+	}
+	return out, nil
 }
 
 // isReportExcerpt reports whether a corpus file is a report excerpt — the assayed report itself, held

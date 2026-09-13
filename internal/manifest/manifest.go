@@ -438,6 +438,10 @@ func CanonicalDoc(pid string, reports []Report) (docID, locator string, ok bool)
 			return "", "", false
 		}
 		return "qon:" + m[1] + "/" + m[2], "p." + strings.TrimPrefix(frag, "p"), true
+	case strings.HasPrefix(base, "leaderboards/"):
+		// A benchmark-leaderboard capture: "leaderboards/<stem>#p<n>" → the held id `leaderboards/<stem>.txt`
+		// (the manifest registers each capture by its extracted .txt). The paragraph ordinal is the locator.
+		return base + ".txt", "p." + strings.TrimPrefix(frag, "p"), true
 	case strings.ContainsRune(frag, '#'):
 		// A report excerpt as its own source: "<excerpt>#p<page>#<n>" → the excerpt's PDF at the printed
 		// page. The paragraph index after the page is provenance-irrelevant, so the locator is the page

@@ -300,6 +300,89 @@ func TestReportPassagesTwoExcerpts(t *testing.T) {
 	}
 }
 
+// TestLeaderboardPassages pins the benchmark-leaderboard capture ingestion: a "leaderboards/<stem>.txt"
+// splits into paragraph passages whose id base is "leaderboards/<stem>" (so a claim's cite id with the
+// extension dropped resolves to it) and whose Source is SourceLeaderboard. The table rows land whole in
+// one passage — a claim's figure ("57.57%") must be a verbatim substring so the judge's quote grounds.
+func TestLeaderboardPassages(t *testing.T) {
+	const dir = "../../examples/ai-index-2026-coding/sources/leaderboards"
+	if _, err := os.Stat(dir); err != nil {
+		t.Skipf("leaderboard corpus not present: %v", err)
+	}
+	ix, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load(%s): %v", dir, err)
+	}
+	if len(ix.Passages) == 0 {
+		t.Fatal("no leaderboard passages parsed")
+	}
+	sawVibe := false
+	for _, p := range ix.Passages {
+		if !strings.HasPrefix(p.ID, "leaderboards/") {
+			t.Fatalf("id %q lacks the leaderboards/ base", p.ID)
+		}
+		if p.Source != SourceLeaderboard {
+			t.Fatalf("passage %q Source=%q, want %q", p.ID, p.Source, SourceLeaderboard)
+		}
+		if passageBase(p.ID) == "leaderboards/vibe-code-v1.1-20260331" && strings.Contains(p.Text, "57.57%") {
+			sawVibe = true
+		}
+	}
+	if !sawVibe {
+		t.Fatal("the Vibe Code Bench v1.1 capture's 57.57% figure is not a verbatim substring of any passage")
+	}
+}
+
+// TestCiteScopedRetrieval is the refuter for spec/TREE.md § Cite-scoped retrieval. A claim citing a held
+// document other than the report is grounded against that document alone, every report passage excluded —
+// so the report restating a benchmark figure cannot corroborate the claim about it. The refuter case: the
+// VC4 figure appears in the report (plain retrieval sees it), but cite-scoped to the leaderboard VC4
+// names, RetrieveFrom returns only that capture and no report passage; and a cite to a document holding
+// no passage falls to Below, which the judge path records as absent with no model call — the report
+// self-restatement, now excluded, cannot rescue it.
+func TestCiteScopedRetrieval(t *testing.T) {
+	const dir = "../../examples/ai-index-2026-coding/sources"
+	if _, err := os.Stat(dir + "/report.txt"); err != nil {
+		t.Skipf("ai-index corpus not present: %v", err)
+	}
+	ix, err := Load(dir)
+	if err != nil {
+		t.Fatalf("Load(%s): %v", dir, err)
+	}
+	q := Query{Text: "Claude Opus 4.6 (Nonthinking) leads Vibe Code Bench at 56.5%", Hint: "Vibe Code Bench"}
+
+	// Plain retrieval reaches the report restating this figure — the self-restatement the cite scope
+	// must exclude. If the corpus no longer restates it, the refuter has lost its teeth.
+	plain := ix.Retrieve(q, 10000, 0)
+	sawReport := false
+	for _, p := range plain.Passages {
+		if strings.HasPrefix(passageBase(p.ID), "report") {
+			sawReport = true
+		}
+	}
+	if !sawReport {
+		t.Fatal("plain retrieval saw no report passage; the self-restatement refuter needs one")
+	}
+
+	// Cite-scoped to the leaderboard VC4 names: only that capture, no report passage.
+	const base = "leaderboards/vibe-code-v1.1-20260331"
+	scoped := ix.RetrieveFrom(q, 10000, 0, map[string]bool{base: true})
+	if len(scoped.Passages) == 0 {
+		t.Fatal("cite-scoped retrieval returned nothing for a held leaderboard")
+	}
+	for _, p := range scoped.Passages {
+		if passageBase(p.ID) != base {
+			t.Errorf("cite-scoped result leaked a non-cited passage: %s", p.ID)
+		}
+	}
+
+	// A cite to a document holding no passage → Below (absent from code, no model call).
+	empty := ix.RetrieveFrom(q, 10000, 0, map[string]bool{"leaderboards/does-not-exist": true})
+	if !empty.Below || len(empty.Passages) != 0 {
+		t.Errorf("cite to an unheld base: want Below with no passages, got below=%v n=%d", empty.Below, len(empty.Passages))
+	}
+}
+
 // ── test helpers ───────────────────────────────────────────────────────────────
 
 func idsOf(ps []Passage) string {

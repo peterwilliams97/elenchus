@@ -284,6 +284,39 @@ func TestIntendedProposition(t *testing.T) {
 	}
 }
 
+// TestCitedExternalBases pins spec/TREE.md § Cite-scoped retrieval's split: a claim's cites resolve to
+// the passage-id bases of its NON-report documents (leaderboards, papers), while report cites are
+// dropped — the empty result being the single-source signal to judge against the report. A report cite
+// is any id matching a manifest report excerpt's PDF filename.
+func TestCitedExternalBases(t *testing.T) {
+	c := cfg{reports: []manifest.Report{{File: "report.pdf"}, {File: "report-productivity.pdf"}}}
+	for _, tc := range []struct {
+		name  string
+		cites string
+		want  []string
+	}{
+		{"report only → single-source", "report.pdf", nil},
+		{"report + leaderboard → leaderboard base", "report.pdf leaderboards/swebench-20260226.txt",
+			[]string{"leaderboards/swebench-20260226"}},
+		{"report + paper → papers base", "report-productivity.pdf paper:cui-2025", []string{"papers/cui-2025"}},
+		{"nothing cited → single-source", "", nil},
+		{"two externals", "report.pdf leaderboards/vibe-code-v1.1-20260331.txt paper:ju-aral-2025",
+			[]string{"leaderboards/vibe-code-v1.1-20260331", "papers/ju-aral-2025"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := c.citedExternalBases(tc.cites)
+			if len(got) != len(tc.want) {
+				t.Fatalf("want %v, got %v", tc.want, got)
+			}
+			for _, b := range tc.want {
+				if !got[b] {
+					t.Errorf("missing base %q in %v", b, got)
+				}
+			}
+		})
+	}
+}
+
 // TestAuditGroundsIntendedProposition drives the REAL c.computeAudit and asserts that the grounding
 // column uses the intended proposition (what_source_actually_says) rather than the literal summary
 // claim — reproducing the #10 case where the audit used to return refuted (literal reading) instead
@@ -1478,12 +1511,12 @@ func TestResolveQuoteProv(t *testing.T) {
 		{"submission-19#p9", "— submission:19, Theatre Network Australia, p.9", labels},
 		{"2025-03-13/4_public-galleries-association-of-victoria#t48",
 			"— hearing:2025-03-13/4_public-galleries-association-of-victoria, Public Galleries Association Of Victoria, line 48", labels},
-		{"report#p2#0", "— report.pdf, AI Index 2026, coding, p.2", labels},                                    // base excerpt
+		{"report#p2#0", "— report.pdf, AI Index 2026, coding, p.2", labels},                                     // base excerpt
 		{"report-productivity#p221#3", "— report-productivity.pdf, AI Index 2026, labor impact, p.221", labels}, // second excerpt → its own PDF
-		{"submission-99#p1", "(passage submission-99#p1, unresolved)", labels},                                 // doc not in manifest
-		{"garbage", "(passage garbage, unresolved)", labels},                                                   // unparseable id
-		{"", "(passage unresolved)", labels},                                                                   // backfill left it empty
-		{"submission-19#p9", "", nil},                                                                          // no -manifest: bare quote
+		{"submission-99#p1", "(passage submission-99#p1, unresolved)", labels},                                  // doc not in manifest
+		{"garbage", "(passage garbage, unresolved)", labels},                                                    // unparseable id
+		{"", "(passage unresolved)", labels},                                                                    // backfill left it empty
+		{"submission-19#p9", "", nil},                                                                           // no -manifest: bare quote
 	}
 	for _, c := range cases {
 		if got := resolveQuoteProv(c.pid, c.labels, reports); got != c.want {
