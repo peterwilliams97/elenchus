@@ -2,8 +2,10 @@ package adjudicate
 
 // adjudicate_test.go pins the file parse and the agreement tally. TestAgreeThreeTwo is the stated
 // refuter: three adjudications, two matching the machine's verdicts and one not, so N=3, Agreed=2 and
-// the single disagreement keeps the human's reason. TestLoad pins the |-delimited line, the skipped `#`
-// and blank lines, the page parse, that a missing file is not an error, and that a short line is.
+// the single disagreement keeps the human's reason; and a fourth adjudication whose id names no rendered
+// leaf is IGNORED — not counted in N, not a disagreement — pinning the gate to the rendered tree
+// (spec/SERVE.md § Adjudications). TestLoad pins the |-delimited line, the skipped `#` and blank lines,
+// the page parse, that a missing file is not an error, and that a short line is.
 
 import (
 	"os"
@@ -28,9 +30,16 @@ func TestAgreeThreeTwo(t *testing.T) {
 	if d := got.Disagreements[0]; d.Human != "overstated" || d.Machine != "partial" || d.Reason == "" {
 		t.Fatalf("disagreement lost a field: %+v", d)
 	}
-	// A machine verdict the tree does not carry is a disagreement, not a silent agreement.
-	if r := Agree(map[string]string{}, adjs[:1]); r.Agreed != 0 || len(r.Disagreements) != 1 || r.Disagreements[0].Machine != "(no verdict)" {
-		t.Fatalf("missing machine verdict must disagree against (no verdict), got %+v", r)
+	// An adjudication whose id names no rendered leaf is gated out: not counted in N, not a disagreement.
+	// (`machine` is the tree's leaf set, tree.LeafVerdicts.) GHOST is absent from machine, so N stays 3.
+	gated := append(append([]Adjudication{}, adjs...),
+		Adjudication{ID: "GHOST", Verdict: "faithful", Reason: "leaf split away since this was written"})
+	if r := Agree(machine, gated); r.N != 3 || r.Agreed != 2 || len(r.Disagreements) != 1 || r.Disagreements[0].ID != "E3" {
+		t.Fatalf("an adjudication of a non-leaf id must be ignored: got %+v", r)
+	}
+	// A file with only off-tree adjudications gates to nothing at all.
+	if r := Agree(machine, []Adjudication{{ID: "GHOST", Verdict: "faithful"}}); r.N != 0 || len(r.Disagreements) != 0 {
+		t.Fatalf("an all-off-tree file must gate to N=0 with no disagreements, got %+v", r)
 	}
 }
 

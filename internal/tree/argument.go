@@ -150,6 +150,27 @@ func unmatchedLeaves(n *ArgNode) []string {
 	return out
 }
 
+// LeafVerdicts maps each atomic-claim leaf's id (a node carrying a `row`) to its pooled faithfulness
+// verdict — the set of leaves the tree actually renders. The adjudication overlay gates to it
+// (adjudicate.Agree, spec/SERVE.md § Adjudications): an adjudication whose id names no leaf here is
+// ignored, so a claim split or dropped since `adjudications.txt` was written falls out silently rather
+// than showing a spurious disagreement. A judged row that is not an argument leaf (e.g. EP24, judged but
+// off-tree) is therefore absent from this map, which is what scopes the gate to the rendered tree.
+func LeafVerdicts(n *ArgNode) map[string]string {
+	out := map[string]string{}
+	var walk func(*ArgNode)
+	walk = func(n *ArgNode) {
+		if n.row != nil {
+			out[n.ID] = n.row.Faith
+		}
+		for _, c := range n.Children {
+			walk(c)
+		}
+	}
+	walk(n)
+	return out
+}
+
 // Judgement derives one node's verdict, bottom-up. A leaf reads its pooled row; an internal node takes
 // the worst contribution of any child (fails > open > weakened > holds). A `?` edge contributes open
 // whatever the child says — the linkage itself is the open question. holds and fails reach the node

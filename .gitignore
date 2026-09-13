@@ -50,10 +50,16 @@ examples/quocirca-2026/REPORT.md
 # (not the dir), so the MANIFEST can be re-included — git cannot un-ignore a file under an excluded dir.
 examples/ai-index-2026-coding/sources/*
 !examples/ai-index-2026-coding/sources/MANIFEST.md
-# The -review site and any judge chains hold verbatim report quotes; rebuilt from the tracked
-# claims/argument files. None exist yet (no judge run), but exclude them so a later run stays local.
+# The -review sites and the judge chains hold verbatim report quotes; rebuilt from the tracked
+# claims/argument files with the render command in CLAUDE.md § Running it. The coding and productivity
+# argument trees each build their own site (site-coding/, site-productivity/); the chains are a judge
+# run (has a cost), kept locally only.
 examples/ai-index-2026-coding/site/
+examples/ai-index-2026-coding/site-coding/
+examples/ai-index-2026-coding/site-productivity/
 examples/ai-index-2026-coding/evidence/
+# REPORT.md quotes the flagged leaves verbatim, so it carries the report's no-redistribution terms too.
+examples/ai-index-2026-coding/REPORT.md
 
 # Local API key export — never commit (holds a live ANTHROPIC_API_KEY)
 /setkey.sh

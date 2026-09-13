@@ -46,7 +46,8 @@ root  | Coding evaluation is shifting toward measuring what models can deliver e
     # ── Terminal-Bench: autonomous end-to-end terminal tasks (p101–102) ──
     TB  | Terminal-Bench — autonomously handling real-world, end-to-end terminal tasks (compile code, train models, set up servers).  | §Terminal-Bench p101
         F-TB  | Terminal-Bench 2.0 accuracy rose from 20% (Feb 2025) to 77.3% (early 2026).  | §Terminal-Bench p101; year-on-year
-            TB4
+            TB4a
+            TB4b
 
     # ── Vibe Code Bench: autonomous full web-app building (p102) ──
     # HELD-SOURCE GAP (F-VC): the two Vals.ai captures held (sources/leaderboards/) bracket but do not

@@ -4007,10 +4007,10 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 	if err != nil {
 		fatal("adjudications: " + err.Error())
 	}
-	machine := make(map[string]string, len(rows))
-	for _, r := range rows {
-		machine[r.ID] = r.Faith // pooled faithfulness verdict, after the single-source remap above
-	}
+	// The overlay is gated to the leaves the argument tree actually renders (not every judged row): an
+	// adjudication whose id names no rendered leaf is ignored (adjudicate.Agree). LeafVerdicts is that
+	// set, id → pooled Faith, after the single-source remap above.
+	machine := tree.LeafVerdicts(root)
 	adj := adjudicate.NewOverlay(machine, adjs)
 	page, rootBlock := tree.ArgumentPage(root, details, title, what, c.singleSource, adj)
 	if adj != nil {

@@ -90,19 +90,23 @@ type Overlay struct {
 }
 
 // Agree compares each adjudication's verdict with the machine's verdict for the same leaf
-// (`machine[id]`), counting matches and listing the mismatches in file order. A leaf the tree carries
-// no verdict for counts as a disagreement against `(no verdict)`, so an adjudication of a dropped id is
-// visible rather than silently agreeing. It authors nothing — string equality is the whole test.
+// (`machine[id]`), counting matches and listing the mismatches in file order. `machine` is the set of
+// leaves the tree renders (tree.LeafVerdicts), so an adjudication whose id names no such leaf is
+// IGNORED — not counted in `N`, not a disagreement. This gates the overlay to the rendered tree: a claim
+// split or dropped since `adjudications.txt` was written falls out silently rather than showing a
+// spurious `(no verdict)` disagreement. `N` is therefore the adjudications that hit a rendered leaf, not
+// the file's line count. It authors nothing — string equality is the whole test.
 func Agree(machine map[string]string, adjs []Adjudication) Result {
-	r := Result{N: len(adjs)}
+	var r Result
 	for _, a := range adjs {
 		m, ok := machine[a.ID]
-		if ok && m == a.Verdict {
+		if !ok {
+			continue // adjudicates no rendered leaf: gated out
+		}
+		r.N++
+		if m == a.Verdict {
 			r.Agreed++
 			continue
-		}
-		if !ok {
-			m = "(no verdict)"
 		}
 		r.Disagreements = append(r.Disagreements, Disagreement{ID: a.ID, Human: a.Verdict, Machine: m, Reason: a.Reason})
 	}
