@@ -44,6 +44,12 @@ Build command (run from `current/`, the render dir; flags **before** the positio
 
 It reports one line: link tally per class plus `pdfs copied=N missing=0`.
 
+A `-from` render is a pure renderer: its only file output is the site (under the example dir, or the
+`site-<name>/` the human renames it to). It **writes nothing back into the chain dir** the chain was
+read from — no `index.html` (its home is `site/index.html`), and it does not re-derive the `audit.md`
+or `tree.html` the judge run left there. So a render leaves `evidence/<run>/` byte-unchanged.
+Refuter: `assay_test.go` `TestFromRenderLeavesChainDirUnchanged`.
+
 `README.md` at the site root is the reader's manual — the two pages named in one line each, how to
 open them (unzip, open `index.html` in Chrome or Edge), and how to serve them over HTTP
 (`python3 -m http.server 8080`, or `assay serve site`) when the browser blocks the `file://` PDF and

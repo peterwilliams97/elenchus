@@ -3817,18 +3817,17 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 		recs, classes = mergeChains(chains)
 	}
 
-	dir := filepath.Dir(chainPaths[0])
-	c.auditPath = filepath.Join(dir, "audit.md")
-	c.treeHTMLPath = filepath.Join(dir, "tree.html")
-	if c.argumentFile != "" {
-		// The argument tree replaces the section-path tree; it writes index.html, not tree.html.
-		c.treeHTMLPath = ""
-		c.indexHTMLPath = filepath.Join(dir, "index.html")
-		if c.review {
-			// The site is a peer of the render dir under the example dir — sourcesDir is
-			// <example>/sources, so its parent is the example dir the site sits beside.
-			c.siteDir = filepath.Join(filepath.Dir(c.sourcesDir), "site")
-		}
+	// A -from render is a pure renderer: the chain dir belongs to the judge run that wrote it, so the
+	// render leaves it byte-unchanged and never writes back into it. `audit.md` and `tree.html` already
+	// sit in the chain dir as that judge run's own artifacts (`runJudge` writes them at chainDir); the
+	// render re-derives none of them. Its only file output is the review site (spec/SERVE.md), under the
+	// example dir when -review is set, where `buildSite` writes `index.html` and `review.html`.
+	// Refuter: assay_test.go TestFromRenderLeavesChainDirUnchanged.
+	if c.argumentFile != "" && c.review {
+		// The site is a peer of the render dir under the example dir — sourcesDir is <example>/sources,
+		// so its parent is the example dir the site sits beside. index.html goes into the site via
+		// writeSite, never into the chain dir.
+		c.siteDir = filepath.Join(filepath.Dir(c.sourcesDir), "site")
 	}
 
 	rows := make([]brief.Row, len(recs))

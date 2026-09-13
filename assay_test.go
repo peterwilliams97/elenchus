@@ -1701,6 +1701,45 @@ func TestZipSiteContainsIndex(t *testing.T) {
 	}
 }
 
+// TestFromRenderLeavesChainDirUnchanged is the refuter for the render-output rule (spec/SERVE.md): a
+// -from render is a pure renderer, so it writes nothing back into the chain dir the chain was read from
+// — no index.html (its home is site/index.html), and no re-derived audit.md or tree.html. It snapshots
+// the chain dir's contents, runs a render, and asserts the snapshot is byte-identical after. The bug it
+// pins: runFromChain used to point auditPath/treeHTMLPath/indexHTMLPath at filepath.Dir(chainPaths[0]),
+// dropping an index.html into every example's evidence/<run>/.
+func TestFromRenderLeavesChainDirUnchanged(t *testing.T) {
+	chainDir := t.TempDir()
+	chain := filepath.Join(chainDir, "x.faithfulness.jsonl")
+	rec := chainRecord{Idx: 0, Total: 1, Mode: "faithfulness", Claim: "The report says X.",
+		Verdict: "faithful", Detail: json.RawMessage(`{}`)}
+	b, err := json.Marshal(rec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, chain, append(b, '\n'))
+
+	claims := filepath.Join(t.TempDir(), "claims.txt")
+	writeFile(t, claims, []byte("C1\tsec=Test\tThe report says X.\t\tbenchmark\n"))
+
+	before := snapshotDir(t, chainDir)
+	(&cfg{usage: newUsageCounters()}).runFromChain(chain, claims)
+	after := snapshotDir(t, chainDir)
+
+	if len(after) != len(before) {
+		t.Fatalf("render changed the chain dir file set: before %d files, after %d", len(before), len(after))
+	}
+	for name, sum := range before {
+		if after[name] != sum {
+			t.Errorf("render modified %s in the chain dir", name)
+		}
+	}
+	for _, stray := range []string{"index.html", "audit.md", "tree.html"} {
+		if _, ok := after[stray]; ok {
+			t.Errorf("render wrote %s into the chain dir; render output belongs under site/ only", stray)
+		}
+	}
+}
+
 func writeFile(t *testing.T, path string, b []byte) {
 	t.Helper()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
@@ -1709,6 +1748,28 @@ func writeFile(t *testing.T, path string, b []byte) {
 	if err := os.WriteFile(path, b, 0o644); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// snapshotDir maps each top-level file name under dir to its content, so a caller can assert a directory
+// is byte-unchanged across an operation. It is used by TestFromRenderLeavesChainDirUnchanged.
+func snapshotDir(t *testing.T, dir string) map[string]string {
+	t.Helper()
+	ents, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := make(map[string]string, len(ents))
+	for _, e := range ents {
+		if e.IsDir() {
+			continue
+		}
+		b, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		out[e.Name()] = string(b)
+	}
+	return out
 }
 
 func getOK(t *testing.T, url string) []byte {
