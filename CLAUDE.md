@@ -243,6 +243,10 @@ this envelope to specific code loci — consult the relevant row before changing
 
 
 ## Reporting to the human
+The first line of every report is a locator: `example: <dir>` for corpus work (name the example the
+run is about, e.g. `example: examples/ai-index-2026-coding`), or `repo` for code-only work that
+touches no single example. It comes before the five lines below.
+
 End-of-task reports are at most 5 lines:
   1. Done / not done, and the one number that matters.
   2. Anything I changed that you didn't ask for.
