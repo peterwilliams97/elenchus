@@ -1,0 +1,7 @@
+# Human adjudications — PW's own leaf verdicts, overlaid on the cite-scoped machine run
+# (spec/SERVE.md § Adjudications). Format: ID | verdict | quote | page | initials | reason
+# Read by the -review render from this example dir; shown beside the machine badge, and the
+# index reports the agreement count. Six |-fields per line; no pipe inside a field.
+
+TB4 | partial | terminal-bench-20260310 row 2: GPT-5.3-Codex, 2026-02-24, 77.3% | p101 | PW | the 77.3% endpoint IS in the held capture (dated 24 Feb); no held capture carries the 20% Feb-2025 baseline, so the endpoint holds but the trend does not — partial, not absent
+VC4 | unverifiable | nearest capture vibe-code-v1.1-20260331: Claude Opus 4.6 (Nonthinking) 57.57%, third | p102 | PW | no held capture in the 17 Feb–30 Mar window the report's 56.5% snapshot would come from; the nearest (31 Mar) is a later v1.1 snapshot showing 57.57% third, so it can neither confirm nor contradict — unverifiable, not contradicted
