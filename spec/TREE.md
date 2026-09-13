@@ -286,6 +286,16 @@ in `assay.go`):
 - **Figures that nest are consistent**: `very` (55%) sits inside `very or somewhat` (85%), a component
   share inside the total that contains it. A larger combined figure does not contradict a smaller
   sub-figure of it — `faithful`.
+- **Complementary percentages are consistent**: two shares that partition one population — `some
+  confidence` (70%) and `little or no trust` (30%) — are two faces of one 100% split, not two facts in
+  conflict. A claim's figure and a passage's figure summing to 100 is never `contradicted`.
+- **Figures within a point are the same figure rounded**: two figures within one percentage point of
+  each other, or two shares of one split that fall within a point of summing to 100% (78% and a
+  complementary 21% sum to 99%), differ only by rounding — `faithful`, never `contradicted`.
+- **A claim at one level of a stated taxonomy does not conflict with the taxonomy's parent**: when the
+  report defines the hierarchy itself — throughput's three factors, instability's two, both under
+  software delivery performance — a claim that places an item at the level the source places it does not
+  contradict a passage naming only the parent or a sibling level. `faithful`.
 - A passage that contains the claim **near-verbatim** — same words, same figure, same scope — is
   `faithful`, whatever wording differs elsewhere.
 - **With no conflicting passage retrieved**, a claim the passages neither pin down nor repeat is
@@ -301,9 +311,12 @@ is scoped to the claim's own excerpt (the one its claim id routes to, `manifest.
 the excerpt stem a report passage id carries (`report`, `report-productivity`), so a same-page
 paragraph of the OTHER excerpt is never mistaken for the claim's source. Refuter: `TestDropOwnParagraph`.
 
-Refuters: `TestSingleSourceDirection` in `assay_test.go` pins three shapes drawn from the quocirca
-corpus — E1 (a specific claim against a vaguer restatement), E23 (nested percentages), K37 (the claim
-present near-verbatim) — each `faithful` under these rules, each carrying the rule sentence it rests on.
+Refuters: `TestSingleSourceDirection` in `assay_test.go` pins six shapes — three from the quocirca
+corpus (E1, a specific claim against a vaguer restatement; E23, nested percentages; K37, the claim
+present near-verbatim) and three from the DORA corpus the base prompt scored `contradicted` (AD19,
+complementary percentages 70/30; EX20, a rounded complement 78/21; SD1, a throughput sub-factor read as
+conflicting with the instability level) — each `faithful` under these rules, each carrying the rule
+sentence it rests on.
 
 ## Reading a leaf back to its evidence
 

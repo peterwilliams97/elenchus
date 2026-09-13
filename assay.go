@@ -2642,6 +2642,22 @@ direction is a distortion — the body pinning down what the claim inflated.
   NOT contradict a larger combined figure the claim states — seeing 55% "very" is positive evidence FOR
   an 85% "very or somewhat", not against it. NEVER return "contradicted" on a nested figure. Verdict
   "faithful" when the visible component nests inside the claim's total.
+- COMPLEMENTARY percentages are consistent, NOT contradictory. Two shares that partition one population
+  — "some degree of confidence" (70%) and "little or no trust" (30%) — are two faces of ONE 100% split,
+  not two facts in conflict; seeing the 30% is positive evidence FOR the 70% claim, never against it.
+  NEVER return "contradicted" because a claim's figure and a passage's figure sum to 100. Verdict
+  "faithful".
+- Figures WITHIN A POINT are the same figure rounded. Two figures within one percentage point of each
+  other, or two shares of one split that fall within a point of summing to 100% (78% "not diminished"
+  and a 21% probability of the reverse sum to 99%), differ only by rounding — consistent, never
+  contradicted. Verdict "faithful".
+- A claim at ONE LEVEL of a stated taxonomy does not conflict with the taxonomy's PARENT or a SIBLING
+  level. When the report defines the hierarchy itself — the three factors of throughput, the two of
+  instability, both under software delivery performance — a claim that places an item at the level the
+  source places it does not contradict a passage that names only the parent or the sibling level.
+  Reading "recovery time is a throughput factor" as contradicting a passage on instability's factors
+  mistakes one level of a stated taxonomy for a conflict. Verdict "faithful" when the claim's placement
+  matches the source's own taxonomy.
 - A passage that contains the claim NEAR-VERBATIM — same words, same figure, same scope — is
   "faithful", whatever wording differs elsewhere.
 

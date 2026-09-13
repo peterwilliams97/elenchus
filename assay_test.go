@@ -216,15 +216,18 @@ func TestRunEvidencePropositionSubstitution(t *testing.T) {
 	}
 }
 
-// TestSingleSourceDirection pins the three restatement shapes a single_source run must call faithful,
-// drawn from the quocirca corpus the directionless base prompt scored overstated/contradicted:
-//   - E1:  a claim that carries MORE detail (four countries) than a vaguer restatement of the figure;
-//   - E23: a "very or somewhat" total (85%) that nests a "very" sub-figure (55%);
-//   - K37: the claim present near-verbatim in a passage.
+// TestSingleSourceDirection pins the restatement shapes a single_source run must call faithful, each
+// scored overstated/contradicted by the directionless base prompt:
+//   - E1:   a claim that carries MORE detail (four countries) than a vaguer restatement of the figure;
+//   - E23:  a "very or somewhat" total (85%) that nests a "very" sub-figure (55%);
+//   - K37:  the claim present near-verbatim in a passage;
+//   - AD19: complementary percentages (70% some confidence, 30% little/no trust) summing to 100%;
+//   - EX20: a rounded complement (78% not-diminished, 21% the reverse) summing to 99%;
+//   - SD1:  a throughput sub-factor (recovery time) read as conflicting with the instability level.
 //
 // Each fixture names the rule sentence it rests on; the harness checks each by name and asserts (a)
-// faithJudge returns faithful and (b) that rule reached the judge's system prompt. Adding a fourth
-// shape touches only the table. The negative control below pins that a non-single_source run gets the
+// faithJudge returns faithful and (b) that rule reached the judge's system prompt. Adding a shape
+// touches only the table. The negative control below pins that a non-single_source run gets the
 // base prompt untouched — the rules must not leak into a run against held sources.
 func TestSingleSourceDirection(t *testing.T) {
 	for _, tc := range singleSourceFixtures {
@@ -1953,11 +1956,11 @@ func TestRenderReviewMultiReport(t *testing.T) {
 	}
 }
 
-// singleSourceFixtures are the three restatement shapes TestSingleSourceDirection pins, drawn from the
-// quocirca single_source corpus that the directionless base prompt scored overstated/contradicted. Each
-// is faithful under `faithJudgeSingleSourceRules` and names the rule sentence it depends on; `passage`
-// is verbatim report wording and `quote` a verbatim span of it, so grounding keeps the faithful verdict.
-// Adding a fourth shape appends one entry here and touches nothing else.
+// singleSourceFixtures are the restatement shapes TestSingleSourceDirection pins — three from the
+// quocirca corpus and three from the DORA corpus — each scored overstated/contradicted by the
+// directionless base prompt. Each is faithful under `faithJudgeSingleSourceRules` and names the rule
+// sentence it depends on; `passage` is verbatim report wording and `quote` a verbatim span of it, so
+// grounding keeps the faithful verdict. Adding a shape appends one entry here and touches nothing else.
 var singleSourceFixtures = []struct {
 	name         string
 	claim        string
@@ -1989,6 +1992,30 @@ var singleSourceFixtures = []struct {
 		quote:        "Print security audits should not be occasional exercises.",
 		passageID:    "report#p10#0",
 		ruleSentence: "contains the claim NEAR-VERBATIM",
+	},
+	{
+		name:         "AD19_complementary_percentages",
+		claim:        `A clear majority of respondents (70%) express some degree of confidence in the quality of AI-generated output, including nearly a quarter (24%) who report "a great deal" or "a lot" of trust.`,
+		passage:      `While 30% of those surveyed indicate a more reserved stance, with "a little" (23%) or "no trust at all" (7%) in the quality of AI-generated output.`,
+		quote:        "While 30% of those surveyed indicate a more reserved stance",
+		passageID:    "report#p31#0",
+		ruleSentence: "COMPLEMENTARY percentages are consistent",
+	},
+	{
+		name:         "EX20_rounded_complement",
+		claim:        "Findings indicate with 78% certainty that AI adoption is not associated with developers feeling a diminished sense of personal ownership over their work; there is a small (21%) but notable probability that AI decreases a sense of personal ownership.",
+		passage:      "However, there is a small (21%) but notable probability that AI decreases a sense of personal ownership.",
+		quote:        "there is a small (21%) but notable probability that AI decreases a sense of personal ownership",
+		passageID:    "report#p46#0",
+		ruleSentence: "within a point of summing to 100%",
+	},
+	{
+		name:         "SD1_taxonomy_level",
+		claim:        "DORA measures software delivery throughput with three factors: lead time for changes, deployment frequency, and failed deployment recovery time.",
+		passage:      "DORA uses two factors to measure software delivery instability: Change fail rate. Rework rate.",
+		quote:        "DORA uses two factors to measure software delivery instability",
+		passageID:    "report#p13#0",
+		ruleSentence: "ONE LEVEL of a stated taxonomy",
 	},
 }
 

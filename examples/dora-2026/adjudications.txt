@@ -1,0 +1,20 @@
+# Human adjudications — PW's own leaf verdicts, overlaid on the single-source machine run
+# (spec/SERVE.md § Adjudications). Format: ID | verdict | quote | page | initials | reason
+# Read by the -review render from this example dir; shown beside the machine badge, and the
+# index reports the agreement count. Six |-fields per line; no pipe inside a field.
+#
+# The four `faithful` overrides are the consistency false-positives the three new single-source
+# rules address (spec/TREE.md § Single-source judging has a direction): ES5 identical figure,
+# AD19 complementary percentages, EX20 rounding, SD1 taxonomy level. CM10 left for PW.
+
+ES5 | faithful | The majority of survey respondents (90%) use AI as part of their work | 4 | PW | claim reproduces the source figure verbatim (90%); the machine's overstated is a false positive — identical figure, identical scope
+AD19 | faithful | While 30% of those surveyed indicate a more reserved stance, with "a little" (23%) or "no trust at all" (7%) | 31 | PW | the 70% "some confidence" and the 30% "little/no trust" partition one 100% split — complements, not a contradiction
+EX20 | faithful | there is a small (21%) but notable probability that AI decreases a sense of personal ownership | 46 | PW | 78% "not diminished" and 21% "decreases" sum to 99% — one split off by a rounding point, not a contradiction
+SD1 | faithful | DORA uses three factors to measure software delivery throughput: Lead time for changes, Deployment frequency, Failed deployment recovery time | 13 | PW | the source assigns recovery time to throughput itself; the machine's contradicted misfiled it under instability — a taxonomy level, not a conflict
+ES2 | partial | qualitative data and survey responses from nearly 5,000 technology professionals from around the world | 3 | PW | the "nearly 5,000" survey figure is corroborated, but "more than 100 hours" sits only in the claim's own paragraph, excluded from retrieval — hours unheld
+AD22 | overstated | despite some imperfections, it seems AI use has rapidly become standard practice for a majority of organizations | 32 | PW | the source hedges with "it seems"; the claim drops the hedge and states it flatly
+PE2 | overstated | Dedicated platform teams are the dominant organizational model, making up 76% | 66 | PW | the 76% is the share of the dominant model; the claim reframes it as "76% of organizations" — denominator broadened
+FT2 | overstated | a prerequisite for success with AI. Without a user at the center of your strategy, AI adoption is unlikely to help, and may even hinder, your team's performance | 95 | PW | the source frames this as advice ("not just beneficial, it's a prerequisite"); rendered as a flat causal finding it overstates the recommendation
+VS4 | partial | While AI adoption on its own shows a modest impact, the effect is dramatically amplified in organizations with strong VSM practices | 78 | PW | verbatim on AI's impact on organizational performance; carried to the team- and product-performance framing the direction holds but the measured outcome differs
+CM12 | partial | adopting AI-assisted development tools can harm teams that don't have a user-centric focus | 64 | PW | direction is faithful, but the claim fuses two findings (harm without focus; strong positive with a North Star focus) into one causal chain
+ES10 | partial | This year's research identifies seven distinct team profiles, from "harmonious high-achievers" to teams caught in a "legacy bottleneck" | 4 | PW | the seven profiles and the two named endpoints are grounded, but "offering a new framework for targeted improvement" adds an evaluative gloss the descriptive finding does not state
