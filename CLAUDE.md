@@ -240,6 +240,11 @@ this envelope to specific code loci — consult the relevant row before changing
   never stands alone.
 - Roads not taken: keep a parking lot (`SESSION.md`) of deferred and abandoned items so reversals
   and dead ends survive the session boundary.
+- Adjudication initials: cc never files a line in an `adjudications.txt` under a human's initials. A
+  leaf verdict cc drafts carries `cc`; a human promotes it by editing the line — correcting the verdict
+  or reason as they read the leaf — and swapping `cc` for their own initials (spec/SERVE.md
+  § Adjudications). A draft left under `PW` renders on the page as PW's own call, so borrowing the
+  initials asserts a reading the human never made. Write `cc` and stop; promotion is the human's edit.
 
 
 ## Reporting to the human

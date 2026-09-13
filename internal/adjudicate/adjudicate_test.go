@@ -2,10 +2,11 @@ package adjudicate
 
 // adjudicate_test.go pins the file parse and the agreement tally. TestAgreeThreeTwo is the stated
 // refuter: three adjudications, two matching the machine's verdicts and one not, so N=3, Agreed=2 and
-// the single disagreement keeps the human's reason; and a fourth adjudication whose id names no rendered
-// leaf is IGNORED — not counted in N, not a disagreement — pinning the gate to the rendered tree
-// (spec/SERVE.md § Adjudications). TestLoad pins the |-delimited line, the skipped `#` and blank lines,
-// the page parse, that a missing file is not an error, and that a short line is.
+// the single disagreement keeps the human's reason; and a fourth adjudication whose id names no judged
+// leaf is IGNORED — not counted in N, not a disagreement — pinning that the count covers only ids with a
+// machine verdict, whether or not that leaf sits on the argument tree (spec/SERVE.md § Adjudications).
+// TestLoad pins the |-delimited line, the skipped `#` and blank lines, the page parse, that a missing
+// file is not an error, and that a short line is.
 
 import (
 	"os"
@@ -30,16 +31,16 @@ func TestAgreeThreeTwo(t *testing.T) {
 	if d := got.Disagreements[0]; d.Human != "overstated" || d.Machine != "partial" || d.Reason == "" {
 		t.Fatalf("disagreement lost a field: %+v", d)
 	}
-	// An adjudication whose id names no rendered leaf is gated out: not counted in N, not a disagreement.
-	// (`machine` is the tree's leaf set, tree.LeafVerdicts.) GHOST is absent from machine, so N stays 3.
+	// An adjudication whose id has no machine verdict is gated out: not counted in N, not a disagreement.
+	// (`machine` is every judged leaf's verdict.) GHOST is absent from machine, so N stays 3.
 	gated := append(append([]Adjudication{}, adjs...),
 		Adjudication{ID: "GHOST", Verdict: "faithful", Reason: "leaf split away since this was written"})
 	if r := Agree(machine, gated); r.N != 3 || r.Agreed != 2 || len(r.Disagreements) != 1 || r.Disagreements[0].ID != "E3" {
-		t.Fatalf("an adjudication of a non-leaf id must be ignored: got %+v", r)
+		t.Fatalf("an adjudication of an unjudged id must be ignored: got %+v", r)
 	}
-	// A file with only off-tree adjudications gates to nothing at all.
+	// A file whose ids name no judged leaf gates to nothing at all.
 	if r := Agree(machine, []Adjudication{{ID: "GHOST", Verdict: "faithful"}}); r.N != 0 || len(r.Disagreements) != 0 {
-		t.Fatalf("an all-off-tree file must gate to N=0 with no disagreements, got %+v", r)
+		t.Fatalf("a file of only unjudged ids must gate to N=0 with no disagreements, got %+v", r)
 	}
 }
 

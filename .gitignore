@@ -72,3 +72,9 @@ examples/ai-index-2026-coding/REPORT.md
 /eval-value.stderr
 examples/dora-2026/sources/*
 !examples/dora-2026/sources/MANIFEST.md
+# The -review site and the judge chains hold verbatim quotes from the DORA report (copyrighted,
+# held for analysis not redistribution), so they carry the same terms as the sources; rebuilt from
+# the tracked claims files and MANIFEST. REPORT.md quotes flagged leaves verbatim, so it too.
+examples/dora-2026/site/
+examples/dora-2026/evidence/
+examples/dora-2026/REPORT.md

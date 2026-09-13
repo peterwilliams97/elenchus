@@ -122,20 +122,30 @@ not a silent mis-parse. `verdict` is the human's call in the same vocabulary as 
 grounded it on; `page` is the report page (`p4` or `4`, empty for none); `initials` name the
 adjudicator; `reason` is one line.
 
+`initials` say who stands behind the line, and the page prints them as written. `cc` marks a draft this
+tool wrote; a human promotes a draft by editing the line — fixing the verdict or reason as they read the
+leaf — and replacing `cc` with their own initials. **cc never files a line under a human's initials**: a
+draft left under `PW` reads on the page as PW's own adjudication, so an unpromoted draft that borrows a
+human's initials asserts a reading the human never made. The tool writes `cc` and stops; promotion is the
+human's edit.
+
 The page uses the file two ways:
 
 - **On the leaf.** An adjudicated leaf's card shows the human verdict and initials beside the machine
   badge — the reader sees both calls without leaving the leaf. No agreement colour on the leaf; the
-  count lives in the index.
+  count lives in the index. The per-leaf display is gated to the tree: only a rendered leaf draws a card,
+  so an adjudication of a claim that sits off the argument tree shows no chip — but it still counts.
 - **In the index.** A line beneath the `what` sentence reports `N leaves adjudicated, judge agreed on
   M`, then lists each disagreement — `<id> — human <hv>, judge <mv>: <reason>`. Agreement is exact
   string equality between the human verdict and the machine's **pooled faithfulness verdict** (the
   leaf's `Faith`, after the single-source `absent`→`uncorroborated` remap), so an evaluative leaf the
-  tree badges `opinion` is still measured against the judge's underlying faithfulness call. The overlay
-  is gated to the leaves the tree renders: an adjudication whose id names no such leaf is ignored — not
-  counted in `N`, not a disagreement — so a claim split or dropped since the file was written falls out
-  silently rather than showing a spurious `(no verdict)` disagreement, and `N` is the adjudications that
-  hit a rendered leaf, not the file's line count.
+  tree badges `opinion` is still measured against the judge's underlying faithfulness call. The count
+  covers **every adjudicated leaf that has a machine verdict**, not only the argument-tree leaves — a
+  judged claim that sits off the tree (many do) is counted the same as one on it. Only an adjudication
+  whose id names no judged leaf at all is ignored — not counted in `N`, not a disagreement — so a claim
+  split or dropped since the file was written falls out silently rather than showing a spurious
+  `(no verdict)` disagreement, and `N` is the adjudications that hit a judged leaf, not the file's line
+  count.
 
 The page authors no verdict: the machine verdict is the judge's pooled `Faith`, the human verdict is a
 line in the file, and agreement is only the two strings compared.
@@ -259,8 +269,8 @@ claim id routes to (`manifest.ReportFor`), never a same-page paragraph of the ot
 - **Adjudications agree by exact verdict match, and disagreements keep their reason.**
   `TestAgreeThreeTwo` (adjudicate package) drives `Agree` with three adjudications, two matching the
   machine verdicts and one not, and asserts `N=3, Agreed=2` with the single disagreement carrying the
-  human's reason; a fourth adjudication whose id names no rendered leaf is ignored — N stays 3 — pinning
-  the gate to the tree's leaf set; `TestLoad` pins the `|`-delimited parse, skipped comments, the page
+  human's reason; a fourth adjudication whose id has no machine verdict is ignored — N stays 3 — pinning
+  that the count covers only ids with a verdict, on or off the tree; `TestLoad` pins the `|`-delimited parse, skipped comments, the page
   field, and that a missing file is not an error. `TestArgumentPageAdjudications` (tree package) drives `ArgumentPage`
   with an overlay and asserts the index reports the count and lists the disagreement, and an adjudicated
   leaf shows the human verdict beside the machine badge.

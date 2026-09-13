@@ -4007,10 +4007,16 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 	if err != nil {
 		fatal("adjudications: " + err.Error())
 	}
-	// The overlay is gated to the leaves the argument tree actually renders (not every judged row): an
-	// adjudication whose id names no rendered leaf is ignored (adjudicate.Agree). LeafVerdicts is that
-	// set, id → pooled Faith, after the single-source remap above.
-	machine := tree.LeafVerdicts(root)
+	// The agreement count covers every adjudicated leaf that has a machine verdict, so an adjudication of
+	// a judged claim counts even when that claim is not an argument-tree leaf (many DORA leaves are judged
+	// but sit off the argument tree). `machine` is therefore every judged row's id → pooled Faith, after
+	// the single-source remap above — not just the rendered leaves. The per-leaf DISPLAY stays gated to
+	// the tree: only a rendered leaf draws a card, so only there does the human chip appear beside the
+	// machine badge (adjudicate.Agree, spec/SERVE.md § Adjudications).
+	machine := make(map[string]string, len(rows))
+	for i := range rows {
+		machine[rows[i].ID] = rows[i].Faith
+	}
 	adj := adjudicate.NewOverlay(machine, adjs)
 	page, rootBlock := tree.ArgumentPage(root, details, title, what, c.singleSource, adj)
 	if adj != nil {

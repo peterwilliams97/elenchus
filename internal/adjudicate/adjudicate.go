@@ -90,12 +90,14 @@ type Overlay struct {
 }
 
 // Agree compares each adjudication's verdict with the machine's verdict for the same leaf
-// (`machine[id]`), counting matches and listing the mismatches in file order. `machine` is the set of
-// leaves the tree renders (tree.LeafVerdicts), so an adjudication whose id names no such leaf is
-// IGNORED — not counted in `N`, not a disagreement. This gates the overlay to the rendered tree: a claim
-// split or dropped since `adjudications.txt` was written falls out silently rather than showing a
-// spurious `(no verdict)` disagreement. `N` is therefore the adjudications that hit a rendered leaf, not
-// the file's line count. It authors nothing — string equality is the whole test.
+// (`machine[id]`), counting matches and listing the mismatches in file order. `machine` is every judged
+// leaf's verdict (assay.go builds it from the run's rows, id → pooled Faith), NOT only the argument-tree
+// leaves — so an adjudication of a judged claim counts even when that claim sits off the argument tree.
+// An adjudication whose id names no judged leaf (absent from `machine`) is IGNORED — not counted in `N`,
+// not a disagreement — so a claim split or dropped since `adjudications.txt` was written falls out
+// silently rather than showing a spurious `(no verdict)` disagreement. `N` is therefore the
+// adjudications that hit a judged leaf, not the file's line count. It authors nothing — string equality
+// is the whole test.
 func Agree(machine map[string]string, adjs []Adjudication) Result {
 	var r Result
 	for _, a := range adjs {
