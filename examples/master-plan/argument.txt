@@ -46,7 +46,7 @@
 root  | Stop reviewing the code; review the test instead, and let the test review the code — because the model that writes the code will be replaced repeatedly and the only thing fixed across model versions is the test, so trust has to live in the test. The goal is to survive the transition to AI-generated code.  | verbatim = §Overview ("The answer") + §Why the test, not the code
 
     REC1  | Approve the statement — a test plus a reviewable description — not the code: use one check for many changes, and shrink the pile a human still reads.  | §The principles (first principle, PR1); the plan's core mechanism
-        F1  | The only thing fixed across model versions is the test, so trust must live there — every earlier shift trusted the tool, but an LLM will be replaced.  | §Why the test, not the code
+        F1  | The only thing fixed across model versions is the test, so trust must live there — every earlier shift trusted the tool, but an LLM will be replaced.  | scheme=practical; §Why the test, not the code
             PR1
             OV3
             OV4
@@ -55,7 +55,7 @@ root  | Stop reviewing the code; review the test instead, and let the test revie
             WT3
             WT5
             WT4
-        F2  | A statement is a test that returns pass/fail plus a plain-English description a person approves.  | §What a statement is
+        F2  | A statement is a test that returns pass/fail plus a plain-English description a person approves.  | scheme=practical; §What a statement is
             ST1
             ST2
             ST3
@@ -63,7 +63,7 @@ root  | Stop reviewing the code; review the test instead, and let the test revie
             GL4
 
     REC2  | A test is not a statement until a refuter has shown it can fail.  | Four rules, rule 1 (OV11) / §What a statement is (ST5)
-        F3  | Refuters on the IPP library caught tests that check nothing — two of six could not fail.  | §What a statement is; the one finding with a HELD truth-maker (refuter-runs-2026-08-15.md)
+        F3  | Refuters on the IPP library caught tests that check nothing — two of six could not fail.  | scheme=practical; §What a statement is; the one finding with a HELD truth-maker (refuter-runs-2026-08-15.md)
             OV11
             ST5
             R-REF
@@ -72,13 +72,13 @@ root  | Stop reviewing the code; review the test instead, and let the test revie
             AP4
 
     REC3  | A checker must not share code with what it checks.  | Four rules, rule 2 (OV11) / §Tests are code too (TC1)
-        F4  | Shared code hides bugs by construction — a shared toInt32 passed 10,000 checks with the bug present and again with the fix reverted.  | §WPP, §Tests are code too, §Choosing (CH6 states the blind spot once)
+        F4  | Shared code hides bugs by construction — a shared toInt32 passed 10,000 checks with the bug present and again with the fix reverted.  | scheme=example; §WPP, §Tests are code too, §Choosing (CH6 states the blind spot once)
             TC1
             WP6
             CH6
 
     REC4  | A checker must say "didn't look", not only "found nothing", and state the one channel it watches.  | Four rules, rule 3 (OV11) / §What a statement is (ST7) / §Tests are code too (TC2)
-        F5  | A pass that could mean "never examined the input" is not a pass, and a right answer on the wrong channel is not coverage (the 65/65 WPP result).  | §What a statement is, §Tests are code too
+        F5  | A pass that could mean "never examined the input" is not a pass, and a right answer on the wrong channel is not coverage (the 65/65 WPP result).  | scheme=practical; §What a statement is, §Tests are code too
             ST7
             ST8
             ST9
@@ -88,7 +88,7 @@ root  | Stop reviewing the code; review the test instead, and let the test revie
             WP-65
 
     REC5  | Prefer changes that alter no behaviour — the old code is the checker — and start there; put new behaviour through the loop only where a test can be written.  | Four rules, rule 4 (OV11) / §Which changes are eligible (EL1)
-        F6  | No-behaviour-change work is machine-checkable and the compression bet is nearly guaranteed; whether a test is shorter than the code for NEW behaviour is the open question — the two do not stand or fall together.  | §Which changes are eligible, §The loop
+        F6  | No-behaviour-change work is machine-checkable and the compression bet is nearly guaranteed; whether a test is shorter than the code for NEW behaviour is the open question — the two do not stand or fall together.  | scheme=practical; §Which changes are eligible, §The loop
             EL1
             EL2
             EL3
@@ -97,7 +97,7 @@ root  | Stop reviewing the code; review the test instead, and let the test revie
             LP7
 
     REC6  | Iterate the test, not the code, until it stops changing; draft it before the code and count the review time of every revision.  | §The loop
-        F7  | You learn the missing condition only after the code fails the test — the codec test grew a year-range and a 32-bit condition round by round until it stabilised.  | §The loop
+        F7  | You learn the missing condition only after the code fails the test — the codec test grew a year-range and a 32-bit condition round by round until it stabilised.  | scheme=practical; §The loop
             LP1
             LP2
             LP3
@@ -105,7 +105,7 @@ root  | Stop reviewing the code; review the test instead, and let the test revie
             LP5
 
     REC7  | Choose what to work on by how good a checker is available, not by where the pain is.  | §Choosing what to work on
-        F8  | The choice is a checklist, not a formula — what checker exists, what inputs, what channel, how long to triage — and no number has been computed from it.  | §Choosing what to work on
+        F8  | The choice is a checklist, not a formula — what checker exists, what inputs, what channel, how long to triage — and no number has been computed from it.  | scheme=example; §Choosing what to work on
             CH1
             CH2
             CH3
@@ -113,7 +113,7 @@ root  | Stop reviewing the code; review the test instead, and let the test revie
             CH5
 
     REC8  | Sample by producer and cell, evenly across cells, never in proportion to traffic volume — random inputs don't work.  | §The principles (second principle, PR2) / §Sampling
-        F9  | Real inputs from a few clustered producers cover the multi-condition combinations that reach production, which random and volume-weighted sampling miss.  | §Sampling; combinatorial basis Kuhn/Wallace/Gallo 2004 (SA3)
+        F9  | Real inputs from a few clustered producers cover the multi-condition combinations that reach production, which random and volume-weighted sampling miss.  | scheme=practical; §Sampling; combinatorial basis Kuhn/Wallace/Gallo 2004 (SA3)
             PR2
             SA1
             SA2
@@ -125,7 +125,7 @@ root  | Stop reviewing the code; review the test instead, and let the test revie
             SA8
 
     REC9  | Order the work easiest→hardest by who makes the input: document products, then WPP, then security.  | §Overview (OV7) / §Goal (GO3); the three findings are the three cases
-        F10  | Document products — easy, already done once: the PDF library shipped and drew no customer-reported defect over several years, with stated caveats.  | §Document-based products; "no bug in N years" claim (DP2/OV8)
+        F10  | Document products — easy, already done once: the PDF library shipped and drew no customer-reported defect over several years, with stated caveats.  | scheme=example; §Document-based products; "no bug in N years" claim (DP2/OV8)
             OV8
             DP1
             DP2
@@ -135,7 +135,7 @@ root  | Stop reviewing the code; review the test instead, and let the test revie
             DP6
             DP7
             DP8
-        F11  | WPP — hard, closed reference: the first codec property test found nothing itself but forced four bugs into view and measured the metric at 0.5 declarations per review-hour.  | §WPP
+        F11  | WPP — hard, closed reference: the first codec property test found nothing itself but forced four bugs into view and measured the metric at 0.5 declarations per review-hour.  | scheme=example; §WPP
             WP1
             WP2
             WP2b
@@ -145,7 +145,7 @@ root  | Stop reviewing the code; review the test instead, and let the test revie
             WP5
             WP7
             WP8
-        F12  | Security — hardest: the attacker adapts and reads our product, so inputs can't be enumerated; no coverage figure exists until every entry point is listed (a day's work not done).  | §Security; §Sampling (SA9/SA10 — the case is decided by who makes the input)
+        F12  | Security — hardest: the attacker adapts and reads our product, so inputs can't be enumerated; no coverage figure exists until every entry point is listed (a day's work not done).  | scheme=example; §Security; §Sampling (SA9/SA10 — the case is decided by who makes the input)
             SA9
             SA10
             SE1
@@ -156,7 +156,7 @@ root  | Stop reviewing the code; review the test instead, and let the test revie
             SE6
 
     REC10  | Measure exported declarations closed per review-hour, paired with escaped bugs and coverage cells; grade a figure provisional until every number in it is reproducible.  | §What we measure
-        F13  | First provisional row, IPP wire codec, 2026-09-05: 1 declaration closed, ~2 review-hours, 0.5 declarations per review-hour.  | §What we measure; restates §WPP (WP8) and §Overview (OV12)
+        F13  | First provisional row, IPP wire codec, 2026-09-05: 1 declaration closed, ~2 review-hours, 0.5 declarations per review-hour.  | scheme=practical; §What we measure; restates §WPP (WP8) and §Overview (OV12)
             OV12
             ME1
             ME2
@@ -166,13 +166,13 @@ root  | Stop reviewing the code; review the test instead, and let the test revie
             ME6
 
     REC11  | Build an asset that outlives its author — a written sampling procedure someone else can use unchanged (succession).  | §Succession
-        F14  | The scarce knowledge (what to sample) is in one head; the procedure is not written down until someone else uses it to sample a new cell and the author accepts it unchanged.  | §Succession
+        F14  | The scarce knowledge (what to sample) is in one head; the procedure is not written down until someone else uses it to sample a new cell and the author accepts it unchanged.  | scheme=example; §Succession
             SU1
             SU2
             SU3
 
     REC12  | Avoid anything that still needs a human per change, and anything that samples the wrong inputs.  | §What to avoid; restates §Overview ("What we don't do", OV13)
-        F15  | The anti-list: better generators, better prompts, specs without tests, tests without refuters, shared-code checkers, trusting a model as a compiler, counting lines; and random / volume-weighted / product-filed sampling.  | §What to avoid
+        F15  | The anti-list: better generators, better prompts, specs without tests, tests without refuters, shared-code checkers, trusting a model as a compiler, counting lines; and random / volume-weighted / product-filed sampling.  | scheme=practical; §What to avoid
             OV13
             AV1
             AV2

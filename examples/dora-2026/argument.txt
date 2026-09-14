@@ -55,33 +55,33 @@ root  | AI's primary role in software development is that of an amplifier — it
 
     # ── The seven DORA AI Capabilities (practical advice, p63–64); each remedies one capability finding ──
     R-STANCE  | Clarify and socialize your AI policies — establish a clear, communicated policy on permitted tools and usage.  | p63; remedies F-STANCE
-        F-STANCE  | A clear and communicated AI stance amplifies AI's positive impact on individual effectiveness and organizational performance, and turns its neutral effect on friction beneficial.  | §Clear and communicated AI stance p52
+        F-STANCE  | A clear and communicated AI stance amplifies AI's positive impact on individual effectiveness and organizational performance, and turns its neutral effect on friction beneficial.  | scheme=practical; §Clear and communicated AI stance p52
             CM4
             CM11 [opinion]
 
     R-DATA  | Treat your data as a strategic asset — invest in the quality, accessibility, and unification of internal data sources.  | p63; remedies F-DATA
-        F-DATA  | Healthy data ecosystems amplify AI's positive influence on organizational performance.  | §Healthy data ecosystems p54
+        F-DATA  | Healthy data ecosystems amplify AI's positive influence on organizational performance.  | scheme=practical; §Healthy data ecosystems p54
             CM5
 
     R-ACCESS  | Connect AI to your internal context — give AI tools secure access to internal documentation, codebases, and data.  | p63; remedies F-ACCESS
-        F-ACCESS  | AI-accessible internal data amplifies AI's positive influence on individual effectiveness and code quality.  | §AI-accessible internal data p55
+        F-ACCESS  | AI-accessible internal data amplifies AI's positive influence on individual effectiveness and code quality.  | scheme=practical; §AI-accessible internal data p55
             CM6
 
     R-VC  | Embrace and fortify your safety nets — make teams proficient in rollback and revert features.  | p63; remedies F-VC
-        F-VC  | Strong version control practices — commit frequency and rollback use — amplify AI's benefits for individual effectiveness and team performance.  | §Strong version control practices p56
+        F-VC  | Strong version control practices — commit frequency and rollback use — amplify AI's benefits for individual effectiveness and team performance.  | scheme=practical; §Strong version control practices p56
             CM7
 
     R-BATCH  | Reduce the size of work items — enforce the discipline of working in small batches.  | p63; remedies F-BATCH
-        F-BATCH  | Working in small batches amplifies AI's positive influence on product performance and turns its neutral effect on friction beneficial (though it slightly reduces AI's individual-effectiveness gains).  | §Working in small batches p58
+        F-BATCH  | Working in small batches amplifies AI's positive influence on product performance and turns its neutral effect on friction beneficial (though it slightly reduces AI's individual-effectiveness gains).  | scheme=practical; §Working in small batches p58
             CM8
 
     R-USER  | Center users' needs in product strategy — keep the user as the product's North Star.  | p64; remedies F-USER
-        F-USER  | A user-centric focus amplifies AI's positive influence on team performance; in its absence, AI adoption has a negative impact on team performance.  | §User-centric focus p60
+        F-USER  | A user-centric focus amplifies AI's positive influence on team performance; in its absence, AI adoption has a negative impact on team performance.  | scheme=practical; §User-centric focus p60
             CM9
             FT1
 
     R-PLAT  | Invest in your internal platform — treat it as a product and the strategic prerequisite for unlocking AI's organizational value.  | p64; remedies F-PLAT
-        F-PLAT  | A quality internal platform amplifies AI's positive influence on organizational performance (negligible when platform quality is low, strong when high), at the cost of a small but credible increase in delivery instability.  | §Quality internal platforms p62; §The strategic imperative p71
+        F-PLAT  | A quality internal platform amplifies AI's positive influence on organizational performance (negligible when platform quality is low, strong when high), at the cost of a small but credible increase in delivery instability.  | scheme=practical; §Quality internal platforms p62; §The strategic imperative p71
             CM10
             PE6
             PE5
@@ -89,7 +89,7 @@ root  | AI's primary role in software development is that of an amplifier — it
 
     # ── Cross-cutting recommendation with its own chapter finding ──
     R-VSM  | Use value stream management to turn AI investment into a competitive advantage.  | §Value stream management p73–78; remedies F-VSM
-        F-VSM  | VSM amplifies AI's impact on organizational performance and independently drives higher team performance, more valuable work, and better product performance.  | §How this appears in our 2025 findings p77
+        F-VSM  | VSM amplifies AI's impact on organizational performance and independently drives higher team performance, more valuable work, and better product performance.  | scheme=practical; §How this appears in our 2025 findings p77
             VS4
             VS1
             VS2

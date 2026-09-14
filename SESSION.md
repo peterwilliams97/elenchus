@@ -4,6 +4,25 @@ Deferred and abandoned items, so reversals and dead ends survive the session bou
 backlog (`docs/todo/roadmap.md`) and not a change log (`rigour-map/decision_log.jsonl`) — this is the
 holding pen for "decided to defer," with enough context to resume cold.
 
+## Edge pass (spec/EDGE.md) — 2026-09-14
+
+Spec-only. `spec/EDGE.md` (247 lines) is written but **untracked**; no code, tags, or chains exist yet.
+
+- **(1) Parser + tags + refuter tests — DONE.** `parseArg` (internal/tree/argument.go) reads
+  `scheme=` off the note column; the dora (8) and master-plan (15) F→R edges are tagged in
+  `examples/dora-2026/argument.txt` and `examples/master-plan/argument.txt`, with refuter tests in
+  `internal/tree/argument_test.go`. Render stays byte-identical on the existing corpus (scheme is
+  provenance a human reads).
+- **(2) `-edge` flag (admission check + template rule + rollup) — NOT STARTED.** No `-edge` flag in
+  code; every "edge" hit in the tree package is the pre-existing `?`-edge concept (spec/ARGUMENT.md),
+  unrelated. No admission check, template rule, or rollup, and no tests for any of it.
+- **(3) Peter's haiku N=5 on dora — NOT STARTED.** No `*edge*` chain under `testing/chains/`; the
+  dirs there are the ce/nb/as-of/prediction/laundering destructive variants, none from an edge run.
+
+**Next step: (2) — the `-edge` flag: the per-edge model call (§ 2), the code-side admission check and
+cross-edge template rule (§ 3), and the `open`/`unchallenged` rollup into ARGUMENT.md's lattice
+(§ 4), with tests.**
+
 ## 2026-06-11 — packages A + B (d015 / d016 / d017)
 
 Fragment-attributed re-calibration, false-attack probe, and reflexive pass. What shipped and what it

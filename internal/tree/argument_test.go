@@ -7,6 +7,7 @@ package tree
 // `uncorroborated` leaf weakens rather than fails under a single-source corpus. Fixtures sit at the foot.
 
 import (
+	"os"
 	"strings"
 	"testing"
 
@@ -418,9 +419,77 @@ func TestSubstanceGatesHold(t *testing.T) {
 	}
 }
 
+// TestSchemeTagsInCorpora is the spec/EDGE.md §1 refuter: the two in-scope corpora carry a scheme tag
+// on exactly the in-scope finding→recommendation edges and nowhere else — dora's 8 capability findings
+// (F-STANCE…F-VSM) and master-plan's 15 findings (F1…F15). It parses the shipped argument.txt files
+// and counts nodes whose edge to the parent is typed; a dropped tag, a stray tag on a rec or base line,
+// or a corpus edit that adds an edge reddens it. The count is the whole assertion — an empty parse
+// would read 0 and fail, per the zero-output rule.
+func TestSchemeTagsInCorpora(t *testing.T) {
+	for _, tc := range []struct {
+		path string
+		want int
+	}{
+		{"../../examples/dora-2026/argument.txt", 8},
+		{"../../examples/master-plan/argument.txt", 15},
+	} {
+		text, err := os.ReadFile(tc.path)
+		if err != nil {
+			t.Fatalf("read %s: %v", tc.path, err)
+		}
+		root, err := parseArg(string(text))
+		if err != nil {
+			t.Fatalf("parseArg %s: %v", tc.path, err)
+		}
+		if got := countTagged(root); got != tc.want {
+			t.Errorf("%s: %d scheme-tagged edges, want %d", tc.path, got, tc.want)
+		}
+	}
+}
+
+// TestSchemeBadValueFailsParse: a scheme value outside the closed set (spec/EDGE.md §1) stops the parse
+// rather than typing the edge to nothing, while a set member parses and lands on the node's `Scheme`.
+// The pair is the refuter — the closed set must both admit its members and reject a typo, so a corpus
+// with a mistyped scheme cannot render as if the edge were untagged.
+func TestSchemeBadValueFailsParse(t *testing.T) {
+	bad := joinLines(
+		"root  | Root.  | x",
+		"    R1  | Rec one.  | x",
+		"        F1  | Finding one.  | scheme=analogy; §Somewhere",
+	)
+	if _, err := parseArg(bad); err == nil {
+		t.Fatalf("an unknown scheme value must fail the parse")
+	}
+	good := joinLines(
+		"root  | Root.  | x",
+		"    R1  | Rec one.  | x",
+		"        F1  | Finding one.  | scheme=practical; §Somewhere",
+	)
+	root, err := parseArg(good)
+	if err != nil {
+		t.Fatalf("a valid scheme must parse: %v", err)
+	}
+	if f1 := childByID(childByID(root, "R1"), "F1"); f1 == nil || f1.Scheme != "practical" {
+		t.Fatalf("scheme not read onto the node: %+v", f1)
+	}
+}
+
 // ── fixtures ────────────────────────────────────────────────────────────────
 
 func joinLines(lines ...string) string { return strings.Join(lines, "\n") + "\n" }
+
+// countTagged sums the nodes whose edge to the parent carries a scheme tag (spec/EDGE.md §1) — every
+// node with a non-empty `Scheme`, over the whole tree.
+func countTagged(n *ArgNode) int {
+	c := 0
+	if n.Scheme != "" {
+		c++
+	}
+	for _, ch := range n.Children {
+		c += countTagged(ch)
+	}
+	return c
+}
 
 func mustBuild(t *testing.T, arg string, rows []brief.Row) *ArgNode {
 	t.Helper()

@@ -28,8 +28,20 @@ type ArgNode struct {
 	ID       string
 	Content  string // the proposition, authored, in the report's words; empty on a bare claim-leaf line
 	Query    bool   // the edge from the parent to this node is a `?` edge (report does not establish it)
+	Scheme   string // the edge to this node's PARENT: its argument scheme (spec/EDGE.md §1), "" if untagged
 	Children []*ArgNode
 	row      *brief.Row // non-nil only on an atomic-claim leaf, keyed by ID from the merged rows
+}
+
+// schemes is the closed set of argument-scheme values a finding line's note column may carry
+// (spec/EDGE.md §1). The tag names what the inference from finding to recommendation IS; an unknown
+// value is a parse error, so a typo cannot silently type an edge to nothing.
+var schemes = map[string]bool{
+	"practical":      true,
+	"survey":         true,
+	"example":        true,
+	"trend":          true,
+	"classification": true,
 }
 
 // Judgement values, worst last. `opinion` is outside the ordering: an opinion is not evidence and
@@ -47,7 +59,10 @@ const (
 // with no matching row, because a leaf the chain does not cover would silently render as an unsettled
 // gap rather than the missing input it is.
 func BuildArgument(argText string, rows []brief.Row) (*ArgNode, error) {
-	root := parseArg(argText)
+	root, err := parseArg(argText)
+	if err != nil {
+		return nil, err
+	}
 	if root == nil {
 		return nil, fmt.Errorf("argument file has no root line")
 	}
@@ -64,9 +79,11 @@ func BuildArgument(argText string, rows []brief.Row) (*ArgNode, error) {
 
 // parseArg reads the argument tree by indentation: a node's parent is the nearest preceding line
 // indented less than it. A line is `<id>[ ?]  | <content>  | <note>` (internal or attached leaf) or a
-// bare `<id>` (an atomic-claim leaf). Blank lines and `#` comments are skipped; the note field is
-// discarded here — it is provenance for a human, not part of the tree.
-func parseArg(text string) *ArgNode {
+// bare `<id>` (an atomic-claim leaf). Blank lines and `#` comments are skipped. The note field is
+// provenance for a human and is otherwise discarded, EXCEPT a leading `scheme=<value>` token
+// (spec/EDGE.md §1): that token types the edge to the parent and is read onto `n.Scheme`, its value
+// validated against the closed `schemes` set — an unknown value is a parse error.
+func parseArg(text string) (*ArgNode, error) {
 	type frame struct {
 		indent int
 		node   *ArgNode
@@ -82,19 +99,26 @@ func parseArg(text string) *ArgNode {
 		indent := len(line) - len(strings.TrimLeft(line, " "))
 		head := trimmed
 		content := ""
+		note := ""
 		if i := strings.IndexByte(trimmed, '|'); i >= 0 {
 			head = strings.TrimSpace(trimmed[:i])
 			rest := trimmed[i+1:]
 			if j := strings.IndexByte(rest, '|'); j >= 0 {
-				rest = rest[:j]
+				content = strings.TrimSpace(rest[:j])
+				note = strings.TrimSpace(rest[j+1:])
+			} else {
+				content = strings.TrimSpace(rest)
 			}
-			content = strings.TrimSpace(rest)
 		}
 		fields := strings.Fields(head)
 		if len(fields) == 0 {
 			continue
 		}
-		n := &ArgNode{ID: fields[0], Content: content}
+		scheme, err := parseScheme(note)
+		if err != nil {
+			return nil, fmt.Errorf("%s: %w", fields[0], err)
+		}
+		n := &ArgNode{ID: fields[0], Content: content, Scheme: scheme}
 		for _, f := range fields[1:] {
 			if f == "?" {
 				n.Query = true
@@ -111,7 +135,27 @@ func parseArg(text string) *ArgNode {
 		}
 		stack = append(stack, frame{indent, n})
 	}
-	return root
+	return root, nil
+}
+
+// parseScheme reads a leading `scheme=<value>` token from a note column (spec/EDGE.md §1), returning
+// the value or "" when the note carries no scheme tag. The token runs to the first `;` so provenance
+// may follow it on the same column. A value outside the closed `schemes` set is an error, not a silent
+// drop — a mistyped scheme must stop the parse rather than type the edge to nothing.
+func parseScheme(note string) (string, error) {
+	const prefix = "scheme="
+	if !strings.HasPrefix(note, prefix) {
+		return "", nil
+	}
+	value := note[len(prefix):]
+	if i := strings.IndexByte(value, ';'); i >= 0 {
+		value = value[:i]
+	}
+	value = strings.TrimSpace(value)
+	if !schemes[value] {
+		return "", fmt.Errorf("unknown scheme %q (want one of practical, survey, example, trend, classification)", value)
+	}
+	return value, nil
 }
 
 // attachRows binds a merged row to every childless node whose ID names a claim, leaving structural
