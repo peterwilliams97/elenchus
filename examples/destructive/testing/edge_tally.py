@@ -7,9 +7,15 @@
 # recommendation follows".
 import json, glob, os, re, sys, collections
 
-# in-scope F→R edge counts per corpus (spec/EDGE.md §5): the denominator a partial run is measured
-# against. A base that names neither leaves partiality UNCHECKED rather than silently passing.
-EXPECT = {"dora": 8, "master-plan": 15}
+# Per corpus (spec/EDGE.md §5): the scheme-tagged F→R edges, and the ones OUT of scope on a failed leaf
+# (§ Scope). The in-scope denominator a partial run is measured against is tagged − excluded; runEdgePass
+# never judges an excluded edge, so the chain holds exactly the in-scope edges and N == in-scope on a full
+# run. dora's R-PLAT is out because its finding leaf-derives to `fails` (spec/EDGE.md Refuter run 1), so
+# the expected denominator is 7, not 8. A corpus that matches neither leaves partiality UNCHECKED.
+EXPECT = {
+    "dora": {"tagged": 8, "excluded": {"R-PLAT": "finding leaf-derives to fails (§ Scope)"}},
+    "master-plan": {"tagged": 15, "excluded": {}},
+}
 
 # norm mirrors edge.norm (internal/edge/edge.go): lower-case, fold curly punctuation and dashes to
 # ASCII, collapse whitespace. The template rule keys anchors through it, so the anchor listing (§3)
@@ -29,9 +35,19 @@ def trunc(s, n=80):
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
-def corpus_of(base):
+# detect_corpus reads the corpus from the chain itself, never from the *.edge.jsonl filename (which is
+# the argument base, e.g. "argument", and names no corpus). It prefers the `corpus` field runEdgePass
+# stamps on every edge record (the example dir, e.g. "dora-2026"), and falls back to the chain dir path
+# the tally was pointed at. Returns a key of EXPECT, or None when neither names a known corpus.
+def detect_corpus(recs, chain_dir):
+    for r in recs:
+        c = (r.get("detail") or {}).get("corpus", "") or ""
+        for k in EXPECT:
+            if k in c.lower():
+                return k
+    low = (chain_dir or "").lower()
     for k in EXPECT:
-        if k in base:
+        if k in low:
             return k
     return None
 
@@ -80,8 +96,7 @@ def summarise(recs):
     return edges
 
 
-def report(base, edges):
-    corpus = corpus_of(base)
+def report(base, corpus, edges):
     N = len(edges)
     print(f"\n===== {base}  ({corpus or 'corpus unknown'}, {N} edges) =====")
 
@@ -107,6 +122,11 @@ def report(base, edges):
     print(f"samples={tot_s}  none_admitted={tot_na}  offered={tot_off}  admitted={tot_adm}  "
           f"rejected={sum(rej.values())}")
     print(f"rejected by step: {dict(rej.most_common()) or '{}'}")
+    # Admitted defeaters by critical_question — which of the scheme's CQs is doing the opening
+    # (spec/EDGE.md §2). The chain carries one modal admitted defeater per open edge, so this counts
+    # open edges by their defeater's CQ; a lopsided tally names the CQ the pass leans on.
+    by_cq = collections.Counter(e["cq"] for e in edges if e["world"])
+    print(f"admitted by critical_question: {dict(by_cq.most_common()) or '{}'}")
 
     # 3. Template rule (spec/EDGE.md §3 rule 4): which edges were lifted to the root as method-level,
     #    then EVERY distinct admitted anchor across edges by exact-match (norm) key with its edge count,
@@ -149,17 +169,23 @@ def report(base, edges):
     #    all hold. The template-rule line is flagged "read the anchors" when it did not fire, pointing
     #    the human at §3's listing to judge whether a near-duplicate anchor should have merged.
     print("-- 5. spec/EDGE.md §5 --")
-    exp = EXPECT.get(corpus)
+    spec = EXPECT.get(corpus)
     nopen = sum(1 for e in edges if e["final"] == "open")
     contested = sum(1 for e in edges if e["flips"] > 0)
     checks = []
 
-    if exp is None:
+    # Partial-run check against the IN-SCOPE denominator (tagged − excluded). The chain holds only the
+    # in-scope edges, so N is the in-scope count; the excluded edges are named with why they are out.
+    if spec is None:
         print(f"  empty/partial: reached {N}/? — corpus unknown, partiality UNCHECKED")
         checks.append(N > 0)  # zero-output is still a fail even when the denominator is unknown
     else:
-        ok = N == exp
-        print(f"  empty/partial: reached {N}/{exp}  → {'PASS' if ok else 'FAIL'}")
+        excl = spec["excluded"]
+        in_scope = spec["tagged"] - len(excl)
+        ok = N == in_scope
+        excl_desc = ", ".join(f"{k} ({why})" for k, why in excl.items()) or "none"
+        print(f"  empty/partial: reached {N}/{in_scope} in-scope  "
+              f"({spec['tagged']} tagged − {len(excl)} excluded: {excl_desc})  → {'PASS' if ok else 'FAIL'}")
         checks.append(ok)
 
     ok = not (N > 0 and nopen == N)
@@ -202,12 +228,14 @@ def main():
         sys.exit(f"NO *.edge.jsonl FOUND in {d} — zero-output = FAILURE, not a pass")
     empty = True
     for f in files:
-        edges = summarise(load(f))
+        recs = load(f)
+        edges = summarise(recs)
         if not edges:
             print(f"\n===== {os.path.basename(f)} — 0 edge records — zero-output = FAILURE =====")
             continue
         empty = False
-        report(os.path.basename(f)[: -len(".edge.jsonl")], edges)
+        corpus = detect_corpus(recs, d)
+        report(os.path.basename(f)[: -len(".edge.jsonl")], corpus, edges)
     if empty:
         sys.exit("all *.edge.jsonl held 0 edge records — zero-output = FAILURE")
 

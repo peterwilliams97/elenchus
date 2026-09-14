@@ -24,11 +24,14 @@ import (
 // the report's domain, in which the verified finding still holds and the recommendation fails. A
 // returned defeater is ADMITTED only if `Admit` passes (§3); a nil defeater is the model declining to
 // refute. `Anchor` is the concrete referent the world turns on, which the admission check requires to
-// sit verbatim inside `World` — the same present-in-the-text discipline the evidence quotes run.
+// sit verbatim inside the REPORT — the finding, the recommendation, or the verified quotes — the same
+// present-in-the-text discipline the evidence quotes run, pointed at the report rather than at the
+// model's own prose. A defeater the report names is checkable against the report; one imported from
+// outside is a claim about the world, and confirming that is a retrieval past the axis boundary.
 type Defeater struct {
 	World            string `json:"world"`
-	Kind             string `json:"kind"`   // population | condition | definition | competing_goal
-	Anchor           string `json:"anchor"` // the referent, verbatim within World
+	Kind             string `json:"kind"`   // population | condition | definition
+	Anchor           string `json:"anchor"` // the referent, verbatim within the finding/recommendation/quotes
 	Settles          string `json:"settles"`
 	CriticalQuestion string `json:"critical_question"` // which of the scheme's fixed CQs this answers
 }
@@ -50,13 +53,14 @@ const (
 )
 
 // kinds is the closed set a defeater's `kind` must name (spec/EDGE.md §3 step 2). It carries the
-// concreteness the note demands — a world that gestures without naming a population, condition,
-// definition or competing goal has no kind to declare and fails admission.
+// concreteness the note demands — a world that gestures without naming a population, condition or
+// definition has no kind to declare and fails admission. `competing_goal` is deliberately absent: a
+// world that swaps in a goal the report's audience does not hold varies the addressee, which the
+// domain rule (§3 step 5) puts outside the report's domain, so it is not an admissible kind.
 var kinds = map[string]bool{
-	"population":     true,
-	"condition":      true,
-	"definition":     true,
-	"competing_goal": true,
+	"population": true,
+	"condition":  true,
+	"definition": true,
 }
 
 // cq is one of a scheme's fixed critical questions: `Slug` is the closed enum value the model returns,
@@ -73,12 +77,15 @@ type cq struct {
 // the edge call may ask. `survey`/`trend`/`classification` are defined for completeness though the dora
 // and master-plan refuter corpora exercise only `practical` and `example` (spec/EDGE.md §5(a)).
 var schemeCQs = map[string][]cq{
+	// practical carries alt_means and side_effects only (spec/EDGE.md §2, 14 Sept). The three CQs that
+	// named the recommendation's goal — goal_held, feasible, goal_conflict — are removed: each is
+	// answerable for any practical recommendation by inventing an addressee with other goals or
+	// constraints, and a world that varies the addressee is outside the report's domain (§3 step 5).
+	// The two that remain stay report-internal — alt_means names a cheaper route to the same goal,
+	// side_effects a cost the recommendation's own text already carries.
 	"practical": {
-		{"goal_held", "Is the goal the recommendation serves actually held by the organisation it addresses?"},
 		{"alt_means", "Is there an alternative means to that goal the recommendation ignores?"},
 		{"side_effects", "Does the recommended action carry a side effect that defeats the goal?"},
-		{"feasible", "Is the recommended action feasible for the organisation it addresses?"},
-		{"goal_conflict", "Does the goal conflict with another goal the organisation holds more binding?"},
 	},
 	"survey": {
 		{"position_to_know", "Are the respondents in a position to know what the claim reports?"},
@@ -104,12 +111,16 @@ var schemeCQs = map[string][]cq{
 func KnownScheme(s string) bool { _, ok := schemeCQs[s]; return ok }
 
 // Admit runs the mechanical, no-NLP admission check of spec/EDGE.md §3 steps 1–3 (the cross-edge
-// template rule of step 4 runs separately, in Resolve). It returns ok, and on failure the step that
-// rejected the offer — "world", "settles", "kind" or "anchor" — so a run logs why each offered defeater
-// was discarded and states how many were offered against how many admitted. The check is form-only: it
-// never judges whether the world is a GOOD defeater, only that the model named a concrete referent and
-// pointed at it inside the world it wrote, which is what stops the free "could be equivocating" attack.
-func Admit(d Defeater) (ok bool, failedStep string) {
+// template rule of step 4 runs separately, in Resolve). `reportText` is the prose the anchor must land
+// in — the finding text, the recommendation text, and each verified quote, assembled by the caller. It
+// returns ok, and on failure the step that rejected the offer — "world", "settles", "kind" or "anchor"
+// — so a run logs why each offered defeater was discarded and states how many were offered against how
+// many admitted. The check is form-only: it never judges whether the world is a GOOD defeater, only
+// that the model named a concrete referent AND that referent appears in the report (§3 step 3, amended
+// 14 Sept). Anchoring in `World` (the pre-fix rule) let the model manufacture its own referent and
+// quote itself — Refuter run 1 admitted an imported compliance goal the report never names; anchoring
+// in the report rejects it, because "compliance mandate" appears nowhere in the report's text.
+func Admit(d Defeater, reportText ...string) (ok bool, failedStep string) {
 	if strings.TrimSpace(d.World) == "" {
 		return false, "world"
 	}
@@ -120,7 +131,7 @@ func Admit(d Defeater) (ok bool, failedStep string) {
 		return false, "kind"
 	}
 	anchor := strings.TrimSpace(d.Anchor)
-	if anchor == "" || !anchorInWorld(anchor, d.World) {
+	if anchor == "" || !anchorInReport(anchor, reportText) {
 		return false, "anchor"
 	}
 	return true, ""
@@ -137,12 +148,21 @@ func norm(s string) string {
 	return anchorWS.ReplaceAllString(anchorPunct.Replace(strings.ToLower(strings.TrimSpace(s))), " ")
 }
 
-// anchorInWorld reports whether the anchor appears verbatim (modulo `norm`) inside the world — step 3
-// of the admission check. The model must point at the concrete thing its world turns on from inside the
-// world it wrote; this confirms the pointer lands.
-func anchorInWorld(anchor, world string) bool {
+// anchorInReport reports whether the anchor appears verbatim (modulo `norm`) inside any of the report
+// texts — the finding, the recommendation, or a verified quote — step 3 of the admission check. The
+// model must point at a concrete referent the report itself names, not one it coined in its own world;
+// this confirms the pointer lands in the report.
+func anchorInReport(anchor string, reportText []string) bool {
 	a := norm(anchor)
-	return a != "" && strings.Contains(norm(world), a)
+	if a == "" {
+		return false
+	}
+	for _, t := range reportText {
+		if strings.Contains(norm(t), a) {
+			return true
+		}
+	}
+	return false
 }
 
 // EdgeResult is one edge's modal outcome over the N samples, before the template rule. `Verdict` is Open

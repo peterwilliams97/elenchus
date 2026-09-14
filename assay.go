@@ -3635,6 +3635,7 @@ func (c *cfg) appendChainTo(path string, rec chainRecord) {
 // modal admitted defeater's fields (empty when the edge is unchallenged), and whether the template rule
 // lifted this edge's defeater to the root as method-level.
 type edgeDetail struct {
+	Corpus           string   `json:"corpus,omitempty"` // example dir the edge is from; edge_tally reads this, not the filename
 	FindingID        string   `json:"finding_id"`
 	RecID            string   `json:"rec_id"`
 	Scheme           string   `json:"scheme"`
@@ -4336,6 +4337,9 @@ func (c *cfg) runEdgePass(root *tree.ArgNode, rows []brief.Row, details map[stri
 		}
 		quotes := edgeQuotes(p.finding, byRow, details)
 		user := edge.User(p.finding.Scheme, p.finding.Content, quotes, p.rec.Content)
+		// The report text the anchor must land in (spec/EDGE.md §3 step 3): the finding, the
+		// recommendation, and each verified quote — not the model's own world.
+		reportText := append([]string{p.finding.Content, p.rec.Content}, quotes...)
 		var samples, rejected []string
 		var admittedDefs []edge.Defeater
 		offered, admitted := 0, 0
@@ -4359,7 +4363,7 @@ func (c *cfg) runEdgePass(root *tree.ArgNode, rows []brief.Row, details map[stri
 				continue
 			}
 			offered++
-			if adm, step := edge.Admit(r.Defeater); adm {
+			if adm, step := edge.Admit(r.Defeater, reportText...); adm {
 				admitted++
 				admittedDefs = append(admittedDefs, r.Defeater)
 				samples = append(samples, edge.Open)
@@ -4393,9 +4397,14 @@ func (c *cfg) runEdgePass(root *tree.ArgNode, rows []brief.Row, details map[stri
 	}
 
 	chainPath := c.edgeChainPath()
+	// The corpus tag is the example directory the argument file sits in (examples/dora-2026 → dora-2026),
+	// stamped on every edge record so edge_tally detects the corpus from the chain, not the chain filename
+	// (which is the argument base, e.g. "argument", and names no corpus).
+	corpus := filepath.Base(filepath.Dir(c.argumentFile))
 	for i, a := range aggs {
 		fv := finalVerdict[a.pair.finding.ID]
 		det := edgeDetail{
+			Corpus:    corpus,
 			FindingID: a.pair.finding.ID, RecID: a.pair.rec.ID, Scheme: a.pair.finding.Scheme,
 			Warrant: a.warrant, Offered: a.offered, Admitted: a.admitted, Rejected: a.rejected,
 			MethodLevel: methodEdges[a.pair.finding.ID],

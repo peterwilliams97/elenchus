@@ -15,7 +15,8 @@ import (
 // each mutation fails at, and only at, its own step (spec/EDGE.md §3). A rule the check stopped
 // enforcing would let its mutation through — the point of a rejecting case per rule.
 func TestAdmitRejectsEachStep(t *testing.T) {
-	if ok, step := Admit(goodDefeater()); !ok {
+	report := reportText()
+	if ok, step := Admit(goodDefeater(), report...); !ok {
 		t.Fatalf("the good defeater should be admitted, rejected at step %q", step)
 	}
 	cases := []struct {
@@ -26,13 +27,14 @@ func TestAdmitRejectsEachStep(t *testing.T) {
 		{"empty world", func(d *Defeater) { d.World = "   " }, "world"},
 		{"empty settles", func(d *Defeater) { d.Settles = "" }, "settles"},
 		{"kind off the closed set", func(d *Defeater) { d.Kind = "vibes" }, "kind"},
-		{"anchor not in world", func(d *Defeater) { d.Anchor = "a fintech startup" }, "anchor"},
+		{"competing_goal is no longer a kind", func(d *Defeater) { d.Kind = "competing_goal" }, "kind"},
+		{"anchor not in report", func(d *Defeater) { d.Anchor = "a fintech startup" }, "anchor"},
 		{"empty anchor", func(d *Defeater) { d.Anchor = "" }, "anchor"},
 	}
 	for _, tc := range cases {
 		d := goodDefeater()
 		tc.mut(&d)
-		ok, step := Admit(d)
+		ok, step := Admit(d, report...)
 		if ok {
 			t.Errorf("%s: expected rejection, was admitted", tc.name)
 			continue
@@ -43,15 +45,43 @@ func TestAdmitRejectsEachStep(t *testing.T) {
 	}
 }
 
+// TestAdmitAnchorInReport pins the amended step 3 (spec/EDGE.md §3, 14 Sept): the anchor must be a
+// verbatim substring of the report — the finding, the recommendation, or a verified quote — not of the
+// model's own world. Anchor drawn from the finding admits; anchor drawn from a quote admits; an anchor
+// the report never names — present only in the world the model wrote, the Refuter-run-1 leak — is
+// rejected at step "anchor".
+func TestAdmitAnchorInReport(t *testing.T) {
+	report := reportText()
+
+	inFinding := goodDefeater()
+	inFinding.Anchor = "delivery instability" // present in the finding text
+	if ok, step := Admit(inFinding, report...); !ok {
+		t.Errorf("an anchor drawn from the finding should admit, rejected at %q", step)
+	}
+
+	inQuote := goodDefeater()
+	inQuote.Anchor = "organizational performance" // present in a verified quote
+	if ok, step := Admit(inQuote, report...); !ok {
+		t.Errorf("an anchor drawn from a verified quote should admit, rejected at %q", step)
+	}
+
+	worldOnly := goodDefeater()
+	worldOnly.World = "an org bound by a compliance mandate the report never raises"
+	worldOnly.Anchor = "compliance mandate" // present only in the model's own world
+	if ok, step := Admit(worldOnly, report...); ok || step != "anchor" {
+		t.Errorf("an anchor named only in the world should be rejected at anchor, got ok=%v step=%q", ok, step)
+	}
+}
+
 // TestAdmitAnchorNormalised: a curly apostrophe or a line wrap between the anchor and its appearance in
-// the world must not fail step 3 — the anchor check runs the same normalisation as the evidence-quote
+// the report must not fail step 3 — the anchor check runs the same normalisation as the evidence-quote
 // grounding, so present-despite-formatting still admits.
 func TestAdmitAnchorNormalised(t *testing.T) {
 	d := goodDefeater()
-	d.World = "an org whose binding constraint is\ndelivery stability"
 	d.Anchor = "binding constraint is delivery stability"
-	if ok, step := Admit(d); !ok {
-		t.Fatalf("wrapped anchor should still be found in the world, rejected at %q", step)
+	report := []string{"an org whose binding constraint is\ndelivery stability, per §2"}
+	if ok, step := Admit(d, report...); !ok {
+		t.Fatalf("wrapped anchor should still be found in the report, rejected at %q", step)
 	}
 }
 
@@ -110,8 +140,8 @@ func TestResolveDistinctAnchorsStay(t *testing.T) {
 
 // TestSchemaPinsFieldsAndCQs pins the per-scheme schema (spec/EDGE.md §2), the edge-pass counterpart of
 // the substance/faithfulness prompt-presence tests: the practical schema constrains critical_question to
-// exactly that scheme's five CQ slugs and no other's, carries the four defeater kinds, and forbids a
-// "sound" field the axis boundary rules out.
+// exactly its two CQ slugs (alt_means, side_effects) and no other's, carries the three defeater kinds
+// (population, condition, definition), and forbids a "sound" field the axis boundary rules out.
 func TestSchemaPinsFieldsAndCQs(t *testing.T) {
 	raw, ok := Schema("practical")
 	if !ok {
@@ -119,10 +149,17 @@ func TestSchemaPinsFieldsAndCQs(t *testing.T) {
 	}
 	s := string(raw)
 	for _, want := range []string{`"warrant"`, `"none_admitted"`, `"defeater"`, `"questions_considered"`,
-		`"population"`, `"condition"`, `"definition"`, `"competing_goal"`,
-		`"goal_held"`, `"alt_means"`, `"side_effects"`, `"feasible"`, `"goal_conflict"`} {
+		`"population"`, `"condition"`, `"definition"`,
+		`"alt_means"`, `"side_effects"`} {
 		if !strings.Contains(s, want) {
 			t.Errorf("practical schema missing %s", want)
+		}
+	}
+	// The removed items must be gone: competing_goal is no longer a kind (spec/EDGE.md §3 step 2), and
+	// the three goal-naming CQs are no longer offered (§2, §3 step 5).
+	for _, gone := range []string{`"competing_goal"`, `"goal_held"`, `"feasible"`, `"goal_conflict"`} {
+		if strings.Contains(s, gone) {
+			t.Errorf("practical schema still carries removed value %s", gone)
 		}
 	}
 	// A CQ slug from another scheme must not leak into this one's enum.
@@ -137,13 +174,26 @@ func TestSchemaPinsFieldsAndCQs(t *testing.T) {
 	}
 }
 
-// goodDefeater is a fully-admissible defeater: dora's R-PLAT side-effect world, anchor quoted inside it.
+// goodDefeater is a fully-admissible defeater: dora's R-PLAT side-effect world, its anchor a phrase the
+// finding names ("delivery instability", see reportText) — admission now checks the report, not the world.
+// Kind is `condition` (a state under which the instability cost bites); `competing_goal` is no longer a
+// kind — a world that swaps the audience's goals is out of the report's domain (spec/EDGE.md §3 step 5).
 func goodDefeater() Defeater {
 	return Defeater{
-		World:            "a regulated org whose binding constraint is delivery stability, where the platform's instability cost outweighs its performance gain",
-		Kind:             "competing_goal",
-		Anchor:           "binding constraint is delivery stability",
+		World:            "a state where the platform's instability cost, under load, outweighs its performance gain",
+		Kind:             "condition",
+		Anchor:           "delivery instability",
 		Settles:          "F-PLAT's instability effect size against that org's own weighting",
 		CriticalQuestion: "side_effects",
+	}
+}
+
+// reportText is the finding, recommendation and one verified quote the admission check anchors against
+// (spec/EDGE.md §3 step 3) — the R-PLAT edge's real texts. goodDefeater's anchor sits in the finding.
+func reportText() []string {
+	return []string{
+		"A quality internal platform amplifies performance at the cost of a small increase in delivery instability.",
+		"Invest in your internal platform — treat it as the strategic prerequisite for unlocking AI's value.",
+		"a quality internal platform amplifies AI's positive influence on organizational performance",
 	}
 }

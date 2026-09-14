@@ -195,9 +195,11 @@ func TestConditionLaunderingLoopStop(t *testing.T) {
 // anchorless defeater and asserts the same wiring leaves the edge unchallenged.
 func TestRunEdgePassAdmitsAndRollsUp(t *testing.T) {
 	root, rows, details := edgeFixture(t)
+	// The anchor is "quality platform", a phrase the fixture's finding names — admission (spec/EDGE.md §3
+	// step 3) checks the report text, not the model's own world.
 	const admitted = `{"warrant":"platform value transfers to every org","none_admitted":false,` +
-		`"defeater":{"world":"a regulated org whose binding constraint is delivery stability","kind":"competing_goal",` +
-		`"anchor":"binding constraint is delivery stability","settles":"the instability effect size","critical_question":"side_effects"},` +
+		`"defeater":{"world":"a state under load where the platform's instability cost outweighs its gain","kind":"condition",` +
+		`"anchor":"quality platform","settles":"the instability effect size","critical_question":"side_effects"},` +
 		`"questions_considered":["side_effects"]}`
 	dir := t.TempDir()
 	c := cfg{repeat: 1, edgeChainDir: dir, argumentFile: "x.txt",
@@ -230,8 +232,8 @@ func TestRunEdgePassRejectsFreeAttack(t *testing.T) {
 	root, rows, details := edgeFixture(t)
 	const free = `{"warrant":"w","none_admitted":false,` +
 		`"defeater":{"world":"it might not generalise to other orgs","kind":"condition",` +
-		`"anchor":"a fintech startup","settles":"a study","critical_question":"goal_held"},` +
-		`"questions_considered":["goal_held"]}`
+		`"anchor":"a fintech startup","settles":"a study","critical_question":"side_effects"},` +
+		`"questions_considered":["side_effects"]}`
 	dir := t.TempDir()
 	c := cfg{repeat: 1, edgeChainDir: dir, argumentFile: "x.txt",
 		call: func(system, prompt string, withTools bool) (string, []retrievedSource, error) { return free, nil, nil }}
