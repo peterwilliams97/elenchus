@@ -82,25 +82,21 @@ run_substance() {
 
   local vfile="$TMP/$probe.verdicts" afile="$TMP/$probe.axes"
   : > "$vfile"; : > "$afile"
-  local r out tally low key
+  local r out vfound low key
   r=1
   while [ "$r" -le "$N" ]; do
     local cdir="$CHAINROOT/$DATE-$MODEL/$probe/run-$r"; mkdir -p "$cdir"
     out="$("$ASSAY" -md -model "$MODEL" -chain-dir "$cdir" "$dir/claim.txt" 2>"$TMP/err" || true)"
-    # Verdict distribution: parse the bold tally line, e.g. **2 hollow · 1 partial**
-    tally="$(printf '%s\n' "$out" | grep -E '^\*\*[0-9]' | head -1 | sed 's/\*\*//g' || true)"
-    if [ -n "$tally" ]; then
-      # Split on the middle-dot separator; each token is "N verdict".
-      printf '%s\n' "$tally" | tr '·' '\n' | while read -r tok; do
-        tok="$(echo "$tok" | xargs)"
-        [ -n "$tok" ] || continue
-        local num="${tok%% *}" verd="${tok#* }"
-        case "$num" in (''|*[!0-9]*) continue;; esac
-        local i=0
-        while [ "$i" -lt "$num" ]; do echo "$verd"; i=$((i+1)); done
-      done >> "$vfile"
+    # Verdict distribution: read one verdict per fragment from the per-run chain JSONL — the
+    # authoritative record — not from stdout. Under the default (brief) renderer -md emits the
+    # `**N hollow · M partial**` tally only to audit.md, never to the stdout run.sh captured, so
+    # grepping stdout parse-missed every run. The chain carries `"verdict":"<word>"` per fragment
+    # regardless of renderer.
+    vfound="$(grep -hoE '"verdict":"[a-zA-Z]+"' "$cdir"/*.substance.jsonl 2>/dev/null | sed 's/.*:"//;s/"//')"
+    if [ -n "$vfound" ]; then
+      printf '%s\n' "$vfound" >> "$vfile"
     else
-      echo "parse-miss" >> "$vfile"
+      echo "parse-miss" >> "$vfile" # no chain record: a failed run, not an empty pass (zero-output rule)
     fi
     # Axis mentions (approximate): one tick per run per keyword mentioned anywhere.
     low="$(printf '%s' "$out" | tr '[:upper:]' '[:lower:]')"
@@ -130,17 +126,16 @@ run_audit() {
   while [ "$r" -le "$N" ]; do
     local cdir="$CHAINROOT/$DATE-$MODEL/laundering/run-$r"; mkdir -p "$cdir"
     out="$("$ASSAY" -md -audit -model "$MODEL" -chain-dir "$cdir" -source "$src" "$dir/summary.txt" 2>"$TMP/err" || true)"
-    # Cross-tab data rows: | N | claim | faithful | substantive | grounded |
-    # Keep only rows whose first cell is an integer (excludes the pattern-reading table).
-    printf '%s\n' "$out" | while IFS='|' read -r _ num _claim faith subst ground _rest; do
-      num="$(echo "$num" | xargs)"
-      case "$num" in (''|*[!0-9]*) continue;; esac
-      faith="$(echo "$faith"  | sed 's/\*\*//g' | xargs)"
-      subst="$(echo "$subst"  | sed 's/\*\*//g' | xargs)"
-      ground="$(echo "$ground"| sed 's/\*\*//g' | xargs)"
-      [ -n "$faith"  ] && echo "$faith"  >> "$ffile"
-      [ -n "$subst"  ] && echo "$subst"  >> "$sfile"
-      [ -n "$ground" ] && echo "$ground" >> "$gfile"
+    # Cross-tab: read each fragment's composite verdict from the per-run audit chain, not stdout. An
+    # audit record stores `"verdict":"faith=<f> sub=<s> ev=<g>"` (auditChainRecord, assay.go); split it
+    # into the three columns. Same reason as the substance probe: the stdout cross-tab table is not what
+    # the default renderer prints, so parsing it parse-missed.
+    grep -hoE '"verdict":"faith=[^"]*"' "$cdir"/*.audit.jsonl 2>/dev/null \
+      | sed 's/.*"verdict":"//;s/"$//' | while read -r line; do
+      [ -n "$line" ] || continue
+      echo "$line" | sed -E 's/.*faith=([^ ]+).*/\1/' >> "$ffile"
+      echo "$line" | sed -E 's/.*sub=([^ ]+).*/\1/'   >> "$sfile"
+      echo "$line" | sed -E 's/.*ev=([^ ]+).*/\1/'    >> "$gfile"
     done
     echo "  laundering run $r/$N done" >&2
     r=$((r+1))
