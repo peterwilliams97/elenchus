@@ -43,6 +43,11 @@ prevent.** The destructive probes are elenchus applied to assay's own critic.
   `BACKGROUND.md`.
 - **`adversary-design-2026-09-14.md`** — proposed direction for the adversarial leg: attack
   finding→recommendation edges with named defeaters. 46 edges across the five corpora, 0 judged today.
+- **`Consultant & institutional reports.md`** — candidate test corpus: open-access consultant and
+  institutional reports to analyse, grouped by subject (global/AU/Scotland, housing, AI-in-programming,
+  EU competitiveness, AI-in-education), each with a **Test notes** column flagging where the argument
+  structure is likely to strain. Top pick is the MIT Ad Hoc Committee report (§G) — a central
+  recommendation contradicted by the report's own appendix surveys. None loaded yet.
 
 ## Suggested build order
 
