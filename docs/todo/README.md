@@ -16,10 +16,13 @@ trust. Current status (`design-notes.md`, full detail):
 - **Not a gate, by design** — `run.sh` is not wired into `build.sh`/`go test`, so nothing forces it
   to run. That is a deliberate choice (no flaky judgment gate), not neglect — but it means the leg
   survives only if someone re-runs it on purpose.
-- **Stale** — last calibration `2026-06-11`, `claude-haiku-4-5` **only**; never run on the current
-  default `claude-sonnet-4-6` or opus. ~3 months cold.
+- **Current, not stale** — re-run on `claude-sonnet-4-6` 13–14 Sept 2026
+  (`destructive-sonnet-2026-09-13.md`); the envelope held on all 8 probes. The obligation is now to
+  re-run it on every model change, not to revive a cold leg.
 - **Weakest *and* least-exercised** — the axis boundary already marks substance/elenchus the weakest
   validator; its calibration being the least-tested compounds the risk rather than excusing it.
+- **Proposed next direction** — `adversary-design-2026-09-14.md`: attack finding→recommendation
+  edges with named defeaters. 46 edges across the five corpora, 0 judged today.
 
 Treat reviving and *keeping* this calibration current on every model change as a first-class,
 recurring obligation, not roadmap step 4. It is cheap to run and expensive to have silently lost.
@@ -45,13 +48,13 @@ recurring obligation, not roadmap step 4. It is cheap to run and expensive to ha
 - **`design-notes.md`** — unsettled design seeds: whether surviving refutation is the best
   validation, and where the elenchus/substance leg stands today (dormant). May graduate to
   `BACKGROUND.md`.
+- **`adversary-design-2026-09-14.md`** — proposed direction for the adversarial leg: attack
+  finding→recommendation edges with named defeaters. 46 edges across the five corpora, 0 judged today.
 
 ## Suggested build order
 
-**Before anything else:** revive the `examples/destructive/` calibration on the current models
-(`design-notes.md`, roadmap 3.2) and keep it current — the standing concern above. It is a
-prerequisite for trusting *any* result the work below produces, and it gets cheaper to lose the
-longer it waits.
+Calibration is current as of 14 Sept; the open prerequisite for the adversarial leg is a scheme tag
+on the edge in `spec/ARGUMENT.md` before any edge-level judge code.
 
 Then, capability work:
 
