@@ -81,16 +81,25 @@ One model call per in-scope edge (repeated N times, § 5). It runs on the same `
   table above, supplied verbatim in the prompt. The model asks the scheme's questions, not questions
   of its own.
 
-**`practical`'s fixed CQs are `alt_means` and `side_effects` only.** The three that named the
-recommendation's *goal* — `goal_held`, `goal_conflict`, `feasible` — are removed. In a report
-addressed to a stated audience the goal is stipulated by the genre, so each of the three is
-answerable for *any* practical recommendation by inventing an addressee with other goals or
-constraints, and a world that changes the addressee is outside the report's domain (§ 3, step 5).
-Run 2 (below) confirmed this concretely: all five of its opened edges opened on a `goal_conflict`
-defeater naming a competing goal the report never addresses. The two that survive stay
-report-internal by construction — `alt_means` names a cheaper or faster route to the same goal, and
-`side_effects` names a cost the recommendation's own text already carries (F-PLAT's instability
-clause, F-BATCH's cost clause).
+**`practical`'s fixed CQs are `side_effects` and `means_mismatch` only.** The logic: for practical
+reasoning "M goes with G → do M" is undercut only by M having a cost the report names, or by the
+recommended M not being the measured M. Goal, feasibility and alternatives are the reader's;
+correlation→intervention is the method, not any one edge's defect, and lives at the root once (§ 3,
+rule 4). The two CQs, with their anchors:
+
+- **`side_effects`** — the finding or its verified quotes name a cost of M. Anchor = the cost clause,
+  verbatim in the finding or quotes (F-PLAT's instability clause, F-BATCH's cost clause).
+- **`means_mismatch`** — the recommended action is not the measured variable. Two anchors: `anchor`
+  verbatim in the finding (the measured variable), `anchor_rec` verbatim in the recommendation (the
+  action). The `world` is the gap between them.
+
+The three CQs that named the recommendation's *goal* — `goal_held`, `goal_conflict`, `feasible` — are
+removed, and so is `alt_means`. The goal-naming three are answerable for *any* practical
+recommendation by inventing an addressee with other goals or constraints, and a world that changes the
+addressee is outside the report's domain (§ 3, step 5); run 2 (below) confirmed this — all five of its
+opened edges opened on a `goal_conflict` defeater naming a competing goal the report never addresses.
+`alt_means` is removed for a different reason (run 3, below): a cheaper route M' does not defeat "do
+M", only "do M *rather than* M'", which the recommendation does not claim.
 
 **Output** — schema-enforced, exactly one of two shapes. There is no third "certified" shape:
 
@@ -99,7 +108,10 @@ clause, F-BATCH's cost clause).
       world            : string    // a state of the world, plausible in the report's domain, in
                                     //   which the verified finding holds and the recommendation fails
       kind             : enum       // population | condition | definition
-      anchor           : string     // the concrete referent the world names, VERBATIM within `world`
+      anchor           : string     // the concrete referent, VERBATIM in the finding or verified
+                                    //   quotes (§ 3, step 3); for means_mismatch, the measured variable
+      anchor_rec       : string     // means_mismatch only: the recommended action, VERBATIM in R;
+                                    //   "" for side_effects
       settles          : string     // the source or observation that would decide it
       critical_question: enum       // which of the scheme's fixed CQs this defeater answers
     none_admitted      : bool       // true ⇔ defeater == null
@@ -118,27 +130,35 @@ critic, `docs/todo/destructive-sonnet-2026-09-13.md`) buys nothing. A returned `
 
 1. `world` non-empty after trim, and `settles` non-empty after trim.
 2. `kind` ∈ {`population`, `condition`, `definition`}.
-3. `anchor` non-empty, and `anchor` is a **verbatim substring (via `norm`) of the finding text, the
-   recommendation text, or the verified quotes** — **not** of the `world`. The same
-   present-in-the-text discipline `quoteInPassage`/`groundVerdict` already run for evidence quotes
-   (`assay.go`), but pointed at the report, not at the model's own prose. **Rationale:** a defeater
+3. **Per-CQ anchor check.** `anchor` non-empty and a **verbatim substring (via `norm`) of the finding
+   text or the verified quotes** — **not** the recommendation text and **not** the `world`. The
+   recommendation is an admissible anchor source only for `anchor_rec`, and only on `means_mismatch`:
+   - `side_effects`: `anchor` is the cost clause, in the finding or quotes.
+   - `means_mismatch`: `anchor` (the measured variable) in the finding or quotes, **and** `anchor_rec`
+     (the recommended action) verbatim in the recommendation. Both required; the `world` is the gap.
+
+   This is the present-in-the-text discipline `quoteInPassage`/`groundVerdict` already run for evidence
+   quotes (`assay.go`), pointed at the report, not at the model's own prose. **Rationale:** a defeater
    the report itself names is checkable against the report; one the model imports from outside is a
-   claim about the world, and confirming *that* is a retrieval, not a deduction — it belongs in
-   grounding, past the axis boundary this pass may not cross (§ What the edge pass is). Anchoring in
-   `world` (the pre-run rule) let the model manufacture its own referent and quote itself, which is
-   why run 1 admitted a world the report never mentions (Refuter run 1, below). **Consequence:** v1
-   admits only **report-internal** defeaters — a world built from a population, condition or
-   definition the report's own text already names. Correlation-as-cause is admissible only on
-   edges whose finding is worded associationally (dora's "amplifies"); where the report states a
-   mechanism, the defeater must find its referent in that wording or fail admission.
+   claim about the world, and confirming *that* is a retrieval, not a deduction — past the axis
+   boundary this pass may not cross (§ What the edge pass is). Anchoring in `world` (the run-1 rule)
+   let the model manufacture its own referent and quote itself (Refuter run 1, below); anchoring in
+   the recommendation as well (the run-2 rule) let the anchor sit in R while the world named a goal R
+   never states (run 3, below). Confining `anchor` to the finding or its quotes — the premise under
+   attack — with `anchor_rec` the one exception naming the action the mismatch is *against*, forces
+   the referent onto the thing being defeated. **Consequence:** the pass admits only **report-internal**
+   defeaters — a world built from a population, condition or definition the report's own text names.
 4. **Template rule — cross-edge, applied after 1–3 across the whole report.** If an admitted
    defeater's `anchor` (case-insensitive) recurs in admitted defeaters on more than one edge of the
    same report, the defeater is **method-level**, not edge-level: a world that defeats every edge is a
    property of the report's evidence type, not of any one inference, and per-edge it is the free
    attack § 3 exists to catch. It is recorded once at the root (reason line `method: <world>`) and
-   **removed from every edge**, which then count as `none-admitted` for that sample. dora's
-   correlation-as-cause is the expected case — one `population`/`condition` world defeats each
-   associational edge, so it belongs at the root once, not on all 8.
+   **removed from every edge**, which then count as `none-admitted` for that sample. The rule stays as
+   a **backstop** — a defeater recurring verbatim across edges is method-level by construction — but
+   with `practical`'s CQ set reduced to `side_effects`/`means_mismatch` (§ 2) the model no longer
+   offers the correlation-as-cause world per-edge, so the rule is no longer expected to fire on dora.
+   dora's method-level point — findings are associational, recommendations are interventions — is
+   instead emitted at the root as a fixed note by the pass (§ 5), not produced by the model.
 5. **Domain rule.** The `world` must hold **for the report's addressed audience as stated**. A
    defeater that varies the addressee — swaps in an organisation with other goals or a binding
    constraint the report never puts on its reader — is not a defeater of the inference: the report's
@@ -245,10 +265,10 @@ below ~⅓ per corpus. A pass whose edges mostly flip is reporting sampling nois
 - **FAIL** if `R-VC` is `open` and its admitted defeater does not survive human inspection as concrete.
 - **FAIL** if the run is empty or partial — 0 edges judged, or fewer than the 8+15 in scope reached
   (`CLAUDE.md` § zero-output, § partial run).
-- **PASS** only if: admitted-`open` rate < 100% in **both** corpora; the template rule (§ 3, rule 4)
-  fired at least once on dora (its correlation-as-cause world is the expected case); `R-VC` is
-  `unchallenged` after templates are removed (or its `open` defeater survives human inspection); and
-  contested-edge rate is below ~⅓ per corpus.
+- **PASS** only if: admitted-`open` rate < 100% in **both** corpora; the fixed root method note for
+  dora — "findings are associational; recommendations are interventions" — is emitted by the pass, not
+  produced by the model; `R-VC` is `unchallenged` (or its `open` defeater survives human inspection);
+  and contested-edge rate is below ~⅓ per corpus.
 
 **Run 2 — re-registered after the step-3 fix (14 Sept).** Same corpus, same model of record, same
 N=5, and **the same pass/fail lines above still bind** — run 2 is judged against them unchanged. The
@@ -271,6 +291,25 @@ on `goal_conflict`, which is now neither an offered CQ nor an admissible world, 
 - **`R-VC` is `unchallenged`** — its run-2 opening world (swapped addressee) is exactly what step 5
   rejects.
 - **offered drops well below run 2's 24** — two CQs where five were on offer.
+
+All other FAIL lines (empty/partial run, false-attack bias, contested-rate ceiling) apply unchanged.
+Registered before the run, per `CLAUDE.md` § Pre-register the attempt.
+
+**Run 4 — re-registered after the CQ reduction to `side_effects`/`means_mismatch` + the fixed root
+method note (15 Sept).** Same corpus, model of record and N=5, against `practical`'s two CQs (§ 2),
+the § 3 per-CQ step-3 anchor rule, and the fixed root method note replacing the template-fired PASS
+condition. **The same pass/fail lines above still bind.** Run 3 admitted 18 defeaters on
+`alt_means`/`side_effects` with none rejected, but `alt_means` defeated "do M *rather than* M'" — a
+comparative no recommendation makes — so those admissions were spurious (run 3 diagnosis, below). With
+`alt_means` gone:
+
+- **admitted-`open` 0–1/7.** No goal- or alternatives-based CQ remains; the only report-internal
+  defeater a `practical` edge can raise is a named cost.
+- **if any edge opens, it is `R-BATCH` on `side_effects`,** with an `anchor` in `F-BATCH`'s own cost
+  clause — the one dora finding whose verified quote names a cost of its own means.
+- **`R-VC` is `unchallenged`** — `F-VC` names no cost, and no goal or `alt_means` CQ remains to open it.
+- **offered < 10** — two CQs, one of which (`means_mismatch`) fires only where finding and
+  recommendation name different variables, which dora's edges do not.
 
 All other FAIL lines (empty/partial run, false-attack bias, contested-rate ceiling) apply unchanged.
 Registered before the run, per `CLAUDE.md` § Pre-register the attempt.
@@ -353,6 +392,37 @@ the § 5b hard-fail condition (its admitted defeater does not survive human insp
 
 The fix is § 2's CQ reduction (`practical` → `alt_means`, `side_effects` only) and § 3's step 5
 (domain rule), both above. Re-registered as run 3 in § 5.
+
+## Refuter run 3 — haiku N=5 dora, 14 Sept 22:14: FAIL (recorded negative)
+
+Third execution of the § 5 refuter on dora, `claude-haiku-4-5-20251001`, N=5, against run 3's
+`practical` CQ set (`alt_means`, `side_effects`) and the § 3 step-5 domain rule. Chain:
+`testing/chains/edge-20260914-2214-haiku`. **Verdict: FAIL** — kept as a recorded negative per
+`CLAUDE.md` § Pre-register the attempt.
+
+**Results.** 7/7 in-scope edges reached. Edge verdicts: **open 4/7**. Admission: **18 defeaters
+offered, 18 admitted, 0 rejected**; **none_admitted 17** (up from run 2's 11). The **template rule
+(§ 3, rule 4) did not fire**. Positive control **`R-VC` open 4/5** on `alt_means` ("code review is the
+operative lever"; predicted `unchallenged`, § 5b). Stability: **contested 3/7** (below the ~⅓ ceiling
+of § 5c). Admitted by CQ: `alt_means` 3, `side_effects` 1.
+
+**Diagnosis — the surviving CQs still attack the wrong thing.** Two defects, both in what a CQ is
+allowed to claim:
+
+1. **`alt_means` does not defeat "do M".** It defeats only "do M *rather than* M'" — a comparative the
+   recommendation never makes. A cheaper or faster route to the same goal leaves "M goes with G, so do
+   M" standing; naming M' is a reason to also weigh M', not a defeater of M. `R-VC` opened 4/5 on
+   exactly this ("code review is the operative lever") — a rival means, not a defeated inference.
+2. **The one `side_effects` defeater anchored on the means, not on the cost.** Its `anchor` was
+   verbatim in the finding (passing step 3), but it named M rather than a cost of M, so the cost in the
+   `world` was invented — unanchored in fact while the anchor pointed elsewhere.
+
+The common root: **the anchor rule has been checking the target of the attack, not the attack.** Step
+3 confirmed the referent sat in the report, but not that it was the *cost* (`side_effects`) or that the
+recommendation made the comparative `alt_means` needs. The fix is § 2's reduction to `side_effects` +
+`means_mismatch` and § 3's per-CQ step 3: `alt_means` removed outright, `side_effects` anchored on the
+cost clause specifically, and `means_mismatch` given two anchors so the attack lands on the F→R gap and
+nothing else. Re-registered as run 4 in § 5.
 
 ## 6. Cost — N=5 on both corpora
 
