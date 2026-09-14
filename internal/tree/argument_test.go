@@ -383,6 +383,41 @@ func TestArgumentPageAdjudications(t *testing.T) {
 	}
 }
 
+// TestSubstanceGatesHold is the substance-rollup refuter (spec/SUBSTANCE-CORPUS.md): the substance axis
+// gates the one `holds` case. A settled-faithful leaf holds when substance is absent (a
+// faithfulness-only run, back-compat) or `substantive` (the control shape); a settled-faithful leaf whose
+// substance came back `hollow` or `partial` weakens instead — the report copies its source, but the
+// proposition does not survive the dialectic. Substance never rescues a leaf faithfulness already sank,
+// so a `partial` FAITHFULNESS verdict stays weakened whatever substance says.
+func TestSubstanceGatesHold(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		faith, sub string
+		class      string
+		want       string
+	}{
+		{"faithful, no substance run → holds (back-compat)", "faithful", "", "", jHolds},
+		{"faithful + substantive → holds (control)", "faithful", "substantive", "", jHolds},
+		{"faithful + hollow → weakened (defect leaf)", "faithful", "hollow", "", jWeakened},
+		{"faithful + partial substance → weakened", "faithful", "partial", "", jWeakened},
+		{"faithful + wobble → weakened whatever substance", "faithful", "substantive", "wobble", jWeakened},
+		{"partial faithfulness stays weakened, substance can't rescue", "partial", "substantive", "", jWeakened},
+	} {
+		r := brief.Row{ID: "F1", Text: "f1", Faith: tc.faith, Substance: tc.sub, Class: tc.class}
+		if got := leafJudgement(&r); got != tc.want {
+			t.Errorf("%s: leafJudgement = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+
+	// An opinion (route=evaluative) leaf is never judged, so its substance verdict — however damning —
+	// does not reclassify it: it stays opinion and contributes nothing. This is why the two evaluative
+	// refuter leaves are tested empirically on their substance VERDICT, not on a tally change.
+	op := brief.Row{ID: "F1", Text: "f1", Faith: "faithful", Substance: "hollow", Route: "evaluative"}
+	if got := leafJudgement(&op); got != jOpinion {
+		t.Errorf("evaluative leaf should stay opinion despite hollow substance, got %q", got)
+	}
+}
+
 // ── fixtures ────────────────────────────────────────────────────────────────
 
 func joinLines(lines ...string) string { return strings.Join(lines, "\n") + "\n" }

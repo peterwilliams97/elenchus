@@ -55,46 +55,50 @@ type retrievedSource = backend.Source
 // ── config ────────────────────────────────────────────────────────────────────
 
 type cfg struct {
-	model         string
-	apiKey        string
-	maxRounds     int
-	maxClaims     int
-	repeat        int // -n: run each claim this many times and report the modal verdict + agreement
-	verbose       bool
-	noColor       bool
-	asMarkdown    bool
-	showProgress  bool
-	quiet         bool
-	fresh         bool // -fresh: re-judge every claim instead of resuming from an existing chain
-	usageOut      string
-	chainFile     string              // Tier-2 JSONL destination; set by runners before case loop
-	renderMode    string              // stdout renderer: "brief" (default), "full", or "tree"
-	treeAll       bool                // -tree=full: expand every node rather than only Needs-you branches
-	retrieveMode  string              // "bm25" (default) retrieves per-claim passages; "none" sends the full corpus
-	maxTokens     int                 // -max-tokens: retrieval token budget per claim (fused bm25+embed ranking)
-	floor         float64             // -floor: top-passage cosine below this ⇒ absent from code, no model call
-	embed         bool                // -embed: add the nomic-embed-text ranker, fused with BM25 by RRF
-	oracle        map[string][]string // -retrieve=oracle: claim-id → fixed gold passage ids
-	held          map[string]bool     // -manifest: doc ids the corpus holds; a claim citing a missing one is unverifiable
-	docLabels     map[string]string   // -manifest: canonical doc id → witness/author, for a quote's provenance line
-	refs          map[string]string   // -refs: claim id → report section ref (§…), for the leaf's report line
-	index         *retrieve.Index     // built once from the source corpus when retrieveMode != "none"
-	auditPath     string              // full-table sink; every run writes it, whichever renderer stdout gets
-	treeHTMLPath  string              // eval/<stamp>/tree.html sink, written alongside audit.md
-	argumentFile  string              // -argument: argument.txt path; when set, -from renders the argument tree
-	indexHTMLPath string              // index.html sink (the argument-tree page), alongside audit.md, when -argument is set
-	review        bool                // -review: build the self-contained review site (spec/SERVE.md)
-	zip           bool                // -zip: write site.zip beside site/ after -review builds it
-	siteDir       string              // site/ sink under the example dir, when -review is set
-	sourcesDir    string              // -manifest's parent dir; the on-disk PDF tree the site copies from
-	reports       []manifest.Report   // -manifest report excerpts: each with its file, page offset, sections, and claim-id prefixes
-	rootTitle     string              // report title for the root block's line 1, from the claims file "# title:" header
-	rootDate      string              // report date for the root block's line 1, from the claims file "# date:" header
-	sourceDocs    int                 // M: documents held per the manifest; the root block's "checked against M" figure
-	singleSource  bool                // -manifest single_source: report is its own only source; leaf 'absent' → 'uncorroborated'
-	runs          int                 // chains merged under -from; >1 adds the root block's stability line. 0/1 = single run
-	usage         *usageCounters
-	tally         *runTally
+	model          string
+	apiKey         string
+	maxRounds      int
+	maxClaims      int
+	repeat         int // -n: run each claim this many times and report the modal verdict + agreement
+	verbose        bool
+	noColor        bool
+	asMarkdown     bool
+	showProgress   bool
+	quiet          bool
+	fresh          bool // -fresh: re-judge every claim instead of resuming from an existing chain
+	usageOut       string
+	chainFile      string              // Tier-2 JSONL destination; set by runners before case loop
+	substanceOn    bool                // -axis substance: also run the substance axis in the -source corpus run
+	substanceFile  string              // <chain-dir>/<fixture>.substance.jsonl, when substanceOn (spec/SUBSTANCE-CORPUS.md)
+	ceScoped       bool                // -ce-scoped: substance critic uses the Counterexample-scope variant prompt
+	narrowBoundary bool                // -narrowing-boundary: verdict keys on how far the surviving claim was narrowed, not axis severity
+	renderMode     string              // stdout renderer: "brief" (default), "full", or "tree"
+	treeAll        bool                // -tree=full: expand every node rather than only Needs-you branches
+	retrieveMode   string              // "bm25" (default) retrieves per-claim passages; "none" sends the full corpus
+	maxTokens      int                 // -max-tokens: retrieval token budget per claim (fused bm25+embed ranking)
+	floor          float64             // -floor: top-passage cosine below this ⇒ absent from code, no model call
+	embed          bool                // -embed: add the nomic-embed-text ranker, fused with BM25 by RRF
+	oracle         map[string][]string // -retrieve=oracle: claim-id → fixed gold passage ids
+	held           map[string]bool     // -manifest: doc ids the corpus holds; a claim citing a missing one is unverifiable
+	docLabels      map[string]string   // -manifest: canonical doc id → witness/author, for a quote's provenance line
+	refs           map[string]string   // -refs: claim id → report section ref (§…), for the leaf's report line
+	index          *retrieve.Index     // built once from the source corpus when retrieveMode != "none"
+	auditPath      string              // full-table sink; every run writes it, whichever renderer stdout gets
+	treeHTMLPath   string              // eval/<stamp>/tree.html sink, written alongside audit.md
+	argumentFile   string              // -argument: argument.txt path; when set, -from renders the argument tree
+	indexHTMLPath  string              // index.html sink (the argument-tree page), alongside audit.md, when -argument is set
+	review         bool                // -review: build the self-contained review site (spec/SERVE.md)
+	zip            bool                // -zip: write site.zip beside site/ after -review builds it
+	siteDir        string              // site/ sink under the example dir, when -review is set
+	sourcesDir     string              // -manifest's parent dir; the on-disk PDF tree the site copies from
+	reports        []manifest.Report   // -manifest report excerpts: each with its file, page offset, sections, and claim-id prefixes
+	rootTitle      string              // report title for the root block's line 1, from the claims file "# title:" header
+	rootDate       string              // report date for the root block's line 1, from the claims file "# date:" header
+	sourceDocs     int                 // M: documents held per the manifest; the root block's "checked against M" figure
+	singleSource   bool                // -manifest single_source: report is its own only source; leaf 'absent' → 'uncorroborated'
+	runs           int                 // chains merged under -from; >1 adds the root block's stability line. 0/1 = single run
+	usage          *usageCounters
+	tally          *runTally
 	// cachedSource is the stable prefix (e.g. the source transcript) placed in a Request's Cached
 	// field, which the Anthropic backend turns into an ephemeral cache block ahead of the variable
 	// prompt and the Ollama backend folds into the prompt. Set per-call by callJSON/callJSONSourced
@@ -162,7 +166,7 @@ func main() {
 	}
 
 	var c cfg
-	var src, text, chainDir, fromChain string
+	var src, text, chainDir, fromChain, axisList string
 	var ev, audit, full bool
 	var treeF treeFlag
 	var backendName, ollamaURL string
@@ -185,6 +189,7 @@ func main() {
 	flag.StringVar(&embedModel, "embed-model", embed.DefaultModel, "embedding model for the semantic ranker")
 	flag.BoolVar(&speakers, "speakers", false, "print the distinct speakers + roles found in -source, then exit")
 	flag.StringVar(&src, "source", "", "transcript file or corpus dir → faithfulness mode")
+	flag.StringVar(&axisList, "axis", "faithfulness", "with -source: axes to run, comma-list of faithfulness|substance (spec/SUBSTANCE-CORPUS.md)")
 	flag.BoolVar(&ev, "evidence", false, "evidence-grounding mode (web search)")
 	flag.BoolVar(&audit, "audit", false, "run all three modes and emit a cross-tab (needs -source)")
 	flag.StringVar(&text, "text", "", "inline input instead of a file")
@@ -193,6 +198,8 @@ func main() {
 	flag.BoolVar(&c.verbose, "verbose", false, "verbose: show every API call")
 	flag.BoolVar(&c.noColor, "no-color", false, "disable ANSI colour")
 	flag.IntVar(&c.maxRounds, "max-rounds", 2, "producer-critic rounds per claim (substance)")
+	flag.BoolVar(&c.ceScoped, "ce-scoped", false, "substance: scope the Counterexample axis (variant prompt; default off) — fatal only for an in-scope instance of a universal claim; a constructed hypothetical only weakens; an observed-outcome counterexample is left to grounding")
+	flag.BoolVar(&c.narrowBoundary, "narrowing-boundary", false, "substance: key the verdict on how far the surviving claim was narrowed, not axis severity (variant prompt; default off) — substantive = the claim as stated or trivially qualified, partial = materially narrower, hollow = no defensible core; whether the claim is TRUE is left to grounding")
 	flag.IntVar(&c.maxClaims, "max-claims", 0, "bound evidence grounding (0 = unlimited)")
 	flag.IntVar(&c.repeat, "n", 1, "repeat each claim N times, show modal verdict + agreement (faithfulness)")
 	flag.BoolVar(&c.showProgress, "progress", true, "show per-claim progress on stderr (default on)")
@@ -362,10 +369,20 @@ func main() {
 	case src != "":
 		modeSuffix = "faithfulness"
 	}
+	// -axis adds the substance axis to the -source corpus run (spec/SUBSTANCE-CORPUS.md). It is inert
+	// outside that path: the single-file modes select their axis directly.
+	for _, a := range strings.Split(axisList, ",") {
+		if strings.EqualFold(strings.TrimSpace(a), "substance") {
+			c.substanceOn = true
+		}
+	}
 	if chainDir != "" {
 		c.chainFile = filepath.Join(chainDir, fixtureName+"."+modeSuffix+".jsonl")
 		c.auditPath = filepath.Join(chainDir, "audit.md")
 		c.treeHTMLPath = filepath.Join(chainDir, "tree.html")
+		if c.substanceOn && src != "" {
+			c.substanceFile = filepath.Join(chainDir, fixtureName+".substance.jsonl")
+		}
 	}
 
 	// Build the retrieval index once from the source corpus, so every claim retrieves from the same
@@ -774,7 +791,80 @@ func (c *cfg) runFaithfulness(input, srcPath string) {
 			emit(i, chosen, spread, samples, retrieve.IDs(ps), t)
 		}
 	}
+	if c.substanceOn {
+		c.runSubstanceAxis(parsed, rows)
+	}
 	c.present(rows, tally(vs), mdFaith(results), func() { c.termFaith(results) }, details)
+}
+
+// runSubstanceAxis runs the substance pass (assayClaim, source-independent) over every corpus leaf and
+// writes a second `.substance.jsonl` beside the faithfulness chain, filling each row's Substance verdict
+// so the argument tree can roll a faithful-but-hollow leaf up as `weakened` (spec/SUBSTANCE-CORPUS.md).
+// It resumes from an existing substance chain the same way the faithfulness pass does — reuse a leaf
+// already judged unless -fresh — so an interrupted run does not re-pay. `rows` is indexed 1:1 with
+// `parsed`; a row already carrying the reused verdict is mutated in place.
+func (c *cfg) runSubstanceAxis(parsed []claimLine, rows []brief.Row) {
+	done := map[int]bool{}
+	if c.substanceFile != "" {
+		if c.fresh {
+			_ = os.Truncate(c.substanceFile, 0)
+		} else {
+			for idx, rec := range readChainSparse(c.substanceFile) {
+				if 0 <= idx && idx < len(rows) {
+					var sd substanceDetail
+					_ = json.Unmarshal(rec.Detail, &sd)
+					rows[idx].Substance, rows[idx].SubstanceReason = rec.Verdict, sd.Reason
+					done[idx] = true
+				}
+			}
+		}
+	}
+	for i := range parsed {
+		if done[i] {
+			continue
+		}
+		t := c.progressStart(i, len(parsed), "substance")
+		s := c.assayClaim(parsed[i].text)
+		c.appendChainTo(c.substanceFile, substanceChainRecord(i, len(parsed), parsed[i].text, s, t))
+		reason := s.Reason
+		if reason == "" && s.SurvivingClaim != "" {
+			reason = "survives as: " + s.SurvivingClaim
+		}
+		rows[i].Substance, rows[i].SubstanceReason = s.Verdict, reason
+		c.progressDone(i, len(parsed), s.Verdict, parsed[i].text, t)
+	}
+}
+
+// substanceSibling maps a faithfulness chain path to its substance sibling: the same file with the
+// `.faithfulness.jsonl` suffix swapped for `.substance.jsonl` (spec/SUBSTANCE-CORPUS.md). A path that
+// does not carry the faithfulness suffix yields "" — no sibling to look for.
+func substanceSibling(faithChain string) string {
+	const suf = ".faithfulness.jsonl"
+	if !strings.HasSuffix(faithChain, suf) {
+		return ""
+	}
+	return strings.TrimSuffix(faithChain, suf) + ".substance.jsonl"
+}
+
+// attachSubstanceOverlay fills each row's Substance verdict/reason from a substance chain, matched by
+// idx and guarded on the claim text so a mismatched sibling never mislabels a leaf. A missing file or a
+// text mismatch leaves the rows untouched — the overlay is optional (spec/SUBSTANCE-CORPUS.md).
+func attachSubstanceOverlay(rows []brief.Row, texts []string, path string) {
+	if path == "" {
+		return
+	}
+	for idx, rec := range readChainSparse(path) {
+		if idx < 0 || idx >= len(rows) || strings.TrimSpace(rec.Claim) != strings.TrimSpace(texts[idx]) {
+			continue
+		}
+		var sd substanceDetail
+		_ = json.Unmarshal(rec.Detail, &sd)
+		reason := sd.Reason
+		if reason == "" && sd.SurvivingClaim != "" {
+			reason = "survives as: " + sd.SurvivingClaim
+		}
+		rows[idx].Substance, rows[idx].SubstanceReason = rec.Verdict, reason
+	}
 }
 
 // readChainSparse reads whatever records a chain file holds, keyed by idx, tolerating gaps (a resumed
@@ -1307,7 +1397,17 @@ func (c cfg) assayClaim(claim string) substance {
 			steel = p.Steelman
 		}
 		u := "CLAIM:\n" + current + "\n\nPRODUCER STEELMAN:\n" + p.Steelman + "\n\nPRODUCER CONDITIONS:\n" + p.Conditions
-		if err := c.callJSON(substanceCriticSys, "", u, false, &last); err != nil {
+		criticSys := substanceCriticSys
+		// The two variants are separate and mutually exclusive; -narrowing-boundary does NOT include
+		// the -ce-scoped rule (it wins if both flags are set). Each is the default prompt with one
+		// surgical change, so a run names exactly which boundary produced its verdicts.
+		switch {
+		case c.narrowBoundary:
+			criticSys = substanceCriticSysNarrowingBoundary // verdict keys on narrowing distance, not axis severity
+		case c.ceScoped:
+			criticSys = substanceCriticSysCEScoped // default prompt + the Counterexample-scope rule
+		}
+		if err := c.callJSON(criticSys, "", u, false, &last); err != nil {
 			return substance{Claim: claim, Verdict: "error", Reason: err.Error()}
 		}
 		rounds++
@@ -2468,6 +2568,69 @@ claim or speaker's words. Set survives_only_by_conditioning=true if the claim wo
 Return ONLY JSON:
 {"critique":[{"axis":string,"finding":string,"severity":"fatal"|"weakens"|"clears"}],"verdict":"substantive"|"partial"|"hollow","surviving_claim":string|null,"reason":string,"needs_another_round":boolean,"added_conditions":integer,"survives_only_by_conditioning":boolean}`
 
+// counterexampleScopeRule is the one rule the -ce-scoped variant adds to the Counterexample axis
+// (spec: docs/todo/destructive-sonnet-2026-09-13.md § Fatal-axis anatomy). The default critic marks
+// Counterexample fatal on any claim a case can be constructed against, which sinks well-formed
+// tendencies, predictions and definitions ("a thermostat also adapts to feedback"); and it double-counts
+// grounding by refuting a prediction with the world's actual outcome (the axis boundary in CLAUDE.md —
+// only retrieval, not the armchair, may confirm how the world turned out). This block scopes the axis
+// without touching any other. It is appended to the default prompt, so the variant is the default plus
+// exactly this text.
+const counterexampleScopeRule = `COUNTEREXAMPLE SCOPE — read this before scoring the Counterexample axis:
+- A counterexample is "fatal" ONLY when the claim is UNIVERSAL in form (all / every / always / no /
+  none, or an unqualified generalisation) AND the counterexample is an instance that falls WITHIN the
+  claim's own stated scope. One such instance breaks a universal.
+- If the claim is a TENDENCY, a PREDICTION, or a CONDITIONAL (not a universal), a CONSTRUCTED
+  hypothetical counterexample only "weakens" — it never makes the verdict hollow on its own. A
+  tendency is not refuted by exhibiting one imagined exception.
+- A counterexample drawn from your OWN KNOWLEDGE OF HOW THE WORLD ACTUALLY TURNED OUT (an observed
+  outcome, e.g. "the product later succeeded") is OUT OF SCOPE for this axis: whether a claim matches
+  the world is the grounding pass's job, reached by retrieval, not yours to settle from memory. Note
+  the observation in your finding if useful, but mark this axis "clears" and let grounding decide — do
+  not record it as "fatal" or "weakens".
+Every other axis is unchanged: Equivocation, Falsifiability, Hidden premise and the rest score exactly
+as before, so an equivocating or unfalsifiable claim still collapses on its own axis.`
+
+// substanceCriticSysCEScoped is the -ce-scoped variant: the default critic prompt plus the one
+// Counterexample-scope rule, inserted just before the JSON contract so the schema line stays last.
+var substanceCriticSysCEScoped = strings.Replace(
+	substanceCriticSys, "\nReturn ONLY JSON:", "\n"+counterexampleScopeRule+"\n\nReturn ONLY JSON:", 1)
+
+// substanceVerdictLinesDefault is the default critic's verdict block, keyed on axis severity — the
+// exact needle the -narrowing-boundary variant replaces. The sonnet anatomy showed this boundary is
+// unreachable for any general claim: "no equivocation, survives counterexample" cannot hold when
+// Equivocation and Hidden-premise fire on every bare claim of the form, so `substantive` is never
+// issued (docs/todo/destructive-sonnet-2026-09-13.md § Why substantive is never issued).
+const substanceVerdictLinesDefault = `Then a verdict:
+- "hollow": unfalsifiable, equivocating, or pure assertion with no defensible core.
+- "partial": a narrower, qualified claim survives after stripping the unsupported parts.
+- "substantive": falsifiable, evidence exists or is clearly obtainable, no equivocation, survives
+counterexample.`
+
+// narrowingBoundaryVerdicts is the verdict block the -narrowing-boundary variant swaps in. It keys the
+// verdict on HOW FAR the surviving claim was narrowed rather than on which axes fired: a claim
+// defensible as stated is `substantive` even when axes weaken it, and whether the claim is TRUE is left
+// to grounding (the axis boundary in CLAUDE.md — only retrieval confirms how the world turned out). The
+// critic states the surviving claim verbatim before the verdict it derives from it.
+const narrowingBoundaryVerdicts = `First state the SURVIVING CLAIM verbatim — the strongest form of the
+claim that withstands the axes above, narrowed no further than those findings force. THEN choose the
+verdict by comparing that surviving claim to the claim AS STATED:
+- "hollow": no defensible core — nothing survives that a reader could act on.
+- "partial": a defensible claim survives, but it is materially narrower than the claim as stated.
+- "substantive": the surviving claim IS the claim as stated, or the claim with only a trivial
+qualification (a scope or unit the claim already implied). Decide this by how far the claim had to be
+narrowed to defend it, NOT by whether an axis fired — a well-formed claim you happen to doubt is still
+"substantive" here. Whether it is TRUE is the grounding pass's job, reached by retrieval, not settled on
+this axis.`
+
+// substanceCriticSysNarrowingBoundary is the -narrowing-boundary variant: every axis and its
+// fatal/weakens/clears mark are unchanged; only the three verdict lines are replaced, and the JSON
+// contract emits `surviving_claim` before `verdict` so the critic commits to the surviving claim first.
+var substanceCriticSysNarrowingBoundary = strings.Replace(
+	strings.Replace(substanceCriticSys, substanceVerdictLinesDefault, narrowingBoundaryVerdicts, 1),
+	`"verdict":"substantive"|"partial"|"hollow","surviving_claim":string|null`,
+	`"surviving_claim":string|null,"verdict":"substantive"|"partial"|"hollow"`, 1)
+
 const faithDefenderSys = `You are the Defender. You are given a SUMMARY CLAIM and a SOURCE
 transcript. Find the STRONGEST evidence in the SOURCE that the speaker actually asserts this claim.
 Quote spans VERBATIM from the SOURCE only — never paraphrase, never use outside knowledge. If there
@@ -3369,22 +3532,27 @@ type chainRecord struct {
 
 // appendChain appends one JSON record to c.chainFile. Errors are logged to
 // stderr and silently dropped — chain failures must never abort the run.
-func (c *cfg) appendChain(rec chainRecord) {
-	if c.chainFile == "" {
+func (c *cfg) appendChain(rec chainRecord) { c.appendChainTo(c.chainFile, rec) }
+
+// appendChainTo appends one record to a named chain file — the seam that lets the corpus run write a
+// second `.substance.jsonl` beside the faithfulness chain (spec/SUBSTANCE-CORPUS.md) through the same
+// backend-stamping and error handling. An empty path is a no-op.
+func (c *cfg) appendChainTo(path string, rec chainRecord) {
+	if path == "" {
 		return
 	}
 	rec.Backend = c.backendName // stamp the producing backend on every record
 	if c.verbose {
-		fmt.Fprintf(os.Stderr, "[chain] %s idx=%d verdict=%s\n", c.chainFile, rec.Idx, rec.Verdict)
+		fmt.Fprintf(os.Stderr, "[chain] %s idx=%d verdict=%s\n", path, rec.Idx, rec.Verdict)
 	}
 	data, err := json.Marshal(rec)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "warning: chain marshal idx=%d: %v\n", rec.Idx, err)
 		return
 	}
-	f, err := os.OpenFile(c.chainFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: chain open %q: %v\n", c.chainFile, err)
+		fmt.Fprintf(os.Stderr, "warning: chain open %q: %v\n", path, err)
 		return
 	}
 	defer f.Close()
@@ -3874,6 +4042,10 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 			details[ids[i]] = leaf
 			vs[i] = rows[i].Faith // reflects the schema-gate override in the rollup, not just the tree
 		}
+		// A sibling <fixture>.substance.jsonl (spec/SUBSTANCE-CORPUS.md) overlays each leaf's substance
+		// verdict, so the argument tree can roll a faithful-but-hollow leaf up as weakened. Absent, the
+		// render is unchanged (a faithfulness-only run).
+		attachSubstanceOverlay(rows, texts, substanceSibling(chainPaths[0]))
 		counts, mdTable, termTable = tally(vs), mdFaith(fr), func() { c.termFaith(fr) }
 	case "substance":
 		sr := make([]substance, len(recs))

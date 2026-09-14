@@ -193,6 +193,12 @@ func (n *ArgNode) Judgement() string {
 // faithful-and-settled holds. `uncorroborated` is a single-source corpus's remap of `absent` (assay.go
 // rewrites it there): the report says it once and no second document repeats it — a weakening, not the
 // grounding failure `absent` is when other sources were held and checked.
+//
+// The substance axis (spec/SUBSTANCE-CORPUS.md), when run, gates the one `holds` case: a faithful leaf
+// holds only if substance also clears it (`substantive`, or absent — a faithfulness-only run is
+// unchanged). A faithful-but-`hollow`/`partial` claim is `weakened` — the report copies its source, but
+// the proposition does not survive the dialectic. Substance only ever lowers a leaf faithfulness left at
+// `holds`; every worse faithfulness verdict already dominates, so it is not re-consulted there.
 func leafJudgement(r *brief.Row) string {
 	if brief.IsOpinion(*r) {
 		return jOpinion
@@ -203,6 +209,9 @@ func leafJudgement(r *brief.Row) string {
 	switch verdictOf(*r) {
 	case "faithful":
 		if r.Class == "wobble" {
+			return jWeakened
+		}
+		if r.Substance == "hollow" || r.Substance == "partial" {
 			return jWeakened
 		}
 		return jHolds

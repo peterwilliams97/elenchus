@@ -441,6 +441,43 @@ func TestSubstanceCriticSysConditionDiscipline(t *testing.T) {
 	}
 }
 
+// TestSubstanceCriticSysCEScopedLonger pins that the -ce-scoped variant is the default prompt with
+// `counterexampleScopeRule` spliced in — so it is strictly longer than `substanceCriticSys`. A
+// no-op strings.Replace (needle absent) would leave them equal and this catches it.
+func TestSubstanceCriticSysCEScopedLonger(t *testing.T) {
+	if !(len(substanceCriticSys) < len(substanceCriticSysCEScoped)) {
+		t.Errorf("substanceCriticSysCEScoped (%d) not longer than substanceCriticSys (%d); scope rule not spliced",
+			len(substanceCriticSysCEScoped), len(substanceCriticSys))
+	}
+}
+
+// TestSubstanceCriticSysNarrowingBoundarySwapped pins that the -narrowing-boundary variant actually
+// swapped the verdict block: the default severity-keyed lines are gone, the narrowing-keyed lines are
+// present, and the JSON emits surviving_claim before verdict. A no-op strings.Replace (needle absent)
+// would leave the default text in place, which each check below catches.
+func TestSubstanceCriticSysNarrowingBoundarySwapped(t *testing.T) {
+	v := substanceCriticSysNarrowingBoundary
+	if v == substanceCriticSys {
+		t.Fatal("substanceCriticSysNarrowingBoundary equals the default; no replacement happened")
+	}
+	if strings.Contains(v, substanceVerdictLinesDefault) {
+		t.Error("default severity-keyed verdict lines still present; verdict block not replaced")
+	}
+	if !strings.Contains(v, narrowingBoundaryVerdicts) {
+		t.Error("narrowing-boundary verdict lines absent; verdict block not spliced")
+	}
+	if !strings.Contains(v, `"surviving_claim":string|null,"verdict":`) {
+		t.Error("JSON contract does not emit surviving_claim before verdict")
+	}
+	// Every axis and its severity vocabulary must survive untouched — only the verdict lines change.
+	for _, axis := range []string{"Evidence:", "Hidden premise:", "Falsifiability:", "Equivocation:",
+		"Base rate / magnitude:", "Counterexample:", "Causality vs correlation:"} {
+		if !strings.Contains(v, axis) {
+			t.Errorf("axis %q dropped from the narrowing-boundary variant", axis)
+		}
+	}
+}
+
 func TestMarkdownSubstance(t *testing.T) {
 	rs := []substance{
 		{Claim: "CLIs are over", Verdict: "hollow", Reason: "unfalsifiable"},
