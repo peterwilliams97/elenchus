@@ -81,13 +81,24 @@ One model call per in-scope edge (repeated N times, § 5). It runs on the same `
   table above, supplied verbatim in the prompt. The model asks the scheme's questions, not questions
   of its own.
 
+**`practical`'s fixed CQs are `alt_means` and `side_effects` only.** The three that named the
+recommendation's *goal* — `goal_held`, `goal_conflict`, `feasible` — are removed. In a report
+addressed to a stated audience the goal is stipulated by the genre, so each of the three is
+answerable for *any* practical recommendation by inventing an addressee with other goals or
+constraints, and a world that changes the addressee is outside the report's domain (§ 3, step 5).
+Run 2 (below) confirmed this concretely: all five of its opened edges opened on a `goal_conflict`
+defeater naming a competing goal the report never addresses. The two that survive stay
+report-internal by construction — `alt_means` names a cheaper or faster route to the same goal, and
+`side_effects` names a cost the recommendation's own text already carries (F-PLAT's instability
+clause, F-BATCH's cost clause).
+
 **Output** — schema-enforced, exactly one of two shapes. There is no third "certified" shape:
 
     warrant            : string    // reconstructed W: "for R to follow from F you need W"
     defeater           : object | null
       world            : string    // a state of the world, plausible in the report's domain, in
                                     //   which the verified finding holds and the recommendation fails
-      kind             : enum       // population | condition | definition | competing_goal
+      kind             : enum       // population | condition | definition
       anchor           : string     // the concrete referent the world names, VERBATIM within `world`
       settles          : string     // the source or observation that would decide it
       critical_question: enum       // which of the scheme's fixed CQs this defeater answers
@@ -106,11 +117,20 @@ critic, `docs/todo/destructive-sonnet-2026-09-13.md`) buys nothing. A returned `
 **admitted** only if all hold; the check is mechanical, no NLP:
 
 1. `world` non-empty after trim, and `settles` non-empty after trim.
-2. `kind` ∈ {`population`, `condition`, `definition`, `competing_goal`}.
-3. `anchor` non-empty, and `anchor` is a **verbatim substring of `world`** — the same
+2. `kind` ∈ {`population`, `condition`, `definition`}.
+3. `anchor` non-empty, and `anchor` is a **verbatim substring (via `norm`) of the finding text, the
+   recommendation text, or the verified quotes** — **not** of the `world`. The same
    present-in-the-text discipline `quoteInPassage`/`groundVerdict` already run for evidence quotes
-   (`assay.go`). The model must point at the concrete thing its world turns on *inside* the world it
-   wrote; the code verifies the pointer lands.
+   (`assay.go`), but pointed at the report, not at the model's own prose. **Rationale:** a defeater
+   the report itself names is checkable against the report; one the model imports from outside is a
+   claim about the world, and confirming *that* is a retrieval, not a deduction — it belongs in
+   grounding, past the axis boundary this pass may not cross (§ What the edge pass is). Anchoring in
+   `world` (the pre-run rule) let the model manufacture its own referent and quote itself, which is
+   why run 1 admitted a world the report never mentions (Refuter run 1, below). **Consequence:** v1
+   admits only **report-internal** defeaters — a world built from a population, condition or
+   definition the report's own text already names. Correlation-as-cause is admissible only on
+   edges whose finding is worded associationally (dora's "amplifies"); where the report states a
+   mechanism, the defeater must find its referent in that wording or fail admission.
 4. **Template rule — cross-edge, applied after 1–3 across the whole report.** If an admitted
    defeater's `anchor` (case-insensitive) recurs in admitted defeaters on more than one edge of the
    same report, the defeater is **method-level**, not edge-level: a world that defeats every edge is a
@@ -119,8 +139,18 @@ critic, `docs/todo/destructive-sonnet-2026-09-13.md`) buys nothing. A returned `
    **removed from every edge**, which then count as `none-admitted` for that sample. dora's
    correlation-as-cause is the expected case — one `population`/`condition` world defeats each
    associational edge, so it belongs at the root once, not on all 8.
+5. **Domain rule.** The `world` must hold **for the report's addressed audience as stated**. A
+   defeater that varies the addressee — swaps in an organisation with other goals or a binding
+   constraint the report never puts on its reader — is not a defeater of the inference: the report's
+   genre stipulates its audience and the goal that audience holds, so a competing goal outside that
+   stipulation is outside the report's domain. This is why `practical`'s three goal-naming CQs
+   (`goal_held`, `goal_conflict`, `feasible`) are removed (§ 2): each is answerable only by inventing
+   an addressee, and the world it produces fails this rule. Run 2's five opened edges (below) all
+   failed it — a `goal_conflict` world (regulated org, rollback forbidden) that swaps the addressee —
+   yet each passed steps 1–3 because its `anchor` was quoted from the finding, so the rule catches
+   what anchoring cannot.
 
-The concreteness the note demands ("a population, a condition, a definition, a competing goal") is
+The concreteness the note demands ("a population, a condition, a definition") is
 carried by `kind` + `anchor`: the model must name the referent's kind from a closed set and quote the
 referent, and the code confirms the quote sits in the world. No sentence-level judgement is made — a
 world that gestures without naming ("it might not generalize") fails at step 3 because it has no
@@ -220,6 +250,31 @@ below ~⅓ per corpus. A pass whose edges mostly flip is reporting sampling nois
   `unchallenged` after templates are removed (or its `open` defeater survives human inspection); and
   contested-edge rate is below ~⅓ per corpus.
 
+**Run 2 — re-registered after the step-3 fix (14 Sept).** Same corpus, same model of record, same
+N=5, and **the same pass/fail lines above still bind** — run 2 is judged against them unchanged. The
+one prediction the amended anchor rule (§ 3, step 3: anchor in the report, not in `world`) changes:
+**admitted-`open` rate drops sharply** from run 1's 4/7, because the imported compliance/returns goal
+that opened those edges now fails admission (it is nowhere in dora's text), and no other report-named
+defeater is expected on the causal edges. **`R-VC` is again predicted `unchallenged`** — this time
+for the recorded reason that run 1's opening world was report-external and step 3 now rejects it.
+Registered before the run, per `CLAUDE.md` § Pre-register the attempt.
+
+**Run 3 — re-registered after the CQ reduction + domain rule (14 Sept).** Same corpus, model of
+record and N=5, against `practical`'s reduced CQ set (`alt_means`, `side_effects` only; § 2) and the
+§ 3 step-5 domain rule. **The same pass/fail lines above still bind.** Run 2's opened edges all opened
+on `goal_conflict`, which is now neither an offered CQ nor an admissible world, so:
+
+- **admitted-`open` ≤ 2/7.** With the three addressee-varying CQs gone, no report-external competing
+  goal can be offered, and the domain rule rejects any that reach the world anyway.
+- **if any edge opens, it is `R-BATCH` on `side_effects`,** with an `anchor` in `F-BATCH`'s own cost
+  clause — the one report-internal cost a practical edge names.
+- **`R-VC` is `unchallenged`** — its run-2 opening world (swapped addressee) is exactly what step 5
+  rejects.
+- **offered drops well below run 2's 24** — two CQs where five were on offer.
+
+All other FAIL lines (empty/partial run, false-attack bias, contested-rate ceiling) apply unchanged.
+Registered before the run, per `CLAUDE.md` § Pre-register the attempt.
+
 **Calibration note, not a gate.** The offered-vs-admitted gap (§ 3) is read as a signal, never a
 pass/fail line: the check is form-only, so both `offered`==`admitted` (rejected nothing) and a
 nonzero rejection count are satisfiable by construction and settle nothing about whether the pass
@@ -229,6 +284,75 @@ grip is judged, not where the run is failed.
 Layer 3 discipline holds (`TESTING.md`): this is **calibration read by a human**, never a CI gate. A
 green refuter means "the edge attacker discriminated on this set, this run," never "the recommendation
 follows."
+
+## Refuter run 1 — haiku N=5 dora, 14 Sept: FAIL (recorded negative)
+
+First execution of the § 5 refuter on dora, `claude-haiku-4-5-20251001`, N=5. Chain:
+`testing/chains/edge-20260914-2050-*`. **Verdict: FAIL** — kept here as a recorded negative, per
+`CLAUDE.md` § Pre-register the attempt (log dead ends, not only survivors).
+
+**Results.** 7 in-scope edges (R-PLAT dropped — its finding leaf-derives to `fails`, § Scope). Edge
+verdicts: **open 4/7**. Admission: **25 defeaters offered, 21 admitted, 4 rejected** (all four
+rejections at step 3, no anchor). The **template rule (§ 3, rule 4) did not fire** — no `anchor`
+recurred verbatim across edges, so no world lifted to the root. Positive control **`R-VC` open 3/5**
+(predicted `unchallenged`, § 5b). Stability: **contested 6/7** (verdict flips across the 5 runs — far
+above the ~⅓ ceiling of § 5c).
+
+**Diagnosis — one defeater wearing 21 hats.** All four opened edges (and R-VC's three opening samples)
+open on the **same** world: a `competing_goal` — a compliance mandate or a shareholder-returns
+obligation — that **the report never mentions**, imported as the goal G' that displaces the
+recommendation's means M. It is `goal_conflict` applied to every practical edge, exactly the
+method-level attack § 3 rule 4 exists to lift to the root once. Two things let it through per-edge
+instead:
+
+1. **The anchor rule pointed at the model's own prose.** Step 3 (pre-run) admitted an `anchor` that
+   was a substring of `world` — but the model *wrote* `world`, so it manufactured its own referent
+   ("compliance mandate") and quoted itself. The check verified a pointer into the model's sentence,
+   not into the report, so a world the report never raises passed as concrete.
+2. **The template rule could not catch it.** Each sample phrased the same goal differently
+   ("regulatory compliance", "shareholder returns", "audit obligations"), so no `anchor` string
+   recurred verbatim and rule 4 never fired. The single method-level world scattered into per-edge
+   admissions instead of collecting at the root.
+
+R-VC opening is the § 5b hard-fail condition: its admitted defeater is this same imported goal, which
+does **not** survive human inspection as concrete (the report names no such constraint), so **admission
+leaked** — the check passed a world it should have rejected. That is the fail, not merely the flip
+count.
+
+The fix is the amended step 3 above: anchor in the **report** (finding / recommendation / verified
+quote), not in `world`. A defeater the report itself names stays admissible; the imported
+compliance/returns goal now fails admission because "compliance mandate" appears nowhere in dora's
+text. Re-registered as run 2 in § 5.
+
+## Refuter run 2 — haiku N=5 dora, 14 Sept 21:13: FAIL (recorded negative)
+
+Second execution of the § 5 refuter on dora, `claude-haiku-4-5-20251001`, N=5, against the amended
+step 3 (anchor in the report, not in `world`). Chain: `testing/chains/edge-20260914-2113-haiku`.
+**Verdict: FAIL** — kept as a recorded negative per `CLAUDE.md` § Pre-register the attempt. The
+earlier `testing/chains/edge-20260914-2106-*` chain is **void**: it ran a stale binary and is a
+byte-repeat of run 1, not a run of the amended check — do not read it as run 2.
+
+**Results.** 7/7 in-scope edges reached. Edge verdicts: **open 5/7**. Admission: **24 defeaters
+offered, 23 admitted, 1 rejected**. The **template rule (§ 3, rule 4) did not fire**. Positive
+control **`R-VC` open 4/5** (predicted `unchallenged`, § 5b); on inspection its world **swaps the
+addressee** — a regulated org for which rollback is forbidden — which is not concrete in the report's
+domain. Stability: **contested 4/7** (verdict flips across the 5 runs — above the ~⅓ ceiling of
+§ 5c).
+
+**Diagnosis — the anchor rule held and was irrelevant.** The step-3 fix did its job: every admitted
+defeater's `anchor` was quoted from the finding or recommendation, so no report-external anchor
+leaked, and the imported compliance/returns world of run 1 is gone. The five opened edges are all
+`critical_question=goal_conflict` — the `anchor` is report-internal, but the `world` still names an
+**external competing goal** the report never addresses. The anchor rule constrains where the quote
+comes from; it does nothing about **which CQ** the model is allowed to ask, and the free move is the
+CQ, not the anchor. `goal_held`, `goal_conflict` and `feasible` are answerable for **any** practical
+recommendation by inventing an addressee with other goals or constraints; in a report addressed to a
+stated audience the goal is stipulated by the genre, and a world that changes the addressee is
+outside the report's domain. `R-VC`'s opening world is exactly this — a swapped addressee — which is
+the § 5b hard-fail condition (its admitted defeater does not survive human inspection as concrete).
+
+The fix is § 2's CQ reduction (`practical` → `alt_means`, `side_effects` only) and § 3's step 5
+(domain rule), both above. Re-registered as run 3 in § 5.
 
 ## 6. Cost — N=5 on both corpora
 
