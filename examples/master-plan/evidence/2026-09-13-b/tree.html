@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>assay tree</title>
+<style>body{font-family:monospace;margin:1.5rem}details{margin-left:2ch}summary{cursor:pointer}.d{margin:.3em 0 .6em 2ch}.op{color:#888}.root{margin:0 0 1.5rem}</style>
+</head><body>
+<pre>model claude-sonnet-4-6 · backend anthropic · calls 250 · $3.3542 (rates 2026-06-01) · wall 29m19s</pre>
+<pre class="root">124 findings checked against 5 source documents
+
+Holds: 82 findings say what their sources say.
+Unsupported by any held source: 39
+  OV8: The report says the PDF work succeeded with no bugs reaching customers in years. No held source says this.
+  OV10: The report says security is the toughest problem because attackers change their approach, and lessons from easier work do not apply. No held source says this.
+  GL2: The report says &lt;/antml :parameter&gt; &lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+  and 36 more
+Generalised from narrower evidence: 3
+  LP3: The report says The test was amended again after the 32-bit integer issue, and then it stopped changing. The source only says After a few rounds of fixes and amendments the test stopped changing;…
+
+Changes 17 summary lines across 17 chapters.
+</pre>
+<details open><summary>1–7  1–7  [7]</summary>
+<details open><summary>1  Overview  [2]</summary>
+<details open><summary>OV1–OV7  OV1–OV7  [7]</summary>
+<details open><summary>OV1  AI can now write more code than we can read; a 13,000-line …  faithful 3/3</summary>
+<div class="d">claim: AI can now write more code than we can read; a 13,000-line pull request is not reviewable by a person.
+reason: The summary reproduces both sentences from the source almost exactly, preserving subject, scope, direction, and register. Both propositions are stated as direct assertions in the passage.
+&gt; AI can now write more code than we can read. A 13,000-line pull request is not reviewable by a person. (passage report#p1#2, unresolved)
+</div></details>
+<details open><summary>OV2  If we keep reviewing by reading, either the code doesn&#39;t ge…  faithful 3/3</summary>
+<div class="d">claim: If we keep reviewing by reading, either the code doesn&#39;t get read or it doesn&#39;t get written.
+reason: The summary claim is a verbatim restatement of a sentence the report&#39;s author states as their own direct assertion, with no hedging or qualification removed.
+&gt; If we keep reviewing by reading, either the code doesn&#39;t get read or it doesn&#39;t get written. (passage report#p1#2, unresolved)
+</div></details>
+<details open><summary>OV3  The answer is to stop reviewing the code, review the test i…  faithful 3/3</summary>
+<div class="d">claim: The answer is to stop reviewing the code, review the test instead, and let the test review the code.
+reason: The claim matches the source almost word-for-word in substance, subject, direction, and force. The source explicitly states &#34;Stop reviewing the code. Review the test instead, and let the test review the code.&#34;
+&gt; Stop reviewing the code. Review the test instead, and let the test review the code. A test written and approved once can accept any number of AI-written changes. A person reads only what no test can cover. (passage report#p1#3, unresolved)
+</div></details>
+<details open><summary>OV4  A test written and approved once can accept any number of A…  faithful 3/3</summary>
+<div class="d">claim: A test written and approved once can accept any number of AI-written changes; a person reads only what no test can cover.
+reason: &lt;/antml :parameter&gt;
+
+&gt; Stop reviewing the code. Review the test instead, and let the test review the code. A test written and approved once can accept any number of AI-written changes. A person reads only what no test can cover. (passage report#p1#3, unresolved)
+</div></details>
+<details open><summary>OV5  A test is only as good as the inputs it runs on: if the inp…  faithful 3/3</summary>
+<div class="d">claim: A test is only as good as the inputs it runs on: if the inputs don&#39;t look like what customers send, the test passes and the customer finds the bug.
+reason: The summary reproduces the source&#39;s exact point, direction, and register with no strengthening or distortion.
+&gt; A test is only as good as the inputs it runs on. If the inputs don&#39;t look like what customers send, the test passes and the customer finds the bug. (passage report#p1#4, unresolved)
+</div></details>
+<details open><summary>OV6  The hard part is not writing tests; it is knowing what inpu…  faithful 3/3</summary>
+<div class="d">claim: The hard part is not writing tests; it is knowing what inputs to feed them, and that differs per piece of work.
+reason: The source states almost word-for-word what the claim says: the hard part is knowing what inputs to feed tests, and that differs per piece of work. The claim is a faithful paraphrase.
+&gt; So the hard part is not writing tests; it is knowing what inputs to feed them. That is different for each of our three current pieces of work, and it gets harder in this order: (passage report#p1#4, unresolved)
+</div></details>
+<details open><summary>OV7  The three pieces of work get harder in this order: document…  faithful 3/3</summary>
+<div class="d">claim: The three pieces of work get harder in this order: document products (easy), WPP (hard), security (hardest).
+reason: The passages explicitly rank the three areas in exactly the order the claim states.
+&gt; They look like the same problem but aren&#39;t. What makes each one hard is different, and putting them in order from easiest to hardest is the main thing this document has to say. (passage report#p1#13, unresolved)
+</div></details>
+</details>
+<details open><summary>OV8–OV13  OV8–OV13  [6]</summary>
+<details open><summary>OV8  Document products are easy: PDFs come from a small, known s…  unsupported 3/3</summary>
+<div class="d">so what: The report says the PDF work succeeded with no bugs reaching customers in years. No held source says this.
+claim: Document products are easy: PDFs come from a small, known set of printer drivers; we already did this and it worked — no customer-reported PDF bug in several years.
+reason: The summary reproduces the positive claim accurately but omits the significant caveats the source attaches to it — self-reported, weak reporting channel, post-ship author fixes — making the result sound cleaner than the source presents it.
+</div></details>
+<details open><summary>OV9  WPP is hard: the thing we have to match is inside Windows, …  faithful 2/3 ≠ unsupported</summary>
+<div class="d">claim: WPP is hard: the thing we have to match is inside Windows, closed source, and we can only see part of it.
+reason: The summary reproduces the source&#39;s exact characterisation of WPP — hard, inside Windows, closed source, only partially observable — with no added strength or omitted qualification.
+&gt; **WPP** — hard. The thing we have to match is inside Windows, closed source, and we can only see part of it. (passage report#p1#5, unresolved)
+</div></details>
+<details open><summary>OV10  Security is hardest: the input comes from an attacker who a…  unsupported 1/3 ≠ faithful, overstated</summary>
+<div class="d">so what: The report says security is the toughest problem because attackers change their approach, and lessons from easier work do not apply. No held source says this.
+claim: Security is hardest: the input comes from an attacker who adapts to us, and nothing about the easy case carries over.
+reason: The source passage matches the claim almost word for word: security is named hardest, the adaptive attacker is the reason, and the inapplicability of the easy case is stated explicitly. All three elements align.
+</div></details>
+<details open><summary>OV11  Four rules: a test doesn&#39;t count until it has been seen to …  faithful 3/3</summary>
+<div class="d">claim: Four rules: a test doesn&#39;t count until it has been seen to fail; a test must not share code with the code it checks; a test must say when it didn&#39;t look; prefer changes that alter no behaviour.
+reason: The summary matches the source passage almost exactly in all four rules: must fail when reverted, no shared code, must report non-examination, and prefer behaviour-preserving changes. All four subjects, scopes, and directions align.
+&gt; A test doesn&#39;t count until it has been seen to fail (revert the fix, run it, watch it go red). A test must not share code with the code it checks. A test must say when it didn&#39;t look, not just when it found nothing. Prefer changes that alter no behaviour, because the old code is then the test. (passage report#p1#6, unresolved)
+</div></details>
+<details open><summary>OV12  What we measure is public functions covered by an approved …  faithful 3/3</summary>
+<div class="d">claim: What we measure is public functions covered by an approved test, per hour of human review; first measurement about half a function per review-hour, on the IPP wire codec, review time recalled not timed.
+reason: The claim matches the source on all points: the metric (public functions per review-hour), the first value (~0.5), the product tested (IPP wire codec), and the caveat that review time was recalled not timed.
+&gt; **What we measure.** Public functions covered by an approved test, per hour of human review. First measurement: about half a function per review-hour, on the IPP wire codec, with the review time recalled rather than timed. (passage report#p1#7, unresolved)
+</div></details>
+<details open><summary>OV13  What we don&#39;t do: buy better code generators, write better …  faithful 3/3</summary>
+<div class="d">claim: What we don&#39;t do: buy better code generators, write better review prompts, rewrite old code from a spec, or count lines.
+reason: The passage states exactly these four exclusions under &#34;What we don&#39;t do,&#34; matching the claim&#39;s subject, scope, and direction without any hedging or omission.
+&gt; **What we don&#39;t do.** Buy better code generators. Write better review prompts. Rewrite old code from a spec. Count lines. (passage report#p1#8, unresolved)
+</div></details>
+</details>
+</details>
+<details open><summary>2  Words used in this document  [2]</summary>
+<details open><summary>GL1–GL7  GL1–GL7  [7]</summary>
+<details open><summary>GL1  Checker: anything that says pass or fail about a change wit…  faithful 3/3</summary>
+<div class="d">claim: Checker: anything that says pass or fail about a change without a person reading it — a test, a comparison against an independent program, a round trip, a real device.
+reason: The claim reproduces the glossary definition exactly in substance and scope.
+&gt; Checker | Anything that says pass or fail about a change without a person reading it: a test, a comparison against an independent program, a round trip, a real device. (passage report#p1#9, unresolved)
+</div></details>
+<details open><summary>GL2  Test: an automated test in the ordinary Go sense — a _test.…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml :parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: Test: an automated test in the ordinary Go sense — a _test.go function that passes or fails, either a property or a check over a fixed set of files.
+reason: The claim matches the glossary entry exactly in subject, scope, and direction.
+</div></details>
+<details open><summary>GL3  Refuter: the run that proves a test can fail — revert the c…  faithful 3/3</summary>
+<div class="d">claim: Refuter: the run that proves a test can fail — revert the code the test guards, run the test, see it go red; mutation testing with a single, known mutation.
+reason: The claim matches the glossary definition exactly in subject, scope, and direction.
+&gt; Refuter | The run that proves a test can fail: revert the code the test guards, run the test, see it go red. One deliberate break, checked once. Mutation testing with a single, known mutation. (passage report#p1#9, unresolved)
+&gt; Revert the code the test guards, run the test, watch it go red. (passage report#p1#24, unresolved)
+&gt; Refuter named as mutation testing with one mutation, and its limit stated. (passage report#p1#87, unresolved)
+</div></details>
+<details open><summary>GL4  Statement: a test plus a plain-English description of what …  faithful 3/3</summary>
+<div class="d">claim: Statement: a test plus a plain-English description of what it checks, with a refuter on record; the unit a person approves instead of the code.
+reason: The claim matches the source definition exactly in subject, scope, and direction.
+&gt; Statement | A test plus a plain-English description of what it checks, with a refuter on record. The unit a person approves instead of the code. (passage report#p1#9, unresolved)
+</div></details>
+<details open><summary>GL5  Declaration: Go&#39;s word for a top-level func, type, var, con…  faithful 3/3</summary>
+<div class="d">claim: Declaration: Go&#39;s word for a top-level func, type, var, const or method; the unit we count.
+reason: The summary matches the source exactly in subject, scope, and meaning.
+&gt; Declaration | Go&#39;s word for a top-level func, type, var, const or method. The unit we count. (passage report#p1#9, unresolved)
+</div></details>
+<details open><summary>GL6  Producer: whatever creates the inputs a piece of code recei…  faithful 3/3</summary>
+<div class="d">claim: Producer: whatever creates the inputs a piece of code receives — a printer driver, a Windows print stack, an attacker; not a property-test generator.
+reason: The summary matches the glossary definition word for word in meaning, including the exclusion of property-test generators.
+&gt; Producer | Whatever creates the inputs a piece of code receives: a printer driver, a Windows print stack, an attacker. Not to be confused with a property-test *generator*, which is a random-input source inside a test. (passage report#p1#9, unresolved)
+</div></details>
+<details open><summary>GL7  Partition: a part of the codebase whose inputs all come fro…  faithful 3/3</summary>
+<div class="d">claim: Partition: a part of the codebase whose inputs all come from the same kind of producer.
+reason: The summary reproduces the glossary definition exactly in meaning: same subject, scope, and direction.
+&gt; Partition | A part of the codebase whose inputs all come from the same kind of producer. The PDF parser is one partition; the redaction path is another, even though both are in the same product. (passage report#p1#9, unresolved)
+</div></details>
+</details>
+<details open><summary>GL8–GL10  GL8–GL10  [3]</summary>
+<details open><summary>GL8  Cell: one producer, one application, one version — the unit…  faithful 3/3</summary>
+<div class="d">claim: Cell: one producer, one application, one version — the unit we count coverage in.
+reason: The summary reproduces the glossary definition of &#34;Cell&#34; verbatim in substance: one producer, one application, one version, used as the coverage-counting unit. Subject, scope, and direction match exactly.
+&gt; Cell | One producer, one application, one version. The unit we count coverage in. (passage report#p1#9, unresolved)
+</div></details>
+<details open><summary>GL9  Differential testing: run our code and an independent imple…  faithful 3/3</summary>
+<div class="d">claim: Differential testing: run our code and an independent implementation on the same input and compare results.
+reason: The claim reproduces the glossary definition word for word; subject, scope, and direction match exactly.
+&gt; Differential testing | Run our code and an independent implementation on the same input and compare results. (passage report#p1#9, unresolved)
+</div></details>
+<details open><summary>GL10  Closed: a declaration is closed when its test passes, its r…  faithful 3/3</summary>
+<div class="d">claim: Closed: a declaration is closed when its test passes, its refuter is on record, and its description has been read and approved.
+reason: The summary matches the source definition exactly in subject, scope, and direction.
+&gt; Closed | A declaration is closed when its test passes, its refuter is on record, and its description has been read and approved. (passage report#p1#9, unresolved)
+</div></details>
+</details>
+</details>
+<details open><summary>3  Goal  [3]</summary>
+<details open><summary>GO1  The goal is to survive the transition to AI-generated code …  faithful 3/3</summary>
+<div class="d">claim: The goal is to survive the transition to AI-generated code — not to build the best AI coder or reviewer.
+reason: The source passage states exactly this: survive the transition to AI-generated code, not build the best AI coder or reviewer. The summary accurately captures both the stated goal and the explicit exclusion, with no overstatement or distortion.
+&gt; Survive the transition to AI-generated code. Not build the best AI coder or reviewer. We start from a legacy of working code with no written specification for most of it. (passage report#p1#10, unresolved)
+</div></details>
+<details open><summary>GO2  We start from a legacy of working code with no written spec…  faithful 3/3</summary>
+<div class="d">claim: We start from a legacy of working code with no written specification for most of it.
+reason: The claim is copied directly from the source passage with no alteration in meaning, scope, or direction.
+&gt; We start from a legacy of working code with no written specification for most of it. (passage report#p1#10, unresolved)
+</div></details>
+<details open><summary>GO3  The three pieces of work (WPP, document-based products, sec…  faithful 2/3 ≠ partial</summary>
+<div class="d">claim: The three pieces of work (WPP, document-based products, security) look like the same problem but aren&#39;t; ordering them easiest to hardest is the main thing this document has to say.
+reason: The source passage matches the claim almost exactly in meaning: the three cases appear similar but differ, and ordering them easiest to hardest is named as the document&#39;s primary purpose. The claim is faithful.
+&gt; They look like the same problem but aren&#39;t. What makes each one hard is different, and putting them in order from easiest to hardest is the main thing this document has to say. (passage report#p1#13, unresolved)
+</div></details>
+</details>
+<details open><summary>4  The principles  [3]</summary>
+<details open><summary>PR1  Use one check for many changes wherever you can; where you …  faithful 3/3</summary>
+<div class="d">claim: Use one check for many changes wherever you can; where you can&#39;t, a human reads the change; work to make that second pile smaller.
+reason: The summary reproduces the source&#39;s exact meaning, direction, and emphasis.
+&gt; Use one check for many changes wherever you can. Where you can&#39;t, a human reads the change. Work to make that second pile smaller. (passage report#p1#14, unresolved)
+</div></details>
+<details open><summary>PR2  A check is only as good as the inputs you feed it: know wha…  faithful 3/3</summary>
+<div class="d">claim: A check is only as good as the inputs you feed it: know what population your inputs sample, and where that sample is thin.
+reason: The summary matches the source exactly in subject, direction, and scope.
+&gt; A check is only as good as the inputs you feed it. Know what population your inputs sample, and where that sample is thin. (passage report#p1#16, unresolved)
+</div></details>
+<details open><summary>PR3  The plan runs over years and models will get stronger; clai…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: The plan runs over years and models will get stronger; claims hold at any model strength unless tagged [improves] or [decays].
+reason: The summary matches the source exactly in subject, scope, direction, and register, including the specific tagging convention as the sole exception.
+</div></details>
+</details>
+<details open><summary>5  Why the test, not the code  [5]</summary>
+<details open><summary>WT1  There are three ways to trust machine-written code: one che…  faithful 3/3</summary>
+<div class="d">claim: There are three ways to trust machine-written code: one check for many changes (scales), read each change (does not scale — the 13 KLOC PR), approve the statement (scales wherever a test can be written).
+reason: The summary accurately reproduces all three named methods, their scaling verdicts, and the 13 KLOC PR label, matching the table in report#p1#19 and the framing in report#p1#18.
+&gt; There are three ways to trust a piece of machine-written code. (passage report#p1#18, unresolved)
+&gt; | One check, many changes | A checker approved once and reused for every change: a test, an independent implementation, a round trip, a real device | Yes |
+| Read each change | A human reads every implementation | No — this is the 13 KLOC PR |
+| Approve the statement | A person approves a test plus its description, and the test accepts the code | Yes, wherever a test can be written | (passage report#p1#19, unresolved)
+</div></details>
+<details open><summary>WT2  Every earlier shift (assembly→compilers, hand code→librarie…  faithful 3/3</summary>
+<div class="d">claim: Every earlier shift (assembly→compilers, hand code→libraries) worked because we could trust the tool that produced the code; that does not work for an LLM.
+reason: The passage states exactly this: prior coding shifts worked because the tool could be trusted once; that approach fails for an LLM. The summary accurately captures the subject, scope, and direction with no strengthening or distortion.
+&gt; Every earlier shift like this — assembly to compilers, hand-rolled code to libraries — worked because we could trust the tool that produced the code: check the compiler once, trust everything it compiles. That does not work for an LLM. (passage report#p1#20, unresolved)
+</div></details>
+<details open><summary>WT3  The model we use will be replaced repeatedly, and trust in …  faithful 3/3</summary>
+<div class="d">claim: The model we use will be replaced repeatedly, and trust in one version says nothing about the next; the only thing fixed across model versions is the test, so trust has to live in the test.
+reason: The passage directly states all three propositions in the claim: models are replaced repeatedly, trust in one version carries nothing forward, and the test is where trust must live.
+&gt; Not because a fixed model is random, but because the model we use will be replaced, repeatedly, and trust in one version says nothing about the next. The only thing that stays fixed across model versions is the test. So the test is where the trust has to live. (passage report#p1#20, unresolved)
+</div></details>
+<details open><summary>WT4  The FLT formalisation worked because Lean&#39;s kernel checked …  unsupported 3/3</summary>
+<div class="d">so what: The report says The FLT proof succeeded because machine checking meant no human had to read all 13 million lines. No held source says this.
+claim: The FLT formalisation worked because Lean&#39;s kernel checked every statement automatically, so nobody read the 13 million lines.
+reason: The summary matches the source almost word for word in substance, direction, and scope. The passage explicitly states the same causal claim about Lean&#39;s kernel and the 13 million lines.
+</div></details>
+<details open><summary>WT5  We have no kernel, so a statement here has to bring its own…  faithful 3/3</summary>
+<div class="d">claim: We have no kernel, so a statement here has to bring its own check — a test.
+reason: The passage states verbatim that there is no kernel and that each statement must carry its own check — a test. The summary reproduces this exactly in sense, scope, and direction.
+&gt; We have no kernel. A statement here has to bring its own check — a test. (passage report#p1#21, unresolved)
+</div></details>
+</details>
+<details open><summary>6  What a statement is  [2]</summary>
+<details open><summary>R-REF–ST6  R-REF–ST6  [7]</summary>
+<details open><summary>R-REF  When we ran refuters on the IPP library in August (refuter …  faithful 3/3</summary>
+<div class="d">claim: When we ran refuters on the IPP library in August (refuter runs, 2026-08-15), two of six tests could not fail.
+reason: The claim matches the source exactly on all dimensions.
+&gt; When we did this on the IPP library in August ([refuter runs, 2026-08-15](https://bitbucket.org/papercutsoftware/ipp/src/5cdfeaef67c18c02a807ead51b8e417b72a9af28/docs/reviews/2026-08-15-refuter-runs.md?at=pd2639/stack)), two of six tests could not fail. (passage report#p1#24, unresolved)
+</div></details>
+<details open><summary>ST1  A statement has two parts: an automated test that returns p…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: A statement has two parts: an automated test that returns pass or fail, and a plain-English description of what the test checks with every assumption spelled out.
+reason: The source passage explicitly defines a statement as exactly these two components: an automated pass/fail test, and a plain-English description with every assumption spelled out. The claim matches subject, scope, and direction precisely.
+</div></details>
+<details open><summary>ST2  A failure is proof of a defect; a pass is only the absence …  faithful 3/3</summary>
+<div class="d">claim: A failure is proof of a defect; a pass is only the absence of a counterexample within what was tried.
+reason: The claim is taken word-for-word from the source as a sincere declarative statement about test results. Subject, scope, direction, and register all match exactly.
+&gt; A failure is proof of a defect; a pass is only the absence of a counterexample within what was tried. (passage report#p1#22, unresolved)
+</div></details>
+<details open><summary>ST3  When we ask whether a statement is shorter than the code it…  faithful 3/3</summary>
+<div class="d">claim: When we ask whether a statement is shorter than the code it accepts, we measure the test, not the description.
+reason: The claim is taken word-for-word from a declarative statement in the source, with the same subject, scope, and direction.
+&gt; When we ask whether a statement is shorter than the code it accepts, we measure the test, not the description. (passage report#p1#22, unresolved)
+</div></details>
+<details open><summary>ST4  Prove2Me, the platform behind the FLT proof, has the same p…  faithful 3/3</summary>
+<div class="d">claim: Prove2Me, the platform behind the FLT proof, has the same pair: the Lean type is the check, the natural-language description is what humans read.
+reason: The summary is a direct restatement of the source with identical subject, scope, and direction.
+&gt; Prove2Me, the platform behind the FLT proof, has the same pair: the Lean type is the check, the natural-language description is what humans read. (passage report#p1#23, unresolved)
+</div></details>
+<details open><summary>ST5  A test is not a statement until it has a refuter: revert th…  faithful 3/3</summary>
+<div class="d">claim: A test is not a statement until it has a refuter: revert the code the test guards, run it, watch it go red; a test that stays green with the code reverted is checking nothing.
+reason: The claim matches the source exactly in subject, scope, direction, and register.
+&gt; A test doesn&#39;t count until it has been seen to fail (revert the fix, run it, watch it go red). (passage report#p1#6, unresolved)
+</div></details>
+<details open><summary>ST6  The refuter is mutation testing with one mutation and only …  faithful 3/3</summary>
+<div class="d">claim: The refuter is mutation testing with one mutation and only proves the test catches the one defect broken on purpose; it says nothing about defects we have not seen.
+reason: The source states exactly this: one mutation, proves only the one deliberate break, silent on unseen defects. The summary matches subject, scope, and direction without strengthening or altering the claim.
+&gt; it is mutation testing with one mutation, and it only proves the test catches the one defect we broke on purpose. It says nothing about defects we have not seen. (passage report#p1#24, unresolved)
+</div></details>
+</details>
+<details open><summary>ST7–ST10  ST7–ST10  [4]</summary>
+<details open><summary>ST7  A test must say &#34;didn&#39;t look&#34; as well as &#34;found nothing&#34;: a…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml-parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: A test must say &#34;didn&#39;t look&#34; as well as &#34;found nothing&#34;: a pass that could also mean the checker never examined the input is not a pass.
+reason: The summary matches the source&#39;s subject, scope, direction, and register exactly — it is a direct and accurate restatement of the rule stated in report#p1#25.
+</div></details>
+<details open><summary>ST8  A redaction scan of a PDF whose text is an image finds zero…  faithful 3/3</summary>
+<div class="d">claim: A redaction scan of a PDF whose text is an image finds zero matches and looks identical to a clean document; the tool has to report that it could not see.
+reason: The summary is a direct quote from the source passage, matching every detail of subject, scope, and direction.
+&gt; A redaction scan of a PDF whose text is an image finds zero matches and looks identical to a clean document; the tool has to report that it could not see. (passage report#p1#25, unresolved)
+</div></details>
+<details open><summary>ST9  The codec property test counts how many inputs the writer r…  faithful 3/3</summary>
+<div class="d">claim: The codec property test counts how many inputs the writer refused before the round trip ran: 0 refused out of 10,000 is what makes 10,000 passes mean 10,000.
+reason: The summary reproduces the source&#39;s point exactly — same subject (codec property test), same mechanism (counting refused inputs), same figures (0 of 10,000), same conclusion (what makes 10,000 passes meaningful). No distortion, no strengthening.
+&gt; Likewise the codec property test below counts how many of its inputs the writer refused before the round trip ran: 0 refused out of 10,000 is what makes 10,000 passes mean 10,000. (passage report#p1#25, unresolved)
+</div></details>
+<details open><summary>ST10  Where a statement lives: the test is a _test.go function, t…  faithful 3/3</summary>
+<div class="d">claim: Where a statement lives: the test is a _test.go function, the description is its doc comment, the refuter is a dated entry under docs/reviews/ quoting the red run and its commit; whether to make refuters executable is open.
+reason: The summary accurately captures all four elements from the source: the test file type, the doc comment for descriptions, the dated docs/reviews/ entry for refuters, and the open question about making refuters executable.
+&gt; **Where a statement lives in the repo.** The test is a \_test.go function; the description is its doc comment. The refuter is a dated entry under docs/reviews/ quoting the red run and the commit it was run against. That is current practice on ipp; whether to also make refuters executable (a build-tagged test that asserts red against a reverted fix) is open. (passage report#p1#26, unresolved)
+</div></details>
+</details>
+</details>
+<details open><summary>7  The loop  [7]</summary>
+<details open><summary>LP1  You don&#39;t know the right test until the code has failed it …  faithful 3/3</summary>
+<div class="d">claim: You don&#39;t know the right test until the code has failed it a few times; what you keep is the version of the test that stopped changing.
+reason: The summary reproduces the source&#39;s core assertion almost verbatim: the right test emerges only after the code breaks it several times, and the keeper is the version that finally stabilises.
+&gt; You don&#39;t know the right test until the code has failed it a few times. Start with a rough one, let the AI write code against it, run it, see what breaks, add the missing condition, and go again. What you keep is the version of the test that stopped changing. (passage report#p1#27, unresolved)
+</div></details>
+<details open><summary>LP2  In the codec work, a generated date with year 57760 read ba…  faithful 3/3</summary>
+<div class="d">claim: In the codec work, a generated date with year 57760 read back as −7776 because the test had no condition about year range; the writer was changed to refuse such dates and the test amended.
+reason: The passage states exactly what the claim says: year 57760 came back as −7776, no year-range condition existed in the test, the writer was updated to reject such dates, and the test was then amended. Subject, scope, and direction all match.
+&gt; First test: a message written and read back should be equal. It passed. Then a generated date with year 57760 read back as −7776 — the test had no condition about year range, because nobody had thought about years the wire format could carry but the code could not. The writer was changed to refuse such dates; the test was amended to say so. (passage report#p1#28, unresolved)
+</div></details>
+<details open><summary>LP3  Then integers wider than 32 bits read back wrong for the sa…  partial 3/3</summary>
+<div class="d">so what: The report says The test was amended again after the 32-bit integer issue, and then it stopped changing. The source only says After a few rounds of fixes and amendments the test stopped changing; the 32-bit integer issue was one step in that longer process.
+claim: Then integers wider than 32 bits read back wrong for the same reason, and the test was amended again; after a few rounds the test stopped changing.
+reason: The source says the test stopped changing &#34;after a few rounds&#34; — the 32-bit integer problem was not the last amendment before stability; the claim implies it was, omitting that further rounds followed.
+&gt; Then integers wider than 32 bits read back wrong, for the same reason; the test was amended again. After a few rounds the test stopped changing. That final version is the statement. (passage report#p1#28, unresolved)
+&gt; First test: a message written and read back should be equal. It passed. Then a generated date with year 57760 read back as −7776 — the test had no condition about year range, because nobody had thought about years the wire format could carry but the code could not. The writer was changed to refuse such dates; the test was amended to say so. Then integers wider than 32 bits read back wrong, for the same reason; the test was amended again. (passage report#p1#28, unresolved)
+</div></details>
+<details open><summary>LP4  The PDF library update established the rule: run the checks…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: The PDF library update established the rule: run the checks while you&#39;re developing, over and over, not once at the end.
+reason: The claim matches the passage exactly in subject, scope, and meaning.
+</div></details>
+<details open><summary>LP5  Count the review time for every version of the test, not ju…  unsupported 3/3</summary>
+<div class="d">so what: The report says track all rounds of checking time and how many drafts there were; begin the test before writing code. No held source says this.
+claim: Count the review time for every version of the test, not just the last, and report the number of revisions alongside; write the first draft before the code.
+reason: The claim accurately captures both instructions from the source: tallying review time across all test versions (not just the final one), reporting revision counts, and drafting the test before the code. No hedging is dropped or scope altered.
+</div></details>
+<details open><summary>LP6  The bet: this pays off only if the test plus its descriptio…  unsupported 3/3</summary>
+<div class="d">so what: The report says the approach succeeds only when the test and description together take less effort than the code. No held source says this.
+claim: The bet: this pays off only if the test plus its description, all revisions counted, is shorter to write and review than the code it accepts.
+reason: The summary closely mirrors the source sentence, preserving the conditional framing (&#34;only if&#34;), the subject (test plus description, all revisions counted), and the comparison (shorter to write and review than the code it accepts). No distortion or overstatement.
+</div></details>
+<details open><summary>LP7  For no-behaviour-change work the bet is nearly guaranteed; …  faithful 3/3</summary>
+<div class="d">claim: For no-behaviour-change work the bet is nearly guaranteed; for new behaviour each function needs its own test and whether that is shorter is the open question — the two do not stand or fall together.
+reason: The summary reproduces the source&#39;s three points — near-certainty for no-behaviour-change, open question for new behaviour, independence of the two — with the same subject, scope, and direction. No distortion or omission.
+&gt; This only pays off if the test plus its description — all revisions counted — is shorter to write and review than the code it accepts. For changes that alter no behaviour, that is nearly guaranteed: the test is &#34;old and new agree on these inputs&#34;, written once for the whole partition. For new behaviour, each function needs its own test, and whether that is shorter than the code is the open question. The two do not stand or fall together. (passage report#p1#33, unresolved)
+</div></details>
+</details>
+</details>
+<details open><summary>8–14  8–14  [7]</summary>
+<details open><summary>8  Choosing what to work on  [6]</summary>
+<details open><summary>CH1  Choose by how good a checker is available, not by where the…  faithful 3/3</summary>
+<div class="d">claim: Choose by how good a checker is available, not by where the pain is.
+reason: The claim is taken word-for-word from the passage, with identical subject, scope, and direction.
+&gt; Choose by how good a checker is available, not by where the pain is. Before starting a partition, answer: (passage report#p1#34, unresolved)
+</div></details>
+<details open><summary>CH2  Before a partition, answer: what checker exists; what input…  faithful 3/3</summary>
+<div class="d">claim: Before a partition, answer: what checker exists; what inputs it runs on and how they were chosen; what it observes; how long a person takes to triage each failure.
+reason: The four questions in the claim match the four bullet points in report#p1#35 exactly — same checker, inputs, observation, and triage-time questions, with no strengthening or narrowing.
+&gt; What checker exists? Old code to compare against, an independent implementation, a round trip, a protocol tool, a real device — or nothing?
+&gt; * What inputs will it run on, and how were they chosen? How many real customer producers do they cover?
+&gt; * What does it observe — bytes, rendered output, what a device did, what appeared in metadata? A defect on a channel the checker doesn&#39;t watch is invisible.
+&gt; * How long does it take a person to work out whether each failure is real? (passage report#p1#35, unresolved)
+</div></details>
+<details open><summary>CH3  Triage time falls as models improve [improves], so partitio…  unsupported 3/3</summary>
+<div class="d">so what: The report says Sorting out failures gets cheaper over time, opening up work that costs too much today. No held source says this.
+claim: Triage time falls as models improve [improves], so partitions too expensive to triage today may not be next year; re-ask per model generation.
+reason: The source passage directly states that triage cost falls as models improve, that today&#39;s expensive partitions may become viable next year, and to re-ask per model generation — matching the claim exactly, including the [improves] tag.
+</div></details>
+<details open><summary>CH4  Nobody has computed a number from these questions; they are…  faithful 3/3</summary>
+<div class="d">claim: Nobody has computed a number from these questions; they are a checklist, not a formula.
+reason: The source passage matches the claim word-for-word in substance: no numbers computed, treated as a checklist rather than a formula. Subject, scope, and direction are identical.
+&gt; Nobody has computed a number from these; they are a checklist, not a formula. (passage report#p1#36, unresolved)
+</div></details>
+<details open><summary>CH5  Differential testing catches transcription errors reliably …  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml-parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: Differential testing catches transcription errors reliably and shared misunderstandings not at all, and this gets worse as models read more [decays].
+reason: The claim matches the source exactly in subject, scope, direction, and the [decays] qualifier.
+</div></details>
+<details open><summary>CH6  The model writing our code has read poppler and mupdf; if i…  faithful 3/3</summary>
+<div class="d">claim: The model writing our code has read poppler and mupdf; if it reproduces a misreading of the PDF spec poppler also contains, the two agree and the comparison passes.
+reason: The summary reproduces the passage almost verbatim — same subject, same mechanism, same outcome. Faithful.
+&gt; The model writing our code has read poppler and mupdf. If it reproduces a misreading of the PDF spec that poppler also contains, the two agree and the comparison passes. (passage report#p1#37, unresolved)
+</div></details>
+</details>
+<details open><summary>9  Sampling: what to feed the checker  [2]</summary>
+<details open><summary>SA1–SA7  SA1–SA7  [7]</summary>
+<details open><summary>SA1  Sampling is the precondition, and it is harder than buildin…  faithful 3/3</summary>
+<div class="d">claim: Sampling is the precondition, and it is harder than building the checker.
+reason: Passage report#p1#39 states exactly this, immediately following the &#34;Sampling&#34; section header at report#p1#38. The claim matches subject, scope, and direction without strengthening or weakening.
+&gt; This is the precondition, and it is harder than building the checker. (passage report#p1#39, unresolved)
+&gt; ## **Sampling: what to feed the checker** (passage report#p1#38, unresolved)
+</div></details>
+<details open><summary>SA2  Random inputs don&#39;t work: if a bug needs three unusual cond…  faithful 3/3</summary>
+<div class="d">claim: Random inputs don&#39;t work: if a bug needs three unusual conditions each showing up one input in ten, a random input hits all three one time in a thousand; four conditions, one in ten thousand.
+reason: The summary reproduces the source&#39;s exact numerical illustration — three conditions each at 1-in-10 giving 1-in-1000, four conditions giving 1-in-10,000 — with the same subject, scope, direction, and register.
+&gt; Suppose a bug needs three unusual conditions to line up, and each shows up in one input in ten. A random input hits all three one time in a thousand. Four conditions, one in ten thousand. (passage report#p1#40, unresolved)
+</div></details>
+<details open><summary>SA3  The standard answer is combinatorial testing: build the inp…  faithful 3/3</summary>
+<div class="d">claim: The standard answer is combinatorial testing: build the input set so every pair or triple of conditions appears together at least once — affordable because most software failures are triggered by two or three conditions (Kuhn, Wallace and Gallo, IEEE TSE 30(6), 2004).
+reason: The summary matches the source almost word for word on subject, scope, direction, and the cited reference. The claim is fully and faithfully represented.
+&gt; The standard answer is combinatorial testing: build the input set so that every pair (or triple) of conditions appears together at least once. That is affordable because, empirically, most software failures are triggered by two or three conditions, rarely more (Kuhn, Wallace and Gallo, IEEE TSE 30(6), 2004). (passage report#p1#40, unresolved)
+</div></details>
+<details open><summary>SA4  Real inputs are cheaper still: they are made by a small num…  faithful 3/3</summary>
+<div class="d">claim: Real inputs are cheaper still: they are made by a small number of producers, each making the same choices every time, so a few hundred real files cover the combinations that actually occur — this is why the PDF corpus worked.
+reason: The claim matches the source passage on subject, scope, direction, and register. The passage explicitly states that real inputs come from a small number of producers, each consistent in behaviour, that a few hundred files cover actual combinations, and that this is why the PDF corpus worked.
+&gt; The inputs our code sees are not random. They are made by a small number of producers — printer drivers, applications, one Windows print stack — and each producer makes the same choices every time: its own font handling, its own text layout, its own structure. So one real file from one real producer contains a whole bundle of conditions that go together, and a few hundred real files cover the combinations that actually occur. This is why the PDF corpus worked: a few hundred files, chosen by producer, beat unbounded random generation. (passage report#p1#41, unresolved)
+</div></details>
+<details open><summary>SA5  Producers cluster by time, customer and application, giving…  unsupported 2/3 ≠ faithful</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: Producers cluster by time, customer and application, giving a coverage count: which producer × application × version cells we hold, and which shipped cells are empty.
+reason: &lt;/antml_parameter&gt;
+
+</div></details>
+<details open><summary>SA6  Customers cluster too, so a pattern that is 0.1% of global …  faithful 3/3</summary>
+<div class="d">claim: Customers cluster too, so a pattern that is 0.1% of global traffic can be 100% of one customer&#39;s; sample evenly across cells, never in proportion to volume.
+reason: The summary reproduces the source&#39;s exact point, direction, and scope: customer clustering, the 0.1%/100% illustration, and the sampling rule. No hedging is dropped, no scope is changed.
+&gt; Customers cluster too — one site tends to run one driver and one application suite — so a pattern that is 0.1% of global traffic can be 100% of one customer&#39;s. Sample evenly across cells, never in proportion to volume. (passage report#p1#42, unresolved)
+</div></details>
+<details open><summary>SA7  New driver versions open new cells so the corpus goes stale…  faithful 3/3</summary>
+<div class="d">claim: New driver versions open new cells so the corpus goes stale; watch the fraction of newly seen inputs that match no held cell.
+reason: The summary reproduces the source&#39;s exact point: new driver versions create new cells, making the corpus go stale, and the staleness measure is the share of new inputs that fit no existing cell.
+&gt; New driver versions open new cells, so the corpus goes stale; watch the fraction of newly seen inputs that match no held cell. (passage report#p1#42, unresolved)
+</div></details>
+</details>
+<details open><summary>SA8–SA10  SA8–SA10  [3]</summary>
+<details open><summary>SA8  Independent implementations (poppler, mupdf) are weakest on…  faithful 3/3</summary>
+<div class="d">claim: Independent implementations (poppler, mupdf) are weakest on common files and strongest on our tail — enterprise MFP drivers, line-of-business applications, old versions at regulated customers.
+reason: The source explicitly names the same tools, the same direction (weakest on common, strongest on tail), and the same tail categories (enterprise MFP drivers, line-of-business apps, old versions at regulated customers). The claim faithfully restates all three elements.
+&gt; poppler and mupdf were tuned on the same public PDFs everyone has. The producers that are only ours — enterprise MFP drivers, line-of-business applications, old versions that persist at regulated customers — are where those tools are untested and therefore give an independent opinion. Differential testing is weakest on common files and strongest on our tail. (passage report#p1#43, unresolved)
+</div></details>
+<details open><summary>SA9  Everything above assumes the producer doesn&#39;t care about us…  faithful 3/3</summary>
+<div class="d">claim: Everything above assumes the producer doesn&#39;t care about us; an attacker changes inputs based on our responses, can read our product, and creates inputs no driver would — so random sampling is back to hopeless.
+reason: The summary closely and accurately paraphrases the passage: attacker adapts inputs, reads the product, creates unusual inputs, making random sampling hopeless. All key points preserved with matching direction and force.
+&gt; Everything above assumes the producer is a program that doesn&#39;t care about us. An attacker is different: it changes its inputs based on our responses, it can download our product and read it, and it deliberately creates inputs no driver would. For attacker-supplied input, the input space is the whole file format again and random sampling is back to hopeless. (passage report#p1#44, unresolved)
+</div></details>
+<details open><summary>SA10  The case is decided by who makes the input, not which produ…  unsupported 3/3</summary>
+<div class="d">so what: The report says which security bucket code falls into depends on who sends it the input. No held source says this.
+claim: The case is decided by who makes the input, not which product the code is in: a redaction feature in a document product parses attacker-chosen input and belongs to the security case.
+reason: The summary reproduces the source&#39;s exact reasoning: classification follows the input-maker, not the product; a redaction feature in a document product takes attacker input and so belongs to the security case. Direction, scope, and register all match.
+</div></details>
+</details>
+</details>
+<details open><summary>10  Which AI-written changes are eligible  [4]</summary>
+<details open><summary>EL1  Changes that alter no behaviour (refactor, consolidation, p…  faithful 2/3 ≠ unsupported</summary>
+<div class="d">claim: Changes that alter no behaviour (refactor, consolidation, port, dedup) already have a checker — the old code; run old and new on the same inputs and compare, and start there.
+reason: The summary accurately captures the subject (no-behaviour changes), the checker (old code), the method (run both on same inputs and compare), and the instruction to start there — matching the source&#39;s direction and scope exactly.
+&gt; **Changes that alter no behaviour** — refactor, consolidation, port, dedup — already have a checker: the old code. Run old and new on the same inputs and compare. Start there: large in lines, zero in behaviour, because &#34;changes nothing&#34; is a question a machine can answer and a human reading the diff cannot. (passage report#p1#47, unresolved)
+</div></details>
+<details open><summary>EL2  Three things a person still decides for a no-behaviour-chan…  faithful 3/3</summary>
+<div class="d">claim: Three things a person still decides for a no-behaviour-change comparison: which inputs to run, what to compare (bytes, rendered output, both), and how close counts as equal.
+reason: The claim matches the source exactly in subject, scope, and all three enumerated items.
+&gt; Three things a person still decides: which inputs to run, what to compare (bytes, rendered output, both), and how close counts as equal. (passage report#p1#47, unresolved)
+</div></details>
+<details open><summary>EL3  New behaviour goes through the loop wherever a test can be …  faithful 2/3 ≠ unsupported</summary>
+<div class="d">claim: New behaviour goes through the loop wherever a test can be written; where it cannot, a human reads it and it stays small — the whole rule is whether a test can be written or not.
+reason: The claim directly mirrors the passage&#39;s content, including the explicit phrase &#34;the whole rule: can a test be written or not,&#34; with no overstatement or omission of material qualifications.
+&gt; **New behaviour** goes through the loop wherever a test can be written for it. Where it cannot — no way to generate inputs, no automatic check — a human reads it, and it stays small. **That is the whole rule: can a test be written or not.** (passage report#p1#48, unresolved)
+</div></details>
+<details open><summary>EL4  Exception: where keeping old behaviour means keeping a secu…  unsupported 3/3</summary>
+<div class="d">so what: The report says For security-sensitive code, a human must label every statement before AI edits. No held source says this.
+claim: Exception: where keeping old behaviour means keeping a security hole (redaction, sanitisation, parsing untrusted input), &#34;the old code is the spec&#34; is wrong; a person marks each extracted statement keep or fix before any AI change.
+reason: The claim matches the source passage exactly in subject (security-sensitive code categories), direction (old code is not the spec), and required action (a person marks each statement keep or fix before any AI change).
+</div></details>
+</details>
+<details open><summary>11  Document-based products (easy)  [2]</summary>
+<details open><summary>DP1–DP7  DP1–DP7  [7]</summary>
+<details open><summary>DP1  The producer is a printer driver — a small, known, fixed se…  faithful 3/3</summary>
+<div class="d">claim: The producer is a printer driver — a small, known, fixed set; independent implementations exist (mupdf, poppler, qpdf, pdftk, pikepdf) and the corpora are large.
+reason: The summary matches the source exactly in subject, scope, and direction.
+&gt; The producer is a printer driver: a small, known, fixed set. Independent implementations exist (mupdf, poppler, qpdf, pdftk, pikepdf) and the corpora are large. (passage report#p1#52, unresolved)
+</div></details>
+<details open><summary>DP2  The PDF library update shipped with a stated success criter…  faithful 3/3</summary>
+<div class="d">claim: The PDF library update shipped with a stated success criterion — no serious bugs from product testing or customers in the first six months — and over several years in production there has been no customer-reported PDF defect.
+reason: The claim matches the source exactly in subject, scope, direction, and register — including the success criterion and the multi-year production outcome.
+&gt; The PDF library update shipped with a stated success criterion — no serious bugs from product testing or customers in the first six months — and over several years in production there has been no customer-reported PDF defect. (passage report#p1#53, unresolved)
+</div></details>
+<details open><summary>DP3  Caveats: it is one project, self-reported; exposure figures…  faithful 3/3</summary>
+<div class="d">claim: Caveats: it is one project, self-reported; exposure figures are order-of-magnitude estimates; the author found and fixed bugs himself after shipping; and the reporting channel is weak.
+reason: The summary matches the source on all four caveats without strengthening or omitting any qualifier.
+&gt; Caveats: it is one project, self-reported, and the exposure figures (customers, processing events) are estimates spanning orders of magnitude; the author found and fixed bugs himself after shipping; and a PDF defect would likely be reported as &#34;printing is broken at site X&#34;, so the reporting channel is weak. (passage report#p1#53, unresolved)
+</div></details>
+<details open><summary>DP4  A count of PDF defects reported through that channel before…  unsupported 2/3 ≠ faithful</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: A count of PDF defects reported through that channel before the method is needed before this result carries more weight than &#34;promising&#34;.
+reason: The claim is copied verbatim from the passage; subject, scope, direction, and register all match exactly.
+</div></details>
+<details open><summary>DP5  Five parts of the PDF method transfer and one does not: (a)…  faithful 3/3</summary>
+<div class="d">claim: Five parts of the PDF method transfer and one does not: (a) bound inputs by producers, (b) bound functions by product settings, (c) choose corpus files by origin not count, (d) checks that need no spec, (e) run checks during development; (f) one person who chose what to sample does NOT transfer.
+reason: The source lists exactly the five transferable elements (a–e) and one non-transferring element (f), matching the claim in every detail.
+&gt; * **(a) Bound the inputs by their producers.** Works wherever the producers can be listed. The most valuable part.
+&gt; * **(b) Bound the functions by product settings.** Works where we can list which functions the products call, with which options. That list is what the other two cases lack.
+&gt; * **(c) Choose corpus files by where they came from, not how many.** Every file that caused a bug, every file from feature work, every licensed test suite, some random ones. Caveat: two of those four sources are our own fix history, which cannot contain a bug class we never fixed.
+&gt; * **(d) Checks that need no spec**, derived from what the function is for: render and count pages, render before and after and compare. Hardest to port. The question for any partition is &#34;what is the rendered page here?&#34;
+&gt; * **(e) Run the checks during development, repeatedly.** Transfers completely; the loop above is (e) applied to tests.
+&gt; * **(f) One person with deep domain knowledge chose what to sample.** Does not transfer. Everything below about extraction and succession is an attempt to replace (f). (passage report#p1#55, unresolved)
+</div></details>
+<details open><summary>DP6  (f) does not transfer, and everything about extraction and …  unsupported 3/3</summary>
+<div class="d">so what: The report says item f cannot be carried over, and all work on extraction and succession aims to fill that gap. No held source says this.
+claim: (f) does not transfer, and everything about extraction and succession is an attempt to replace (f).
+reason: The source passage states exactly this: (f) &#34;Does not transfer. Everything below about extraction and succession is an attempt to replace (f).&#34; The summary reproduces the same subject, scope, and direction without strengthening or distorting it.
+</div></details>
+<details open><summary>DP7  The loop here is an experiment stated in advance: can an AI…  unsupported 2/3 ≠ faithful</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: The loop here is an experiment stated in advance: can an AI extract statements from existing code well enough that a reviewer reading only the statements spots the bugs — tested on the bugs the author found and fixed after shipping.
+reason: The summary matches the source precisely on all three axes.
+</div></details>
+</details>
+<details open><summary>DP8–DP8  DP8–DP8  [1]</summary>
+<details open><summary>DP8  Criterion: the reviewer&#39;s marks identify at least K of the …  faithful 3/3</summary>
+<div class="d">claim: Criterion: the reviewer&#39;s marks identify at least K of the N post-ship bugs (K fixed before the run); control is the same reviewer reading code directly on the other half; recorded are test size, review minutes over revisions, and revisions per function.
+reason: The summary accurately captures the criterion (K of N bugs, K fixed before the run), the control condition (same reviewer, same time budget, reading code directly on the other half), and all three recorded metrics (test size per function, review minutes summed over revisions, revisions per function).
+&gt; * *Criterion:* the reviewer&#39;s marks identify at least K of the N post-ship bugs, K fixed before the run.
+&gt; * *Control:* same reviewer, same time budget, reading the code directly, on the other half of the bug set.
+&gt; * *Recorded:* test size per function, review minutes summed over revisions, revisions per function. (passage report#p1#57, unresolved)
+</div></details>
+</details>
+</details>
+<details open><summary>12  WPP (hard)  [2]</summary>
+<details open><summary>WP1–WP5  WP1–WP5  [7]</summary>
+<details open><summary>WP1  The producer is Windows: one producer, closed source, many …  faithful 3/3</summary>
+<div class="d">claim: The producer is Windows: one producer, closed source, many versions, and we can observe only some of what it does.
+reason: The summary is a direct, exact restatement of passage report#p1#59, matching every element: one producer (Windows), closed source, many versions, partial observability. Nothing is added, removed, or distorted.
+&gt; The producer is Windows: one producer, closed source, many versions, and we can observe only some of what it does. (passage report#p1#59, unresolved)
+</div></details>
+<details open><summary>WP2  We can check automatically the wire protocol layer (client …  unsupported 3/3</summary>
+<div class="d">so what: The report says automated checks cover the wire layer, ipptool, and lab printers; Windows matching our design stays out of reach. No held source says this.
+claim: We can check automatically the wire protocol layer (client and server written as mirror images), conformance with ipptool, and behaviour on the handful of real printers in the lab; we cannot check whether Windows matches what we assumed.
+reason: The claim maps precisely onto the source passage: same three automated-check categories, same limitation about Windows. Subject, scope, and direction all match without strengthening or narrowing.
+</div></details>
+<details open><summary>WP2b  The statements are the WPP install gates; the number report…  faithful 3/3</summary>
+<div class="d">claim: The statements are the WPP install gates; the number reported is the count of gates that cannot be made into a test (only check: &#34;Windows installed it&#34;), because those are the ones a human still reads.
+reason: The summary matches the source almost word for word in substance: WPP gates as statements, the reported count being gates with no automatable check, and humans reading those.
+&gt; The statements are the WPP install gates — a short list of conditions, each observed in Windows and each linked to the code that implements it. When a new Windows observation contradicts a gate, a new gate replaces it. The number we report is the count of gates that cannot be made into a test — where the only check is &#34;Windows installed it&#34; — because those are the ones a human still reads. (passage report#p1#61, unresolved)
+</div></details>
+<details open><summary>WP3  First result (2026-09-05, branch human-to-ai/rapid-ipp-code…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: First result (2026-09-05, branch human-to-ai/rapid-ipp-codec, evidence docs/reviews/2026-09-05-rapid-ipp-codec.md @ a46a4b7): a property test over the IPP wire codec — any message the writer accepts, once written and read back, equals the original — over Rapid&#39;s full-wire-range generators.
+reason: The claim matches the source on date, branch, evidence file, round-trip property, and Rapid&#39;s full-wire-range generators. Nothing is added, dropped, or strengthened.
+</div></details>
+<details open><summary>WP3b  Eleven commits, each with a refuter on record; about 5.5 ho…  faithful 3/3</summary>
+<div class="d">claim: Eleven commits, each with a refuter on record; about 5.5 hours of agent time across five prompts and roughly two hours of human review.
+reason: The claim reproduces the source&#39;s figures and qualifications exactly: eleven commits, refuters on record, 5.5 agent-hours across five prompts, and roughly two review-hours.
+&gt; Eleven commits, each with a refuter on record; about 5.5 hours of agent time across five prompts and roughly two hours of human review. (passage report#p1#62, unresolved)
+</div></details>
+<details open><summary>WP4  The property itself found nothing: zero counterexamples in …  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml.parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: The property itself found nothing: zero counterexamples in 10,000 checks, with 0 inputs refused, so all 10,000 were real; its refuter is the same test failing at the commit before be9e85c on a year overflow (57760 → −7776) that shipped, so it can see at least one real bug.
+reason: The claim mirrors the source passage precisely on every detail: the zero-counterexample result, the 10,000-check count, the 0 refused inputs, the refuter method, the specific commit reference, and the year-overflow figures. No element is added, removed, or distorted.
+</div></details>
+<details open><summary>WP5  Building it found four bugs: two in the codec (small intege…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: Building it found four bugs: two in the codec (small integer types changed value — uint8(200) came back as −56 — and integers too large for 32 bits, and floats, were silently truncated onto the wire) and two in the validator (it crashed outside a special build, and it compared a string containing the current time). All four fixed, each with a refuter.
+reason: The claim matches the source exactly: four bugs, same split, same details, all fixed with refuters. Minor omission of &#34;so it could fail at random&#34; is benign narrowing.
+</div></details>
+</details>
+<details open><summary>WP6–WP-65  WP6–WP-65  [4]</summary>
+<details open><summary>WP6  The test could not see one bug and passed over it twice: th…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: The test could not see one bug and passed over it twice: the writer, its validator, and the printer of the compared values all call the same toInt32, which truncates; the property passed 10,000 checks with the truncation present and passed again with the fix reverted. The bug was found by a plain table test that shares nothing with the writer.
+reason: The summary accurately reproduces every key element: shared toInt32 causing the blind spot, 10,000 checks passing twice, and the plain table test finding the bug. Subject, scope, direction, and register all match the source.
+</div></details>
+<details open><summary>WP7  A refuter checks behaviour not design: the first timestamp …  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: A refuter checks behaviour not design: the first timestamp fix added a flag and a second rendering method and its refuter passed; the proper fix (move the timestamp to the log line, delete the second method) passed the same refuter and cost more agent time — the fix shape is a human&#39;s call and was skipped once before it was made.
+reason: The claim accurately captures every detail in the source: the principle stated, both fixes described, refuter passing both, higher agent cost of the proper fix, and the human-judgement point including it being skipped once.
+</div></details>
+<details open><summary>WP8  Against the plan: the test&#39;s value was mostly in what build…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: Against the plan: the test&#39;s value was mostly in what building it forced us to look at; its blind spot was exactly where it shared code with its subject; the expensive step was human review. First metric: one declaration closed in about two review-hours — 0.5 declarations per review-hour, review time recalled not timed.
+reason: The summary reproduces the source passage almost word-for-word, preserving all three qualifications and the numeric result with its caveat. Fully faithful.
+</div></details>
+<details open><summary>WP-65  Our own 65/65 result measured PDFs received, not the transp…  faithful 3/3</summary>
+<div class="d">claim: Our own 65/65 result measured PDFs received, not the transport binding it was meant to measure — a passing check watching the wrong thing.
+reason: The passage states exactly this: the 65/65 result measured PDFs received rather than the transport binding it was intended to measure, and a passing check may be watching the wrong thing. The summary reproduces this accurately in the same direction and scope.
+&gt; What we cannot: whether Windows&#39;s behaviour matches what we assumed. A passing check may be watching the wrong thing — our own 65/65 result measured PDFs received, not the transport binding it was meant to measure. (passage report#p1#60, unresolved)
+</div></details>
+</details>
+</details>
+<details open><summary>13  Security (hardest)  [6]</summary>
+<details open><summary>SE1  The producer is an attacker: it has our product, changes it…  faithful 3/3</summary>
+<div class="d">claim: The producer is an attacker: it has our product, changes its next input based on our last response, and is not limited to any bug class we have seen, so we cannot list its inputs; this case also covers every untrusted-input path in the other two products.
+reason: The summary closely tracks the source passage in all key respects.
+&gt; The producer is an attacker. It has our product and can read it. It changes its next input based on how we responded to the last one. It is not limited to any bug class we have seen. So we cannot list its inputs; we can only estimate them by running something that behaves like it. This case also covers every untrusted-input path in the other two products. (passage report#p1#65, unresolved)
+</div></details>
+<details open><summary>SE2  The loop is a deterministic exploit check plus adversarial …  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: The loop is a deterministic exploit check plus adversarial simulation: point an LLM at the shipped product with no internal knowledge; anything it finds that our own review missed is a measured gap.
+reason: The claim matches the source in subject, scope, direction, and register.
+</div></details>
+<details open><summary>SE3  Three non-negotiables: the blind (if it sees our findings/h…  faithful 3/3</summary>
+<div class="d">claim: Three non-negotiables: the blind (if it sees our findings/history/notes it is simulating us, not an attacker, and the result is void); a deterministic check (looking at the response not the path certifies attacks that never happened); several runs and a known positive (one run is one sample; finding nothing means nothing until the instrument has found something).
+reason: The summary accurately captures all three non-negotiables with the same meaning, scope, and force as the source passage.
+&gt; Three non-negotiables. **The blind:** if it can see our findings, fix history or notes, it is simulating us, not an attacker, and the result is void. **A deterministic check:** an LLM is a poor judge of its own findings, and a check that looks at the response rather than the path taken will certify attacks that never happened. **Several runs and a known positive:** one run is one sample from a noisy process, and finding nothing means nothing until the instrument has been shown to find something. (passage report#p1#66, unresolved)
+</div></details>
+<details open><summary>SE4  Use more than one model family and a human red team, becaus…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: Use more than one model family and a human red team, because our model&#39;s blind spots are the attacker&#39;s model&#39;s blind spots but not a human attacker&#39;s [decays].
+reason: The claim copies the passage word for word, including the conditional tag, with no change in meaning, scope, or register.
+</div></details>
+<details open><summary>SE5  Re-run every model release against the frozen exploit check…  faithful 3/3</summary>
+<div class="d">claim: Re-run every model release against the frozen exploit checks and count what the new model finds that they miss — that count is the rate at which our security tests go stale; a test with no such measurement since the last release should be treated as unreviewed.
+reason: The summary closely and accurately restates the source passage — same subject (security tests), same action (re-run each model release against frozen exploit checks), same metric (count of what new model finds that checks miss = staleness rate), and same consequence (no such measurement → treated as unreviewed).
+&gt; Re-run it every time a new model is released, against the frozen exploit checks, and count what the new model finds that the checks miss. That count is the rate at which our security tests go stale. A security test with no such measurement since the last model release should be treated as unreviewed. (passage report#p1#67, unresolved)
+</div></details>
+<details open><summary>SE6  None of this gives a coverage figure until we have listed e…  faithful 3/3</summary>
+<div class="d">claim: None of this gives a coverage figure until we have listed every externally reachable entry point — that list is the denominator, and it is a day&#39;s work that has not been done.
+reason: The summary claim is a verbatim reproduction of the source passage. Subject, scope, direction, and register all match exactly.
+&gt; None of this gives a coverage figure until we have listed every externally reachable entry point — that list is the denominator, and it is a day&#39;s work that has not been done. (passage report#p1#67, unresolved)
+</div></details>
+</details>
+<details open><summary>14  What to avoid  [2]</summary>
+<details open><summary>AV1  Avoid anything that still needs a human per change: better …  partial 3/3</summary>
+<div class="d">so what: The report says All these things should be avoided because they still require a human per change. The source only says These items are listed under &#34;anything that still needs a human per change,&#34; as things to avoid — the framing is a list of anti-patterns, not a single unified directive to avoid them all for one stated reason.
+claim: Avoid anything that still needs a human per change: better code generators (acceptance, not generation, is the bottleneck), better review prompts, specifications without tests, tests without refuters, checkers that share code with what they check, trusting a model version as if it were a compiler, counting lines or defects per KLOC.
+reason: The source lists these as things to avoid, matching the claim&#39;s items closely. However, the claim frames the parenthetical reason for &#34;better code generators&#34; (&#34;acceptance, not generation, is the bottleneck&#34;) as if it applies to all items, when in the source each item has its own brief rationale. Minor distortion of framing, but substance is largely faithful — verdict partial due to scope of the unifying rationale.
+&gt; * Better code generators. Generation is not the bottleneck; acceptance is.
+&gt; * Better review prompts. Still a human per change.
+&gt; * Specifications without tests.
+&gt; * Tests without refuters. A test never seen red is not evidence.
+&gt; * Checkers that share code with what they check.
+&gt; * Trusting a model version as if it were a compiler. It will be replaced.
+&gt; * Counting lines or defects per KLOC. Neither measures the thing that fails to scale. (passage report#p1#69, unresolved)
+&gt; Anything that still needs a human per change: (passage report#p1#68, unresolved)
+</div></details>
+<details open><summary>AV2  Avoid anything that samples the wrong inputs: random inputs…  faithful 2/3 ≠ unsupported</summary>
+<div class="d">claim: Avoid anything that samples the wrong inputs: random inputs, corpora weighted by traffic volume, filing code by product instead of by who produces its input, and using the PDF result as evidence about WPP or security.
+reason: The summary lists exactly the four items the source lists under &#34;avoid&#34; — random inputs, traffic-weighted corpora, product-based filing, and misapplying the PDF result — matching subject, scope, and direction precisely.
+&gt; * Random inputs. Hopeless on multi-condition bugs, and no customer sends them.
+&gt; * Corpora weighted by traffic volume. They miss the cell that is one customer&#39;s whole workload.
+&gt; * Filing code by product instead of by who produces its input.
+&gt; * Using the PDF result as evidence about WPP or security. (passage report#p1#70, unresolved)
+</div></details>
+</details>
+</details>
+<details open><summary>15–19  15–19  [5]</summary>
+<details open><summary>15  What we measure  [6]</summary>
+<details open><summary>ME1  Main number: exported declarations closed per hour of human…  faithful 3/3</summary>
+<div class="d">claim: Main number: exported declarations closed per hour of human review — exported only so it can&#39;t be inflated by splitting helpers, though it can be gamed by moving code into internal/, so it is reported alongside statements per partition, lines accepted, and revisions per declaration.
+reason: The claim matches the source on every point: the metric definition, the exported-only scope, the gaming risk via internal/, and the four companion figures reported alongside it.
+&gt; **Main number:** exported declarations closed per hour of human review. Exported only, so it can&#39;t be inflated by splitting helpers — though it can still be gamed by moving code into internal/, which is why it is always reported alongside **statements per partition**, **lines of code accepted**, and **revisions per declaration**. (passage report#p1#71, unresolved)
+</div></details>
+<details open><summary>ME2  Paired with bugs that escaped, per closed declaration, meas…  faithful 3/3</summary>
+<div class="d">claim: Paired with bugs that escaped, per closed declaration, measured later; neither number is reported without the other.
+reason: The summary reproduces the source passage almost verbatim in substance: the main metric is paired with escaped-bug counts per closed declaration, and both must always be reported together.
+&gt; **Paired with:** bugs that escaped, per closed declaration, measured later. Neither number is reported without the other. (passage report#p1#72, unresolved)
+</div></details>
+<details open><summary>ME3  Coverage: producer × application × version cells held again…  faithful 3/3</summary>
+<div class="d">claim: Coverage: producer × application × version cells held against cells shipped, and how fast that goes stale — no cell count, no coverage claim.
+reason: The summary reproduces the source almost verbatim in substance: the same metric (producer × application × version cells held vs. shipped), the same staleness requirement, and the same condition (no cell count = no coverage claim). All elements match exactly.
+&gt; **Coverage:** producer × application × version cells held, against cells shipped; and how fast that goes stale. No cell count, no coverage claim. (passage report#p1#73, unresolved)
+</div></details>
+<details open><summary>ME4  Reach: the fraction of each partition that no test could co…  faithful 3/3</summary>
+<div class="d">claim: Reach: the fraction of each partition that no test could cover and a human still reads.
+reason: The claim matches the source exactly in subject, scope, and meaning — it defines &#34;Reach&#34; as the share of each partition a human must still read because no test covers it.
+&gt; **Reach:** the fraction of each partition that no test could cover and a human still reads. (passage report#p1#74, unresolved)
+</div></details>
+<details open><summary>ME5  Evidence grade: a figure is provisional until every number …  faithful 3/3</summary>
+<div class="d">claim: Evidence grade: a figure is provisional until every number in it has a producing command or a timestamp; provisional figures may be tracked but not quoted.
+reason: The claim matches the source exactly in subject, scope, and direction: the definition of &#34;provisional&#34; and the rule that such figures may be tracked but not quoted are stated word-for-word in passage report#p1#75.
+&gt; **Evidence grade.** A figure is *provisional* until every number in it has a producing command or a timestamp. Provisional figures may be tracked but not quoted. (passage report#p1#75, unresolved)
+</div></details>
+<details open><summary>ME6  First row, provisional (IPP wire codec, 2026-09-05): 1 decl…  faithful 3/3</summary>
+<div class="d">claim: First row, provisional (IPP wire codec, 2026-09-05): 1 declaration closed; ~2 review-hours (recalled); 0.5 declarations per review-hour; 5.5 agent-hours (timed); 11 commits; 4 bugs fixed; 1 checker blind spot found.
+reason: The summary reproduces every figure from the source row exactly: declaration count, review hours, rate, agent hours, commits, bugs fixed, and blind spots. No addition, omission, or distortion.
+&gt; **First row, provisional (IPP wire codec, 2026-09-05):** 1 declaration closed; \~2 review-hours (recalled); **0.5 declarations per review-hour**; 5.5 agent-hours (timed); 11 commits; 4 bugs fixed; 1 checker blind spot found. (passage report#p1#76, unresolved)
+</div></details>
+</details>
+<details open><summary>16  Tests are code too  [6]</summary>
+<details open><summary>TC1  A checker must not share code with what it checks; where it…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: A checker must not share code with what it checks; where it does it cannot see bugs in the shared code and a second check sharing nothing is needed — learned in the redaction work (two independent readers must agree) and in the codec (a shared toInt32 hid a bug for 10,000 checks).
+reason: The claim matches the source passage in full: the rule about shared code, the consequence, and both specific lessons (redaction two-reader rule, codec toInt32 hiding a bug for 10,000 checks) are all present and accurately represented.
+</div></details>
+<details open><summary>TC2  A checker watches one channel and says nothing about the ot…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: A checker watches one channel and says nothing about the others; every checker states what it observes, and a partition is covered only when every channel a bug could live on has a checker.
+reason: The claim matches the source exactly in subject, scope, and direction.
+</div></details>
+<details open><summary>TC3  Text gone from a PDF&#39;s content stream can still be in its m…  faithful 3/3</summary>
+<div class="d">claim: Text gone from a PDF&#39;s content stream can still be in its metadata; bytes can be clean while the rendered page is not.
+reason: The summary reproduces verbatim a declarative, sincere statement from report#p1#78, used as a concrete example illustrating a checker design rule. Subject, scope, direction, and register all match exactly.
+&gt; Text gone from a PDF&#39;s content stream can still be in its metadata; bytes can be clean while the rendered page is not. (passage report#p1#78, unresolved)
+</div></details>
+<details open><summary>TC5  Our 65/65 WPP result is the same shape — right answer, wron…  faithful 3/3</summary>
+<div class="d">claim: Our 65/65 WPP result is the same shape — right answer, wrong channel.
+reason: The summary reproduces the source&#39;s exact claim verbatim. The passage explicitly states &#34;Our 65/65 WPP result is the same shape — right answer, wrong channel,&#34; matching the claim in subject, scope, direction, and register.
+&gt; Our 65/65 WPP result is the same shape — right answer, wrong channel. (passage report#p1#78, unresolved)
+</div></details>
+<details open><summary>TC6  A refuter checks behaviour not design: a fix can pass its r…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: A refuter checks behaviour not design: a fix can pass its refuter and still be the wrong shape, and that judgement stays with a person.
+reason: The claim matches the source exactly in subject, scope, direction, and register. Both the principle and the consequence (human judgement on shape) are stated word-for-word in the passages.
+</div></details>
+<details open><summary>TC7  Frozen is not forever: tests against a driver population go…  faithful 3/3</summary>
+<div class="d">claim: Frozen is not forever: tests against a driver population go stale as drivers update (trigger: the corpus staleness figure); tests against an attacker go stale as models improve (trigger: a model release).
+reason: The claim is a near-verbatim restatement of passage report#p1#79, preserving both conditions and their triggers accurately.
+&gt; Frozen is not forever. Tests against a driver population go stale as drivers update; the trigger to re-review is the corpus staleness figure. Tests against an attacker go stale as models improve; the trigger is a model release. (passage report#p1#79, unresolved)
+</div></details>
+</details>
+<details open><summary>17  Succession  [3]</summary>
+<details open><summary>SU1  The point is an asset that outlives its author; right now t…  faithful 3/3</summary>
+<div class="d">claim: The point is an asset that outlives its author; right now the PDF method&#39;s most important part — knowing what to sample — is in one person&#39;s head.
+reason: The summary reproduces the source&#39;s exact meaning and emphasis: the goal is a lasting asset, and the critical sampling knowledge currently lives with one person. Direction, scope, and register all match.
+&gt; The point of all this is an asset that outlives its author. Right now the PDF method&#39;s most important part — knowing what to sample — is in one person&#39;s head. (passage report#p1#80, unresolved)
+</div></details>
+<details open><summary>SU2  The succession test: someone other than the author, using o…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: The succession test: someone other than the author, using only the written procedure and the corpus, chooses what to sample for a new cell, and the author accepts it unchanged; until that has happened once the procedure is not written down.
+reason: The claim matches the source passage almost word for word in substance, direction, and scope — same test, same condition, same conclusion about what counts as written down.
+</div></details>
+<details open><summary>SU3  The asset must contain the sampling procedure, the corpus w…  faithful 3/3</summary>
+<div class="d">claim: The asset must contain the sampling procedure, the corpus with each file&#39;s origin and cell, the tests with refuter records, the descriptions with review marks, and the staleness measurements; a partition missing any cannot be handed on.
+reason: The summary closely and accurately restates the source&#39;s list of five required components and the consequence of any gap, preserving subject, scope, direction, and force without strengthening or weakening the claim.
+&gt; What the asset has to contain: the sampling procedure; the corpus, with where each file came from and which cell it fills; the tests with their refuter records; the descriptions with their review marks; the staleness measurements. A partition missing any of these cannot be handed on. (passage report#p1#81, unresolved)
+</div></details>
+</details>
+<details open><summary>18  What this does not settle  [5]</summary>
+<details open><summary>NS1  Extraction is unsettled; the experiment above is its first …  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: Extraction is unsettled; the experiment above is its first test, on the easiest case.
+reason: The passage directly states extraction&#39;s experiment is its first test, on the easiest case, matching the claim exactly in subject, scope, and direction.
+</div></details>
+<details open><summary>NS2  Whether tests are shorter than code for new behaviour is un…  partial 3/3</summary>
+<div class="d">so what: The report says tests being shorter than code for new work is unknown; near-certain for no-change work. The source only says for new work each function needs its own test and being shorter is an open question; for no-change work it is nearly certain.
+claim: Whether tests are shorter than code for new behaviour is unknown (nearly certain for no-behaviour-change work).
+reason: The claim reverses the parenthetical and main clause. The source says &#34;nearly certain for no-behaviour-change&#34; is the main positive claim, and &#34;unknown for new behaviour&#34; is the open question. The summary swaps their grammatical roles, making &#34;nearly certain&#34; the parenthetical qualifier. The substance is present but the framing/emphasis is inverted, making this partial.
+&gt; For changes that alter no behaviour, that is nearly guaranteed: the test is &#34;old and new agree on these inputs&#34;, written once for the whole partition. For new behaviour, each function needs its own test, and whether that is shorter than the code is the open question. The two do not stand or fall together. (passage report#p1#33, unresolved)
+</div></details>
+<details open><summary>NS3  The before-method bug count that would make the PDF result …  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: The before-method bug count that would make the PDF result evidence rather than anecdote is missing.
+reason: The passage lists this exact item as still missing, matching the claim in subject, scope, and direction.
+</div></details>
+<details open><summary>NS4  Counting the producers is unsettled: &#34;a handful of patterns…  unsupported 3/3</summary>
+<div class="d">so what: The report says How many producers there are remains unknown; file layout must drive the tally, not the Producer field. No held source says this.
+claim: Counting the producers is unsettled: &#34;a handful of patterns&#34; has held as a judgement for a decade and has never been counted; the count must key on file structure, not the Producer string.
+reason: The source passage matches the claim precisely: the decade-long informal judgement, the fact it has never been formally counted, and the rule that the count must key on file structure rather than the Producer string — all present verbatim.
+</div></details>
+<details open><summary>NS5  Whether the security blind can be kept in practice is unset…  unsupported 3/3</summary>
+<div class="d">so what: The report says Three things remain unresolved: keeping the security blind, the no-edit rule, and training plus timing.. No held source says this.
+claim: Whether the security blind can be kept in practice is unsettled; enforcing &#34;new version, never edit&#34; in a git repo is currently a convention; training and measuring review time are open.
+reason: All three items — security blind in practice, &#34;new version never edit&#34; as a convention, and training/measuring review time — appear explicitly as open questions in report#p1#82. The summary accurately captures all of them.
+</div></details>
+</details>
+<details open><summary>19  Appendix: where the rules came from  [5]</summary>
+<details open><summary>AP0  Sources marked [cite path] have not yet been verified in th…  unsupported 3/3</summary>
+<div class="d">so what: The report says Items tagged cite path are unverified and count only as claims. No held source says this.
+claim: Sources marked [cite path] have not yet been verified in this document and should be read as claims, not citations.
+reason: The summary reproduces the passage&#39;s meaning exactly — same subject (sources marked [cite path]), same direction (unverified, treat as claims not citations). No distortion, overstatement, or scope shift.
+</div></details>
+<details open><summary>AP1  &#34;Didn&#39;t look&#34; as a distinct result came from local PDF reda…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: &#34;Didn&#39;t look&#34; as a distinct result came from local PDF redaction tooling: PASS/FAIL/ERROR/REFUSED outcomes and an Incomplete() gate [cite path].
+reason: The summary matches the passage exactly in subject, scope, and wording, including the [cite path] placeholder.
+</div></details>
+<details open><summary>AP2  Wrong channel came from redaction: text removed from the co…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: Wrong channel came from redaction: text removed from the content stream but present in /Info metadata in 11 of 24 real files, plus an XPS case where bytes were clean and the render was not [cite path]; and WPP&#39;s 65/65 transport finding.
+reason: The claim reproduces the source&#39;s content accurately across all three examples, including the 11-of-24 figure, the XPS case, and the WPP finding.
+</div></details>
+<details open><summary>AP3  Producer string is not the cell key: 24 of 24 redaction cor…  unsupported 3/3</summary>
+<div class="d">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.
+claim: Producer string is not the cell key: 24 of 24 redaction corpus files read &#34;Aspose&#34; after an upload pipeline rewrote them; structural clustering placed 89% of files in 49 clusters [cite path].
+reason: The claim matches the passage in every detail: the 24-of-24 figure, the Aspose rewrite, the 89% / 49 clusters statistic, and the [cite path] marker. Nothing is added, dropped, or distorted.
+</div></details>
+<details open><summary>AP4  Refuters came from the IPP refuter runs, 2026-08-15; shared…  faithful 3/3</summary>
+<div class="d">claim: Refuters came from the IPP refuter runs, 2026-08-15; shared-code blind spot and behaviour-not-design came from the IPP codec branch human-to-ai/rapid-ipp-codec, review doc at a46a4b7.
+reason: The source directly attributes both items to exactly the same origins the claim names.
+&gt; * *Refuters* — IPP refuter runs, 2026-08-15 (linked above).
+&gt; * *Shared code blind spot; behaviour-not-design* — IPP codec branch human-to-ai/rapid-ipp-codec, review doc at a46a4b7. (passage report#p1#85, unresolved)
+</div></details>
+</details>
+</details>
+</body></html>

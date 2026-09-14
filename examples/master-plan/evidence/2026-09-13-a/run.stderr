@@ -1,0 +1,192 @@
+[  1/124] ✓ faithful      "AI can now write more code than we can read; a 13,000-lin…"  38.05s
+[heartbeat] elapsed=1m0s calls=10 in=807 out=2529 web=0 est=$0.2185 (rates 2026-06-01) verified=1 errored=0 seen=1/124 claim="faithfulness 2/124"
+[  2/124] ✓ faithful      "If we keep reviewing by reading, either the code doesn't …"  34.37s
+[  3/124] ✓ faithful      "The answer is to stop reviewing the code, review the test…"  42.2s
+[heartbeat] elapsed=2m0s calls=19 in=1481 out=4805 web=0 est=$0.3316 (rates 2026-06-01) verified=3 errored=0 seen=3/124 claim="faithfulness 4/124"
+[  4/124] ✓ faithful      "A test written and approved once can accept any number of…"  36.09s
+[heartbeat] elapsed=3m0s calls=28 in=2272 out=7170 web=0 est=$0.4463 (rates 2026-06-01) verified=4 errored=0 seen=4/124 claim="faithfulness 5/124"
+[  5/124] ✓ faithful      "A test is only as good as the inputs it runs on: if the i…"  39.03s
+[  6/124] ✓ faithful      "The hard part is not writing tests; it is knowing what in…"  31.27s
+[heartbeat] elapsed=4m0s calls=37 in=2993 out=9821 web=0 est=$0.5652 (rates 2026-06-01) verified=6 errored=0 seen=6/124 claim="faithfulness 7/124"
+[  7/124] ✓ faithful      "The three pieces of work get harder in this order: docume…"  58.09s
+[heartbeat] elapsed=5m0s calls=43 in=3506 out=12079 web=0 est=$0.6519 (rates 2026-06-01) verified=7 errored=0 seen=7/124 claim="faithfulness 8/124"
+[  8/124] ✓ unsupported   "Document products are easy: PDFs come from a small, known…"  55.37s
+[heartbeat] elapsed=6m0s calls=51 in=4206 out=14592 web=0 est=$0.7601 (rates 2026-06-01) verified=8 errored=0 seen=8/124 claim="faithfulness 9/124"
+[  9/124] ✓ faithful      "WPP is hard: the thing we have to match is inside Windows…"  36.84s
+[ 10/124] ✓ unsupported   "Security is hardest: the input comes from an attacker who…"  37.5s
+[heartbeat] elapsed=7m0s calls=60 in=4943 out=16997 web=0 est=$0.8753 (rates 2026-06-01) verified=10 errored=0 seen=10/124 claim="faithfulness 11/124"
+[ 11/124] ✓ faithful      "Four rules: a test doesn't count until it has been seen t…"  42.11s
+[heartbeat] elapsed=8m0s calls=69 in=5865 out=19594 web=0 est=$0.9939 (rates 2026-06-01) verified=11 errored=0 seen=11/124 claim="faithfulness 12/124"
+[ 12/124] ✓ faithful      "What we measure is public functions covered by an approve…"  43.2s
+[ 13/124] ✓ faithful      "What we don't do: buy better code generators, write bette…"  36.64s
+[heartbeat] elapsed=9m0s calls=78 in=6635 out=22180 web=0 est=$1.1120 (rates 2026-06-01) verified=13 errored=0 seen=13/124 claim="faithfulness 14/124"
+[ 14/124] ✓ faithful      "Checker: anything that says pass or fail about a change w…"  40.59s
+[heartbeat] elapsed=10m0s calls=87 in=7480 out=24605 web=0 est=$1.2278 (rates 2026-06-01) verified=14 errored=0 seen=14/124 claim="faithfulness 15/124"
+[ 15/124] ✓ unsupported   "Test: an automated test in the ordinary Go sense — a _t…"  39.06s
+[ 16/124] ✓ faithful      "Refuter: the run that proves a test can fail — revert t…"  49.15s
+[heartbeat] elapsed=11m0s calls=95 in=8228 out=27381 web=0 est=$1.3401 (rates 2026-06-01) verified=16 errored=0 seen=16/124 claim="faithfulness 17/124"
+[ 17/124] ✓ faithful      "Statement: a test plus a plain-English description of wha…"  44.9s
+[heartbeat] elapsed=12m0s calls=103 in=8920 out=29553 web=0 est=$1.4431 (rates 2026-06-01) verified=17 errored=0 seen=17/124 claim="faithfulness 18/124"
+[ 18/124] ✓ faithful      "Declaration: Go's word for a top-level func, type, var, c…"  36.63s
+[heartbeat] elapsed=13m0s calls=112 in=9654 out=31959 web=0 est=$1.5583 (rates 2026-06-01) verified=18 errored=0 seen=18/124 claim="faithfulness 19/124"
+[ 19/124] ✓ faithful      "Producer: whatever creates the inputs a piece of code rec…"  39.85s
+[ 20/124] ✓ faithful      "Partition: a part of the codebase whose inputs all come f…"  37.47s
+[heartbeat] elapsed=14m0s calls=121 in=10373 out=34227 web=0 est=$1.6714 (rates 2026-06-01) verified=20 errored=0 seen=20/124 claim="faithfulness 21/124"
+[ 21/124] ✓ faithful      "Cell: one producer, one application, one version — the …"  41.26s
+[ 22/124] ✓ faithful      "Differential testing: run our code and an independent imp…"  34.73s
+[heartbeat] elapsed=15m0s calls=131 in=11114 out=36623 web=0 est=$1.7951 (rates 2026-06-01) verified=22 errored=0 seen=22/124 claim="faithfulness 23/124"
+[ 23/124] ✓ faithful      "Closed: a declaration is closed when its test passes, its…"  36.35s
+[heartbeat] elapsed=16m0s calls=141 in=11933 out=39217 web=0 est=$1.9219 (rates 2026-06-01) verified=23 errored=0 seen=23/124 claim="faithfulness 24/124"
+[ 24/124] ✓ faithful      "The goal is to survive the transition to AI-generated cod…"  38.46s
+[ 25/124] ✓ faithful      "We start from a legacy of working code with no written sp…"  33.92s
+[heartbeat] elapsed=17m0s calls=151 in=12724 out=41747 web=0 est=$2.0477 (rates 2026-06-01) verified=25 errored=0 seen=25/124 claim="faithfulness 26/124"
+[ 26/124] ✓ faithful      "The three pieces of work (WPP, document-based products, s…"  49.2s
+[heartbeat] elapsed=18m0s calls=159 in=13456 out=44128 web=0 est=$2.1540 (rates 2026-06-01) verified=26 errored=0 seen=26/124 claim="faithfulness 27/124"
+[ 27/124] ✓ faithful      "Use one check for many changes wherever you can; where yo…"  38.13s
+[ 28/124] ✓ faithful      "A check is only as good as the inputs you feed it: know w…"  34.95s
+[heartbeat] elapsed=19m0s calls=168 in=14178 out=46432 web=0 est=$2.2677 (rates 2026-06-01) verified=28 errored=0 seen=28/124 claim="faithfulness 29/124"
+[ 29/124] ✓ unsupported   "The plan runs over years and models will get stronger; cl…"  42.07s
+[heartbeat] elapsed=20m0s calls=176 in=14906 out=48844 web=0 est=$2.3744 (rates 2026-06-01) verified=29 errored=0 seen=29/124 claim="faithfulness 30/124"
+[ 30/124] ✓ faithful      "There are three ways to trust machine-written code: one c…"  55.54s
+[heartbeat] elapsed=21m0s calls=184 in=15674 out=51458 web=0 est=$2.4843 (rates 2026-06-01) verified=30 errored=0 seen=30/124 claim="faithfulness 31/124"
+[ 31/124] ✓ faithful      "Every earlier shift (assembly→compilers, hand code→li…"  41.19s
+[ 32/124] ✓ faithful      "The model we use will be replaced repeatedly, and trust i…"  40.13s
+[heartbeat] elapsed=22m0s calls=193 in=16531 out=54103 web=0 est=$2.6035 (rates 2026-06-01) verified=32 errored=0 seen=32/124 claim="faithfulness 33/124"
+[ 33/124] ✓ unsupported   "The FLT formalisation worked because Lean's kernel checke…"  37.76s
+[ 34/124] ✓ faithful      "We have no kernel, so a statement here has to bring its o…"  34.54s
+[heartbeat] elapsed=23m0s calls=203 in=17312 out=56641 web=0 est=$2.7294 (rates 2026-06-01) verified=34 errored=0 seen=34/124 claim="faithfulness 35/124"
+[heartbeat] elapsed=24m0s calls=208 in=17724 out=58632 web=0 est=$2.8032 (rates 2026-06-01) verified=34 errored=0 seen=34/124 claim="faithfulness 35/124"
+[ 35/124] ✓ unsupported   "A statement has two parts: an automated test that returns…"  1m6.26s
+[ 36/124] ✓ faithful      "A failure is proof of a defect; a pass is only the absenc…"  34.14s
+[heartbeat] elapsed=25m0s calls=219 in=18634 out=61542 web=0 est=$2.9436 (rates 2026-06-01) verified=36 errored=0 seen=36/124 claim="faithfulness 37/124"
+[ 37/124] ✓ faithful      "When we ask whether a statement is shorter than the code …"  33.02s
+[ 38/124] ✓ faithful      "Prove2Me, the platform behind the FLT proof, has the same…"  38.25s
+[heartbeat] elapsed=26m0s calls=228 in=19419 out=63884 web=0 est=$3.0581 (rates 2026-06-01) verified=38 errored=0 seen=38/124 claim="faithfulness 39/124"
+[ 39/124] ✓ faithful      "A test is not a statement until it has a refuter: revert …"  43.13s
+[heartbeat] elapsed=27m0s calls=236 in=20177 out=66565 web=0 est=$3.1689 (rates 2026-06-01) verified=39 errored=0 seen=39/124 claim="faithfulness 40/124"
+[ 40/124] ✓ faithful      "When we ran refuters on the IPP library in August (refute…"  52.25s
+[heartbeat] elapsed=28m0s calls=244 in=20890 out=69023 web=0 est=$3.2763 (rates 2026-06-01) verified=40 errored=0 seen=40/124 claim="faithfulness 41/124"
+[ 41/124] ✓ faithful      "The refuter is mutation testing with one mutation and onl…"  42.17s
+[ 42/124] ✓ unsupported   "A test must say \"didn't look\" as well as \"found nothing\":…"  36.9s
+[heartbeat] elapsed=29m0s calls=254 in=21779 out=71666 web=0 est=$3.4041 (rates 2026-06-01) verified=42 errored=0 seen=42/124 claim="faithfulness 43/124"
+[ 43/124] ✓ faithful      "A redaction scan of a PDF whose text is an image finds ze…"  35.66s
+[heartbeat] elapsed=30m0s calls=262 in=22540 out=74044 web=0 est=$3.5105 (rates 2026-06-01) verified=43 errored=0 seen=43/124 claim="faithfulness 44/124"
+[ 44/124] ✓ faithful      "The codec property test counts how many inputs the writer…"  45.24s
+[ 45/124] ✓ faithful      "Where a statement lives: the test is a _test.go function,…"  43.88s
+[heartbeat] elapsed=31m0s calls=270 in=23369 out=76583 web=0 est=$3.6194 (rates 2026-06-01) verified=45 errored=0 seen=45/124 claim="faithfulness 46/124"
+[ 46/124] ✓ faithful      "You don't know the right test until the code has failed i…"  50.56s
+[heartbeat] elapsed=32m0s calls=277 in=24021 out=78741 web=0 est=$3.7136 (rates 2026-06-01) verified=46 errored=0 seen=46/124 claim="faithfulness 47/124"
+[ 47/124] ✓ faithful      "In the codec work, a generated date with year 57760 read …"  49.88s
+[heartbeat] elapsed=33m0s calls=284 in=24656 out=81115 web=0 est=$3.8109 (rates 2026-06-01) verified=47 errored=0 seen=47/124 claim="faithfulness 48/124"
+[ 48/124] ✓ partial       "Then integers wider than 32 bits read back wrong for the …"  50.18s
+[ 49/124] ✓ unsupported   "The PDF library update established the rule: run the chec…"  35.51s
+[heartbeat] elapsed=34m0s calls=293 in=25433 out=83610 web=0 est=$3.9276 (rates 2026-06-01) verified=49 errored=0 seen=49/124 claim="faithfulness 50/124"
+[ 50/124] ✓ unsupported   "Count the review time for every version of the test, not …"  48.79s
+[heartbeat] elapsed=35m0s calls=301 in=26137 out=86017 web=0 est=$4.0342 (rates 2026-06-01) verified=50 errored=0 seen=50/124 claim="faithfulness 51/124"
+[ 51/124] ✓ unsupported   "The bet: this pays off only if the test plus its descript…"  37.19s
+[heartbeat] elapsed=36m0s calls=309 in=26869 out=88413 web=0 est=$4.1407 (rates 2026-06-01) verified=51 errored=0 seen=51/124 claim="faithfulness 52/124"
+[ 52/124] ✓ faithful      "For no-behaviour-change work the bet is nearly guaranteed…"  51.02s
+[ 53/124] ✓ faithful      "Choose by how good a checker is available, not by where t…"  34.28s
+[heartbeat] elapsed=37m0s calls=318 in=27558 out=90897 web=0 est=$4.2570 (rates 2026-06-01) verified=53 errored=0 seen=53/124 claim="faithfulness 54/124"
+[ 54/124] ✓ faithful      "Before a partition, answer: what checker exists; what inp…"  54.4s
+[heartbeat] elapsed=38m0s calls=325 in=28225 out=93164 web=0 est=$4.3528 (rates 2026-06-01) verified=54 errored=0 seen=54/124 claim="faithfulness 55/124"
+[ 55/124] ✓ unsupported   "Triage time falls as models improve [improves], so partit…"  42s
+[ 56/124] ✓ faithful      "Nobody has computed a number from these questions; they a…"  35.92s
+[heartbeat] elapsed=39m0s calls=335 in=29030 out=95860 web=0 est=$4.4812 (rates 2026-06-01) verified=56 errored=0 seen=56/124 claim="faithfulness 57/124"
+[ 57/124] ✓ unsupported   "Differential testing catches transcription errors reliabl…"  36.15s
+[heartbeat] elapsed=40m0s calls=345 in=29927 out=98498 web=0 est=$4.6089 (rates 2026-06-01) verified=57 errored=0 seen=57/124 claim="faithfulness 58/124"
+[ 58/124] ✓ faithful      "The model writing our code has read poppler and mupdf; if…"  36.24s
+[ 59/124] ✓ faithful      "Sampling is the precondition, and it is harder than build…"  37.34s
+[heartbeat] elapsed=41m0s calls=354 in=30622 out=101064 web=0 est=$4.7264 (rates 2026-06-01) verified=59 errored=0 seen=59/124 claim="faithfulness 60/124"
+[ 60/124] ✓ faithful      "Random inputs don't work: if a bug needs three unusual co…"  44.47s
+[heartbeat] elapsed=42m0s calls=362 in=31451 out=103396 web=0 est=$4.8323 (rates 2026-06-01) verified=60 errored=0 seen=60/124 claim="faithfulness 61/124"
+[ 61/124] ✓ faithful      "The standard answer is combinatorial testing: build the i…"  42.78s
+[heartbeat] elapsed=43m0s calls=369 in=32225 out=105720 web=0 est=$4.9293 (rates 2026-06-01) verified=61 errored=0 seen=61/124 claim="faithfulness 62/124"
+[ 62/124] ✓ faithful      "Real inputs are cheaper still: they are made by a small n…"  54.94s
+[ 63/124] ✓ unsupported   "Producers cluster by time, customer and application, givi…"  40.61s
+[heartbeat] elapsed=44m0s calls=378 in=33021 out=108440 web=0 est=$5.0494 (rates 2026-06-01) verified=63 errored=0 seen=63/124 claim="faithfulness 64/124"
+[ 64/124] ✓ faithful      "Customers cluster too, so a pattern that is 0.1% of globa…"  41.87s
+[heartbeat] elapsed=45m0s calls=387 in=33850 out=110901 web=0 est=$5.1657 (rates 2026-06-01) verified=64 errored=0 seen=64/124 claim="faithfulness 65/124"
+[ 65/124] ✓ faithful      "New driver versions open new cells so the corpus goes sta…"  38.3s
+[ 66/124] ✓ faithful      "Independent implementations (poppler, mupdf) are weakest …"  45.17s
+[heartbeat] elapsed=46m0s calls=395 in=34592 out=113277 web=0 est=$5.2720 (rates 2026-06-01) verified=66 errored=0 seen=66/124 claim="faithfulness 67/124"
+[ 67/124] ✓ faithful      "Everything above assumes the producer doesn't care about …"  43.92s
+[heartbeat] elapsed=47m0s calls=403 in=35368 out=115763 web=0 est=$5.3800 (rates 2026-06-01) verified=67 errored=0 seen=67/124 claim="faithfulness 68/124"
+[ 68/124] ✓ unsupported   "The case is decided by who makes the input, not which pro…"  44.03s
+[heartbeat] elapsed=48m0s calls=412 in=36207 out=118491 web=0 est=$5.5003 (rates 2026-06-01) verified=68 errored=0 seen=68/124 claim="faithfulness 69/124"
+[ 69/124] ✓ faithful      "Changes that alter no behaviour (refactor, consolidation,…"  44.41s
+[ 70/124] ✓ faithful      "Three things a person still decides for a no-behaviour-ch…"  34.95s
+[heartbeat] elapsed=49m0s calls=421 in=37079 out=120939 web=0 est=$5.6166 (rates 2026-06-01) verified=70 errored=0 seen=70/124 claim="faithfulness 71/124"
+[ 71/124] ✓ faithful      "New behaviour goes through the loop wherever a test can b…"  42.53s
+[heartbeat] elapsed=50m0s calls=429 in=37875 out=123297 web=0 est=$5.7228 (rates 2026-06-01) verified=71 errored=0 seen=71/124 claim="faithfulness 72/124"
+[ 72/124] ✓ unsupported   "Exception: where keeping old behaviour means keeping a se…"  44.19s
+[ 73/124] ✓ faithful      "The producer is a printer driver — a small, known, fixe…"  36s
+[heartbeat] elapsed=51m0s calls=439 in=38882 out=126073 web=0 est=$5.8529 (rates 2026-06-01) verified=73 errored=0 seen=73/124 claim="faithfulness 74/124"
+[ 74/124] ✓ faithful      "The PDF library update shipped with a stated success crit…"  36.67s
+[heartbeat] elapsed=52m0s calls=448 in=39729 out=128709 web=0 est=$5.9719 (rates 2026-06-01) verified=74 errored=0 seen=74/124 claim="faithfulness 75/124"
+[ 75/124] ✓ faithful      "Caveats: it is one project, self-reported; exposure figur…"  45.74s
+[ 76/124] ✓ unsupported   "A count of PDF defects reported through that channel befo…"  33.19s
+[heartbeat] elapsed=53m0s calls=456 in=40435 out=130984 web=0 est=$6.0765 (rates 2026-06-01) verified=76 errored=0 seen=76/124 claim="faithfulness 77/124"
+[ 77/124] ✓ faithful      "Five parts of the PDF method transfer and one does not: (…"  1m18.19s
+[heartbeat] elapsed=54m0s calls=461 in=41093 out=133527 web=0 est=$6.1594 (rates 2026-06-01) verified=77 errored=0 seen=77/124 claim="faithfulness 78/124"
+[ 78/124] ✓ unsupported   "(f) does not transfer, and everything about extraction an…"  41.28s
+[heartbeat] elapsed=55m0s calls=469 in=41749 out=135733 web=0 est=$6.2628 (rates 2026-06-01) verified=78 errored=0 seen=78/124 claim="faithfulness 79/124"
+[ 79/124] ✓ unsupported   "The loop here is an experiment stated in advance: can an …"  43.18s
+[heartbeat] elapsed=56m0s calls=477 in=42585 out=138305 web=0 est=$6.3723 (rates 2026-06-01) verified=79 errored=0 seen=79/124 claim="faithfulness 80/124"
+[ 80/124] ✓ faithful      "Criterion: the reviewer's marks identify at least K of th…"  44.06s
+[ 81/124] ✓ faithful      "The producer is Windows: one producer, closed source, man…"  33.25s
+[heartbeat] elapsed=57m0s calls=487 in=43494 out=140945 web=0 est=$6.5001 (rates 2026-06-01) verified=81 errored=0 seen=81/124 claim="faithfulness 82/124"
+[ 82/124] ✓ unsupported   "We can check automatically the wire protocol layer (clien…"  33.62s
+[heartbeat] elapsed=58m0s calls=495 in=44183 out=143298 web=0 est=$6.6059 (rates 2026-06-01) verified=82 errored=0 seen=82/124 claim="faithfulness 83/124"
+[ 83/124] ✓ faithful      "Our own 65/65 result measured PDFs received, not the tran…"  50.38s
+[ 84/124] ✗ error         "The statements are the WPP install gates; the number repo…"  10.38s
+[ 85/124] ✗ error         "First result (2026-09-05, branch human-to-ai/rapid-ipp-co…"  2.13s
+[ 86/124] ✗ error         "Eleven commits, each with a refuter on record; about 5.5 …"  2.07s
+[ 87/124] ✗ error         "The property itself found nothing: zero counterexamples i…"  1.32s
+[ 88/124] ✗ error         "Building it found four bugs: two in the codec (small inte…"  1.94s
+[ 89/124] ✗ error         "The test could not see one bug and passed over it twice: …"  1.58s
+[ 90/124] ✗ error         "A refuter checks behaviour not design: the first timestam…"  1.53s
+[ 91/124] ✗ error         "Against the plan: the test's value was mostly in what bui…"  1.47s
+[ 92/124] ✗ error         "The producer is an attacker: it has our product, changes …"  1.37s
+[ 93/124] ✗ error         "The loop is a deterministic exploit check plus adversaria…"  1.85s
+[ 94/124] ✗ error         "Three non-negotiables: the blind (if it sees our findings…"  1.36s
+[ 95/124] ✗ error         "Use more than one model family and a human red team, beca…"  1.34s
+[ 96/124] ✗ error         "Re-run every model release against the frozen exploit che…"  1.66s
+[ 97/124] ✗ error         "None of this gives a coverage figure until we have listed…"  2.07s
+[ 98/124] ✗ error         "Avoid anything that still needs a human per change: bette…"  1.59s
+[ 99/124] ✗ error         "Avoid anything that samples the wrong inputs: random inpu…"  1.34s
+[100/124] ✗ error         "Main number: exported declarations closed per hour of hum…"  1.56s
+[101/124] ✗ error         "Paired with bugs that escaped, per closed declaration, me…"  1.36s
+[102/124] ✗ error         "Coverage: producer × application × version cells held a…"  1.52s
+[103/124] ✗ error         "Reach: the fraction of each partition that no test could …"  1.57s
+[104/124] ✗ error         "Evidence grade: a figure is provisional until every numbe…"  1.62s
+[105/124] ✗ error         "First row, provisional (IPP wire codec, 2026-09-05): 1 de…"  1.29s
+[106/124] ✗ error         "A checker must not share code with what it checks; where …"  1.5s
+[107/124] ✗ error         "A checker watches one channel and says nothing about the …"  1.91s
+[108/124] ✗ error         "Text gone from a PDF's content stream can still be in its…"  1.58s
+[109/124] ✗ error         "Our 65/65 WPP result is the same shape — right answer, …"  1.19s
+[110/124] ✗ error         "A refuter checks behaviour not design: a fix can pass its…"  1.79s
+[111/124] ✗ error         "Frozen is not forever: tests against a driver population …"  1.88s
+[112/124] ✗ error         "The point is an asset that outlives its author; right now…"  1.23s
+[heartbeat] elapsed=59m0s calls=584 in=44369 out=143917 web=0 est=$6.6328 (rates 2026-06-01) verified=83 errored=29 seen=112/124 claim="faithfulness 113/124"
+[113/124] ✗ error         "The succession test: someone other than the author, using…"  1.52s
+[114/124] ✗ error         "The asset must contain the sampling procedure, the corpus…"  1.49s
+[115/124] ✗ error         "Extraction is unsettled; the experiment above is its firs…"  1.51s
+[116/124] ✗ error         "Whether tests are shorter than code for new behaviour is …"  1.35s
+[117/124] ✗ error         "The before-method bug count that would make the PDF resul…"  1.9s
+[118/124] ✗ error         "Counting the producers is unsettled: \"a handful of patter…"  1.39s
+[119/124] ✗ error         "Whether the security blind can be kept in practice is uns…"  1.8s
+[120/124] ✗ error         "Sources marked [cite path] have not yet been verified in …"  1.47s
+[121/124] ✗ error         "\"Didn't look\" as a distinct result came from local PDF re…"  1.36s
+[122/124] ✗ error         "Wrong channel came from redaction: text removed from the …"  1.38s
+[123/124] ✗ error         "Producer string is not the cell key: 24 of 24 redaction c…"  1.68s
+[124/124] ✗ error         "Refuters came from the IPP refuter runs, 2026-08-15; shar…"  1.92s
+tree (html): evidence/2026-09-13-a/tree.html
+
+SUMMARY claims-machine-full faithfulness
+  cases 124 · verified 83 · errored 41
+  faithful 63 · partial 1 · unsupported 19 · error 41
+  wall 59m19s · est_usd $6.6328 (rates 2026-06-01) · cache_hit 100% (read 14134173 / created 26848)
+  schema_retries 0 · quote_rejects 72 · no_quote_downgrades 58 · plain_retries 248
+  detail: evidence/2026-09-13-a/claims-machine-full.faithfulness.jsonl
+USAGE model=claude-sonnet-4-6 calls=620 in=44369 out=143917 cache_read=14134173 cache_create=26848 web_searches=0 wall=3558s est_usd=$6.6328 (rates 2026-06-01)

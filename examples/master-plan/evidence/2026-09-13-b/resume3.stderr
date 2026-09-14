@@ -1,0 +1,81 @@
+[resume] 82/124 claims already in evidence/2026-09-13-b/claims-machine-full.faithfulness.jsonl; judging the rest
+[ 83/124] ✓ faithful      "Our own 65/65 result measured PDFs received, not the tran…"  43.65s
+[heartbeat] elapsed=1m0s calls=7 in=593 out=2155 web=0 est=$0.0939 (rates 2026-06-01) verified=83 errored=0 seen=83/124 claim="faithfulness 84/124"
+[ 84/124] ✓ faithful      "The statements are the WPP install gates; the number repo…"  48.81s
+[heartbeat] elapsed=2m0s calls=15 in=1524 out=4847 web=0 est=$0.2055 (rates 2026-06-01) verified=84 errored=0 seen=84/124 claim="faithfulness 85/124"
+[ 85/124] ✓ unsupported   "First result (2026-09-05, branch human-to-ai/rapid-ipp-co…"  44.57s
+[ 86/124] ✓ faithful      "Eleven commits, each with a refuter on record; about 5.5 …"  37.75s
+[heartbeat] elapsed=3m0s calls=24 in=2520 out=7496 web=0 est=$0.3251 (rates 2026-06-01) verified=86 errored=0 seen=86/124 claim="faithfulness 87/124"
+[ 87/124] ✓ unsupported   "The property itself found nothing: zero counterexamples i…"  40.56s
+[heartbeat] elapsed=4m0s calls=33 in=3723 out=10575 web=0 est=$0.4519 (rates 2026-06-01) verified=87 errored=0 seen=87/124 claim="faithfulness 88/124"
+[ 88/124] ✓ unsupported   "Building it found four bugs: two in the codec (small inte…"  41.71s
+[heartbeat] elapsed=5m0s calls=41 in=4807 out=13357 web=0 est=$0.5652 (rates 2026-06-01) verified=88 errored=0 seen=88/124 claim="faithfulness 89/124"
+[ 89/124] ✓ unsupported   "The test could not see one bug and passed over it twice: …"  46.31s
+[ 90/124] ✓ unsupported   "A refuter checks behaviour not design: the first timestam…"  53.21s
+[heartbeat] elapsed=6m0s calls=48 in=5730 out=16037 web=0 est=$0.6680 (rates 2026-06-01) verified=90 errored=0 seen=90/124 claim="faithfulness 91/124"
+[ 91/124] ✓ unsupported   "Against the plan: the test's value was mostly in what bui…"  46.51s
+[heartbeat] elapsed=7m0s calls=56 in=6716 out=18782 web=0 est=$0.7806 (rates 2026-06-01) verified=91 errored=0 seen=91/124 claim="faithfulness 92/124"
+[ 92/124] ✓ faithful      "The producer is an attacker: it has our product, changes …"  45.17s
+[heartbeat] elapsed=8m0s calls=64 in=7556 out=21340 web=0 est=$0.8898 (rates 2026-06-01) verified=92 errored=0 seen=92/124 claim="faithfulness 93/124"
+[ 93/124] ✓ unsupported   "The loop is a deterministic exploit check plus adversaria…"  36.56s
+[ 94/124] ✓ faithful      "Three non-negotiables: the blind (if it sees our findings…"  46.13s
+[heartbeat] elapsed=9m0s calls=72 in=8496 out=24039 web=0 est=$1.0015 (rates 2026-06-01) verified=94 errored=0 seen=94/124 claim="faithfulness 95/124"
+[ 95/124] ✓ unsupported   "Use more than one model family and a human red team, beca…"  37.81s
+[heartbeat] elapsed=10m0s calls=81 in=9427 out=26720 web=0 est=$1.1215 (rates 2026-06-01) verified=95 errored=0 seen=95/124 claim="faithfulness 96/124"
+[ 96/124] ✓ faithful      "Re-run every model release against the frozen exploit che…"  43.17s
+[ 97/124] ✓ faithful      "None of this gives a coverage figure until we have listed…"  32.75s
+[heartbeat] elapsed=11m0s calls=90 in=10321 out=29199 web=0 est=$1.2383 (rates 2026-06-01) verified=97 errored=0 seen=97/124 claim="faithfulness 98/124"
+[ 98/124] ✓ partial       "Avoid anything that still needs a human per change: bette…"  54.63s
+[heartbeat] elapsed=12m0s calls=97 in=11185 out=31801 web=0 est=$1.3397 (rates 2026-06-01) verified=98 errored=0 seen=98/124 claim="faithfulness 99/124"
+[ 99/124] ✓ faithful      "Avoid anything that samples the wrong inputs: random inpu…"  44.15s
+[heartbeat] elapsed=13m0s calls=105 in=12029 out=34236 web=0 est=$1.4472 (rates 2026-06-01) verified=99 errored=0 seen=99/124 claim="faithfulness 100/124"
+[100/124] ✓ faithful      "Main number: exported declarations closed per hour of hum…"  43.49s
+[101/124] ✓ faithful      "Paired with bugs that escaped, per closed declaration, me…"  36.81s
+[heartbeat] elapsed=14m0s calls=115 in=12884 out=36911 web=0 est=$1.5753 (rates 2026-06-01) verified=101 errored=0 seen=101/124 claim="faithfulness 102/124"
+[102/124] ✓ faithful      "Coverage: producer × application × version cells held a…"  38.69s
+[103/124] ✓ faithful      "Reach: the fraction of each partition that no test could …"  35.64s
+[heartbeat] elapsed=15m0s calls=125 in=13669 out=39396 web=0 est=$1.7004 (rates 2026-06-01) verified=103 errored=0 seen=103/124 claim="faithfulness 104/124"
+[104/124] ✓ faithful      "Evidence grade: a figure is provisional until every numbe…"  39.15s
+[heartbeat] elapsed=16m0s calls=134 in=14542 out=41959 web=0 est=$1.8184 (rates 2026-06-01) verified=104 errored=0 seen=104/124 claim="faithfulness 105/124"
+[105/124] ✓ faithful      "First row, provisional (IPP wire codec, 2026-09-05): 1 de…"  42.18s
+[heartbeat] elapsed=17m0s calls=142 in=15546 out=44525 web=0 est=$1.9283 (rates 2026-06-01) verified=105 errored=0 seen=105/124 claim="faithfulness 106/124"
+[106/124] ✓ unsupported   "A checker must not share code with what it checks; where …"  41.15s
+[107/124] ✓ unsupported   "A checker watches one channel and says nothing about the …"  48.19s
+[heartbeat] elapsed=18m0s calls=150 in=16311 out=46966 web=0 est=$2.0356 (rates 2026-06-01) verified=107 errored=0 seen=107/124 claim="faithfulness 108/124"
+[108/124] ✓ faithful      "Text gone from a PDF's content stream can still be in its…"  35.9s
+[109/124] ✓ faithful      "Our 65/65 WPP result is the same shape — right answer, …"  31.37s
+[heartbeat] elapsed=19m0s calls=161 in=17203 out=49679 web=0 est=$2.1730 (rates 2026-06-01) verified=109 errored=0 seen=109/124 claim="faithfulness 110/124"
+[110/124] ✓ unsupported   "A refuter checks behaviour not design: a fix can pass its…"  54.16s
+[heartbeat] elapsed=20m0s calls=168 in=17796 out=52073 web=0 est=$2.2705 (rates 2026-06-01) verified=110 errored=0 seen=110/124 claim="faithfulness 111/124"
+[111/124] ✓ faithful      "Frozen is not forever: tests against a driver population …"  42.25s
+[heartbeat] elapsed=21m0s calls=177 in=18673 out=54629 web=0 est=$2.3884 (rates 2026-06-01) verified=111 errored=0 seen=111/124 claim="faithfulness 112/124"
+[112/124] ✓ faithful      "The point is an asset that outlives its author; right now…"  36.13s
+[113/124] ✓ unsupported   "The succession test: someone other than the author, using…"  37.92s
+[heartbeat] elapsed=22m0s calls=187 in=19674 out=57374 web=0 est=$2.5181 (rates 2026-06-01) verified=113 errored=0 seen=113/124 claim="faithfulness 114/124"
+[114/124] ✓ faithful      "The asset must contain the sampling procedure, the corpus…"  40.39s
+[heartbeat] elapsed=23m0s calls=196 in=20437 out=59790 web=0 est=$2.6335 (rates 2026-06-01) verified=114 errored=0 seen=114/124 claim="faithfulness 115/124"
+[115/124] ✓ unsupported   "Extraction is unsettled; the experiment above is its firs…"  33.17s
+[116/124] ✓ partial       "Whether tests are shorter than code for new behaviour is …"  50.2s
+[heartbeat] elapsed=24m0s calls=204 in=21055 out=62237 web=0 est=$2.7405 (rates 2026-06-01) verified=116 errored=0 seen=116/124 claim="faithfulness 117/124"
+[117/124] ✓ unsupported   "The before-method bug count that would make the PDF resul…"  34.86s
+[heartbeat] elapsed=25m0s calls=214 in=21930 out=64889 web=0 est=$2.8684 (rates 2026-06-01) verified=117 errored=0 seen=117/124 claim="faithfulness 118/124"
+[118/124] ✓ unsupported   "Counting the producers is unsettled: \"a handful of patter…"  40.25s
+[119/124] ✓ unsupported   "Whether the security blind can be kept in practice is uns…"  44.37s
+[heartbeat] elapsed=26m0s calls=221 in=22560 out=67243 web=0 est=$2.9654 (rates 2026-06-01) verified=119 errored=0 seen=119/124 claim="faithfulness 120/124"
+[120/124] ✓ unsupported   "Sources marked [cite path] have not yet been verified in …"  40.14s
+[heartbeat] elapsed=27m0s calls=230 in=23365 out=69643 web=0 est=$3.0808 (rates 2026-06-01) verified=120 errored=0 seen=120/124 claim="faithfulness 121/124"
+[121/124] ✓ unsupported   "\"Didn't look\" as a distinct result came from local PDF re…"  41.13s
+[122/124] ✓ unsupported   "Wrong channel came from redaction: text removed from the …"  43.2s
+[heartbeat] elapsed=28m0s calls=238 in=24255 out=72134 web=0 est=$3.1892 (rates 2026-06-01) verified=122 errored=0 seen=122/124 claim="faithfulness 123/124"
+[123/124] ✓ unsupported   "Producer string is not the cell key: 24 of 24 redaction c…"  40.06s
+[heartbeat] elapsed=29m0s calls=247 in=25218 out=75017 web=0 est=$3.3122 (rates 2026-06-01) verified=123 errored=0 seen=123/124 claim="faithfulness 124/124"
+[124/124] ✓ faithful      "Refuters came from the IPP refuter runs, 2026-08-15; shar…"  44.38s
+tree (html): evidence/2026-09-13-b/tree.html
+
+SUMMARY claims-machine-full faithfulness
+  cases 124 · verified 124 · errored 0
+  faithful 82 · partial 3 · unsupported 39
+  wall 29m19s · est_usd $3.3542 (rates 2026-06-01) · cache_hit 100% (read 7123250 / created 0)
+  schema_retries 0 · quote_rejects 76 · no_quote_downgrades 61 · plain_retries 124
+  detail: evidence/2026-09-13-b/claims-machine-full.faithfulness.jsonl
+USAGE model=claude-sonnet-4-6 calls=250 in=25593 out=76029 cache_read=7123250 cache_create=0 web_searches=0 wall=1758s est_usd=$3.3542 (rates 2026-06-01)

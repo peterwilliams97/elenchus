@@ -1,0 +1,19 @@
+[resume] 83/124 claims already in evidence/2026-09-13-a/claims-machine-full.faithfulness.jsonl; judging the rest
+[ 84/124] ✗ error         "The statements are the WPP install gates; the number repo…"  4.59s
+[ 85/124] ✗ error         "First result (2026-09-05, branch human-to-ai/rapid-ipp-co…"  2.85s
+[ 86/124] ✗ error         "Eleven commits, each with a refuter on record; about 5.5 …"  2.81s
+[ 87/124] ✗ error         "The property itself found nothing: zero counterexamples i…"  1.38s
+[ 88/124] ✗ error         "Building it found four bugs: two in the codec (small inte…"  2.33s
+[ 89/124] ✗ error         "The test could not see one bug and passed over it twice: …"  1.5s
+[ 90/124] ✗ error         "A refuter checks behaviour not design: the first timestam…"  2.5s
+[ 91/124] ✗ error         "Against the plan: the test's value was mostly in what bui…"  2.09s
+[ 92/124] ✗ error         "The producer is an attacker: it has our product, changes …"  1.81s
+[ 93/124] ✗ error         "The loop is a deterministic exploit check plus adversaria…"  1.64s
+[ 94/124] ✗ error         "Three non-negotiables: the blind (if it sees our findings…"  1.79s
+[ 95/124] ✗ error         "Use more than one model family and a human red team, beca…"  1.59s
+[ 96/124] ✗ error         "Re-run every model release against the frozen exploit che…"  1.41s
+[ 97/124] ✗ error         "None of this gives a coverage figure until we have listed…"  2.01s
+[ 98/124] ✗ error         "Avoid anything that still needs a human per change: bette…"  1.86s
+[ 99/124] ✗ error         "Avoid anything that samples the wrong inputs: random inpu…"  1.41s
+[100/124] ✗ error         "Main number: exported declarations closed per hour of hum…"  1.51s
+[101/124] ✗ error         "Paired with bugs that escaped, per closed declaration, me…"  1.34s

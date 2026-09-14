@@ -1,0 +1,17 @@
+[resume] 82/124 claims already in evidence/2026-09-13-b/claims-machine-full.faithfulness.jsonl; judging the rest
+[ 83/124] ✗ error         "Our own 65/65 result measured PDFs received, not the tran…"  2.82s
+[ 84/124] ✗ error         "The statements are the WPP install gates; the number repo…"  2.79s
+[ 85/124] ✗ error         "First result (2026-09-05, branch human-to-ai/rapid-ipp-co…"  2.21s
+[ 86/124] ✗ error         "Eleven commits, each with a refuter on record; about 5.5 …"  2.43s
+[ 87/124] ✗ error         "The property itself found nothing: zero counterexamples i…"  2.99s
+[ 88/124] ✗ error         "Building it found four bugs: two in the codec (small inte…"  1.9s
+[ 89/124] ✗ error         "The test could not see one bug and passed over it twice: …"  1.52s
+[ 90/124] ✗ error         "A refuter checks behaviour not design: the first timestam…"  1.65s
+[ 91/124] ✗ error         "Against the plan: the test's value was mostly in what bui…"  1.71s
+[ 92/124] ✗ error         "The producer is an attacker: it has our product, changes …"  1.59s
+[ 93/124] ✗ error         "The loop is a deterministic exploit check plus adversaria…"  1.74s
+[ 94/124] ✗ error         "Three non-negotiables: the blind (if it sees our findings…"  1.76s
+[ 95/124] ✗ error         "Use more than one model family and a human red team, beca…"  1.85s
+[ 96/124] ✗ error         "Re-run every model release against the frozen exploit che…"  1.48s
+[ 97/124] ✗ error         "None of this gives a coverage figure until we have listed…"  1.31s
+[ 98/124] ✗ error         "Avoid anything that still needs a human per change: bette…"  1.56s

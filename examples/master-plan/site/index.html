@@ -1,0 +1,1063 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surviving human-to-AI coding — master plan (draft v8, 2026-09-06)</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<style>
+:root{--holds:#009e73;--weak:#e69f00;--open:#0072b2;--fails:#d55e00;--opinion:#767676;--contested:#cc79a7}
+*{box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:#1a1a1a;background:#fafafa;margin:0;line-height:1.5}
+.page{max-width:60rem;margin:0 auto;padding:2rem 1.25rem 4rem}
+h1{font-size:1.3rem;font-weight:600;line-height:1.3;margin:0 0 .6rem}
+.what{color:#555;margin:0 0 1.25rem;max-width:46rem}
+.adjstat{border:1px solid #e3e3e3;border-radius:8px;background:#fff;padding:.7rem 1rem;margin:0 0 1.25rem;font-size:.92rem}
+.adjstat p{margin:0 0 .4rem;font-weight:500}
+.adjstat ul{margin:0;padding-left:1.2rem;color:#555}
+.adjstat li{margin:.15rem 0}
+.human{font-size:.72rem;font-weight:600;letter-spacing:.02em;padding:.12rem .45rem;border-radius:999px;border:1px solid #999;color:#444;background:#fff;white-space:nowrap}
+.thesis{border:1px solid #ddd;border-radius:8px;background:#fff;padding:1rem 1.15rem;margin:0 0 1.5rem}
+.thesis .prop{font-size:1.05rem;font-weight:500;margin:0 0 .6rem}
+.thesis .tally{margin:0 0 .3rem}
+.thesis .base{color:#555;margin:0}
+.toggle{font:inherit;font-size:.82rem;border:1px solid #ccc;border-radius:6px;background:#fff;padding:.28rem .7rem;cursor:pointer;margin:0 0 1rem}
+details.card{border:1px solid #e3e3e3;border-radius:8px;background:#fff;margin:.5rem 0}
+details.card>summary{cursor:pointer;list-style:none;padding:.55rem .8rem;display:flex;gap:.5rem;align-items:baseline;flex-wrap:wrap}
+details.card>summary::-webkit-details-marker{display:none}
+details.card[open]>summary{border-bottom:1px solid #eee}
+details.card details.card{margin:.5rem .8rem}
+.card .id{font-weight:600;white-space:nowrap}
+.card .q{color:#999}
+.card .prop{flex:1 1 18rem}
+.card .dc{color:#777;font-size:.85rem;white-space:nowrap}
+.leaf .body{padding:.5rem .85rem .85rem;color:#333;font-size:.95rem}
+.leaf .claimfull{margin:.2rem 0 .5rem}
+.leaf .meta{color:#555;margin:.2rem 0}
+.leaf blockquote{margin:.5rem 0;padding:.25rem 0 .25rem .8rem;border-left:3px solid #ddd;color:#333}
+.claim{flex:1 1 18rem}
+.badge{font-size:.7rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;padding:.14rem .5rem;border-radius:999px;white-space:nowrap;color:#fff}
+.b-holds{background:var(--holds)}
+.b-weakened{background:var(--weak);color:#000}
+.b-open{background:var(--open)}
+.b-fails{background:var(--fails)}
+.b-opinion{background:var(--opinion)}
+.b-contested{background:var(--contested);color:#000}
+.note{color:#777;font-size:.8rem;white-space:nowrap}
+.key{border-top:1px solid #ddd;margin:2rem 0 0;padding-top:1.1rem;color:#555;font-size:.9rem;line-height:2}
+.key .badge{margin-right:.35rem}
+.nav{margin:1.1rem 0 0;font-size:.9rem}
+.nav a,.key a{color:inherit}
+</style>
+</head><body>
+<main class="page">
+<h1>Surviving human-to-AI coding — master plan (draft v8, 2026-09-06)</h1>
+<p class="what">This page checks whether the report&#39;s findings say what its sources say, and which recommendations that leaves standing.</p>
+<button class="toggle" type="button">Expand all</button>
+<section class="thesis">
+<p class="prop">Stop reviewing the code; review the test instead, and let the test review the code — because the model that writes the code will be replaced repeatedly and the only thing fixed across model versions is the test, so trust has to live in the test. The goal is to survive the transition to AI-generated code.</p>
+<p class="tally">Of 12 recommendations, 1 holds (REC10), 3 are open — 3 because their findings are contested — 8 fail (REC1: no held source supports F1, REC3: no held source supports F4, REC4: no held source supports F5, REC5: no held source supports F6, REC6: no held source supports F7, REC7: no held source supports F8, REC9: no held source supports F10, REC11: no held source supports F14).</p>
+<p class="base">5 findings support no recommendation.</p>
+</section>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">REC1</span><span class="prop">Approve the statement — a test plus a reviewable description — not the code: use one check for many changes, and shrink the pile a human still reads.</span><span class="dc">(F1)</span></summary>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">F1</span><span class="prop">The only thing fixed across model versions is the test, so trust must live there — every earlier shift trusted the tool, but an LLM will be replaced.</span><span class="dc">(WT4)</span></summary>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">PR1</span><span class="claim">Use one check for many changes wherever you can; where you can&#39;t, a human reads…</span></summary>
+<div class="body">
+<p class="claimfull">Use one check for many changes wherever you can; where you can&#39;t, a human reads the change; work to make that second pile smaller.</p>
+<p class="meta">report: §The principles</p>
+<p class="meta">reason: The summary reproduces the source passage almost word-for-word in meaning, direction, and scope. All three parts — reuse one check, fall back to human reading, reduce the human-read pile — match exactly.</p>
+<blockquote>Use one check for many changes wherever you can. Where you can&#39;t, a human reads the change. Work to make that second pile smaller. (passage report#p1#14, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">OV3</span><span class="claim">The answer is to stop reviewing the code, review the test instead, and let the …</span></summary>
+<div class="body">
+<p class="claimfull">The answer is to stop reviewing the code, review the test instead, and let the test review the code.</p>
+<p class="meta">report: §Overview</p>
+<p class="meta">reason: The claim matches the source&#39;s subject, direction, and force exactly. The passage states the same three-part idea in the same order with no hedging omitted by the summary.</p>
+<blockquote>Stop reviewing the code. Review the test instead, and let the test review the code. A test written and approved once can accept any number of AI-written changes. A person reads only what no test can cover. (passage report#p1#3, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">OV4</span><span class="claim">A test written and approved once can accept any number of AI-written changes; a…</span></summary>
+<div class="body">
+<p class="claimfull">A test written and approved once can accept any number of AI-written changes; a person reads only what no test can cover.</p>
+<p class="meta">report: §Overview</p>
+<p class="meta">reason: The summary reproduces the source&#39;s exact proposition, direction, and scope: a single approved test handles unlimited AI changes, and human reading is limited to what tests cannot reach.</p>
+<blockquote>A test written and approved once can accept any number of AI-written changes. A person reads only what no test can cover. (passage report#p1#3, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">WT1</span><span class="claim">There are three ways to trust machine-written code: one check for many changes …</span></summary>
+<div class="body">
+<p class="claimfull">There are three ways to trust machine-written code: one check for many changes (scales), read each change (does not scale — the 13 KLOC PR), approve the statement (scales wherever a test can be written).</p>
+<p class="meta">report: §Why the test, not the code</p>
+<p class="meta">reason: The summary accurately reflects the three-row table in report#p1#19, including the scaling verdict for each approach and the 13 KLOC PR reference, matching subject, scope, and direction.</p>
+<blockquote>There are three ways to trust a piece of machine-written code. (passage report#p1#18, unresolved)</blockquote>
+<blockquote>| One check, many changes | A checker approved once and reused for every change: a test, an independent implementation, a round trip, a real device | Yes |
+| Read each change | A human reads every implementation | No — this is the 13 KLOC PR |
+| Approve the statement | A person approves a test plus its description, and the test accepts the code | Yes, wherever a test can be written | (passage report#p1#19, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">WT2</span><span class="claim">Every earlier shift (assembly→compilers, hand code→libraries) worked because we…</span></summary>
+<div class="body">
+<p class="claimfull">Every earlier shift (assembly→compilers, hand code→libraries) worked because we could trust the tool that produced the code; that does not work for an LLM.</p>
+<p class="meta">report: §Why the test, not the code</p>
+<p class="meta">reason: The passage states exactly this: prior coding shifts worked by trusting the tool once, and that approach fails for an LLM. Subject, scope, direction, and register all match.</p>
+<blockquote>Every earlier shift like this — assembly to compilers, hand-rolled code to libraries — worked because we could trust the tool that produced the code: check the compiler once, trust everything it compiles. That does not work for an LLM. (passage report#p1#20, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">WT3</span><span class="claim">The model we use will be replaced repeatedly, and trust in one version says not…</span></summary>
+<div class="body">
+<p class="claimfull">The model we use will be replaced repeatedly, and trust in one version says nothing about the next; the only thing fixed across model versions is the test, so trust has to live in the test.</p>
+<p class="meta">report: §Why the test, not the code</p>
+<p class="meta">reason: The passage states exactly what the claim says: models will be replaced repeatedly, trust in one version does not carry over, and the test is where trust must live.</p>
+<blockquote>Not because a fixed model is random, but because the model we use will be replaced, repeatedly, and trust in one version says nothing about the next. The only thing that stays fixed across model versions is the test. So the test is where the trust has to live. (passage report#p1#20, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">WT5</span><span class="claim">We have no kernel, so a statement here has to bring its own check — a test.</span></summary>
+<div class="body">
+<p class="claimfull">We have no kernel, so a statement here has to bring its own check — a test.</p>
+<p class="meta">report: §Why the test, not the code</p>
+<p class="meta">reason: The passage states verbatim &#34;We have no kernel. A statement here has to bring its own check — a test.&#34; The claim reproduces this accurately in substance, scope, and register.</p>
+<blockquote>We have no kernel. A statement here has to bring its own check — a test. (passage report#p1#21, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">WT4</span><span class="claim">The FLT formalisation worked because Lean&#39;s kernel checked every statement auto…</span></summary>
+<div class="body">
+<p class="claimfull">The FLT formalisation worked because Lean&#39;s kernel checked every statement automatically, so nobody read the 13 million lines.</p>
+<p class="meta">so what: The report says The FLT project succeeded because a machine checked all 13 million lines, so no human had to read them. No held source says this.</p>
+<p class="meta">report: §Why the test, not the code</p>
+<p class="meta">reason: The summary matches the source almost word for word in substance, direction, and register. The passage explicitly states the same causal claim about Lean&#39;s kernel enabling automatic checking so no human read the 13 million lines.</p>
+</div></details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">F2</span><span class="prop">A statement is a test that returns pass/fail plus a plain-English description a person approves.</span><span class="dc">(ST1)</span></summary>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">ST1</span><span class="claim">A statement has two parts: an automated test that returns pass or fail, and a p…</span></summary>
+<div class="body">
+<p class="claimfull">A statement has two parts: an automated test that returns pass or fail, and a plain-English description of what the test checks with every assumption spelled out.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §What a statement is</p>
+<p class="meta">reason: The source explicitly defines a statement as exactly these two parts: an automated pass/fail test, and a plain-English description with every assumption spelled out. The claim matches subject, scope, and direction precisely.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">ST2</span><span class="claim">A failure is proof of a defect; a pass is only the absence of a counterexample …</span></summary>
+<div class="body">
+<p class="claimfull">A failure is proof of a defect; a pass is only the absence of a counterexample within what was tried.</p>
+<p class="meta">report: §What a statement is</p>
+<p class="meta">reason: The summary reproduces a sincere declarative statement from the source word for word, with the same meaning and force. No distortion, hedging removed, or context stripped.</p>
+<blockquote>A failure is proof of a defect; a pass is only the absence of a counterexample within what was tried. (passage report#p1#22, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">ST3</span><span class="claim">When we ask whether a statement is shorter than the code it accepts, we measure…</span></summary>
+<div class="body">
+<p class="claimfull">When we ask whether a statement is shorter than the code it accepts, we measure the test, not the description.</p>
+<p class="meta">report: §What a statement is</p>
+<p class="meta">reason: The claim appears word-for-word in the source as a straightforward declarative statement by the author.</p>
+<blockquote>When we ask whether a statement is shorter than the code it accepts, we measure the test, not the description. (passage report#p1#22, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">ST4</span><span class="claim">Prove2Me, the platform behind the FLT proof, has the same pair: the Lean type i…</span></summary>
+<div class="body">
+<p class="claimfull">Prove2Me, the platform behind the FLT proof, has the same pair: the Lean type is the check, the natural-language description is what humans read.</p>
+<p class="meta">report: §What a statement is</p>
+<p class="meta">reason: The claim is stated word-for-word in the source passage, with no hedging removed or meaning altered.</p>
+<blockquote>Prove2Me, the platform behind the FLT proof, has the same pair: the Lean type is the check, the natural-language description is what humans read. (passage report#p1#23, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">GL4</span><span class="claim">Statement: a test plus a plain-English description of what it checks, with a re…</span></summary>
+<div class="body">
+<p class="claimfull">Statement: a test plus a plain-English description of what it checks, with a refuter on record; the unit a person approves instead of the code.</p>
+<p class="meta">report: §Words used in this document</p>
+<p class="meta">reason: The claim matches the glossary entry for &#34;Statement&#34; in report#p1#9 exactly in subject, scope, and direction.</p>
+<blockquote>Statement | A test plus a plain-English description of what it checks, with a refuter on record. The unit a person approves instead of the code. (passage report#p1#9, unresolved)</blockquote>
+</div></details>
+</details>
+</details>
+<details class="card"><summary><span class="badge b-open">open</span><span class="id">REC2</span><span class="prop">A test is not a statement until a refuter has shown it can fail.</span><span class="dc">(F3)</span></summary>
+<details class="card"><summary><span class="badge b-open">open</span><span class="id">F3</span><span class="prop">Refuters on the IPP library caught tests that check nothing — two of six could not fail.</span><span class="dc">(ST5)</span></summary>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">OV11</span><span class="claim">Four rules: a test doesn&#39;t count until it has been seen to fail; a test must no…</span></summary>
+<div class="body">
+<p class="claimfull">Four rules: a test doesn&#39;t count until it has been seen to fail; a test must not share code with the code it checks; a test must say when it didn&#39;t look; prefer changes that alter no behaviour.</p>
+<p class="meta">report: §Overview</p>
+<p class="meta">reason: The summary reproduces all four rules accurately and in the same order, with no added strength or omitted hedging. The source states them plainly and so does the summary.</p>
+<blockquote>A test doesn&#39;t count until it has been seen to fail (revert the fix, run it, watch it go red). A test must not share code with the code it checks. A test must say when it didn&#39;t look, not just when it found nothing. Prefer changes that alter no behaviour, because the old code is then the test. (passage report#p1#6, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-open">unverifiable</span><span class="note">6/6</span><span class="id">ST5</span><span class="claim">A test is not a statement until it has a refuter: revert the code the test guar…</span></summary>
+<div class="body">
+<p class="claimfull">A test is not a statement until it has a refuter: revert the code the test guards, run it, watch it go red; a test that stays green with the code reverted is checking nothing.</p>
+<p class="meta">report: §What a statement is</p>
+<p class="meta">reason: schema failure: the judge reason carried a raw tag (&lt;/antml_parameter&gt;)</p>
+<blockquote>A test doesn&#39;t count until it has been seen to fail (revert the fix, run it, watch it go red). (passage report#p1#6, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">R-REF</span><span class="claim">When we ran refuters on the IPP library in August (refuter runs, 2026-08-15), t…</span></summary>
+<div class="body">
+<p class="claimfull">When we ran refuters on the IPP library in August (refuter runs, 2026-08-15), two of six tests could not fail.</p>
+<p class="meta">report: §What a statement is</p>
+<p class="meta">reason: The passage states exactly what the claim says: on the IPP library in August (refuter runs, 2026-08-15), two of six tests could not fail. Subject, scope, and direction match precisely.</p>
+<blockquote>When we did this on the IPP library in August ([refuter runs, 2026-08-15](https://bitbucket.org/papercutsoftware/ipp/src/5cdfeaef67c18c02a807ead51b8e417b72a9af28/docs/reviews/2026-08-15-refuter-runs.md?at=pd2639/stack)), two of six tests could not fail. (passage report#p1#24, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">ST6</span><span class="claim">The refuter is mutation testing with one mutation and only proves the test catc…</span></summary>
+<div class="body">
+<p class="claimfull">The refuter is mutation testing with one mutation and only proves the test catches the one defect broken on purpose; it says nothing about defects we have not seen.</p>
+<p class="meta">report: §What a statement is</p>
+<p class="meta">reason: The source states exactly the same two-part limitation: one mutation, proves only the chosen defect is caught, silent on unseen defects. Subject, scope, and direction match precisely.</p>
+<blockquote>it is mutation testing with one mutation, and it only proves the test catches the one defect we broke on purpose. It says nothing about defects we have not seen. (passage report#p1#24, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">GL3</span><span class="claim">Refuter: the run that proves a test can fail — revert the code the test guards,…</span></summary>
+<div class="body">
+<p class="claimfull">Refuter: the run that proves a test can fail — revert the code the test guards, run the test, see it go red; mutation testing with a single, known mutation.</p>
+<p class="meta">report: §Words used in this document</p>
+<p class="meta">reason: The claim matches the glossary definition and elaboration in the passages exactly: revert the guarded code, run the test, watch it fail; one deliberate mutation, checked once.</p>
+<blockquote>Refuter | The run that proves a test can fail: revert the code the test guards, run the test, see it go red. One deliberate break, checked once. Mutation testing with a single, known mutation. (passage report#p1#9, unresolved)</blockquote>
+<blockquote>Revert the code the test guards, run the test, watch it go red. A test that stays green with the code reverted is checking nothing (passage report#p1#24, unresolved)</blockquote>
+<blockquote>Refuter named as mutation testing with one mutation, and its limit stated. (passage report#p1#87, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">AP4</span><span class="claim">Refuters came from the IPP refuter runs, 2026-08-15; shared-code blind spot and…</span></summary>
+<div class="body">
+<p class="claimfull">Refuters came from the IPP refuter runs, 2026-08-15; shared-code blind spot and behaviour-not-design came from the IPP codec branch human-to-ai/rapid-ipp-codec, review doc at a46a4b7.</p>
+<p class="meta">report: §Appendix</p>
+<p class="meta">reason: The passage explicitly names both sources in the exact terms the summary uses: refuters traced to the 2026-08-15 IPP runs, and the shared-code blind spot plus behaviour-not-design traced to the rapid-ipp-codec branch at a46a4b7.</p>
+<blockquote>* *Refuters* — IPP refuter runs, 2026-08-15 (linked above).
+&gt; * *Shared code blind spot; behaviour-not-design* — IPP codec branch human-to-ai/rapid-ipp-codec, review doc at a46a4b7. (passage report#p1#85, unresolved)</blockquote>
+</div></details>
+</details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">REC3</span><span class="prop">A checker must not share code with what it checks.</span><span class="dc">(F4)</span></summary>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">F4</span><span class="prop">Shared code hides bugs by construction — a shared toInt32 passed 10,000 checks with the bug present and again with the fix reverted.</span><span class="dc">(TC1)</span></summary>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">TC1</span><span class="claim">A checker must not share code with what it checks; where it does it cannot see …</span></summary>
+<div class="body">
+<p class="claimfull">A checker must not share code with what it checks; where it does it cannot see bugs in the shared code and a second check sharing nothing is needed — learned in the redaction work (two independent readers must agree) and in the codec (a shared toInt32 hid a bug for 10,000 checks).</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §Tests are code too</p>
+<p class="meta">reason: The claim matches the source passage almost exactly in subject, scope, direction, and both attributed examples. No overstatement, no fabrication, no distortion.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">WP6</span><span class="claim">The test could not see one bug and passed over it twice: the writer, its valida…</span></summary>
+<div class="body">
+<p class="claimfull">The test could not see one bug and passed over it twice: the writer, its validator, and the printer of the compared values all call the same toInt32, which truncates; the property passed 10,000 checks with the truncation present and passed again with the fix reverted. The bug was found by a plain table test that shares nothing with the writer.</p>
+<p class="meta">so what: The report says &lt;/antml :parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §WPP</p>
+<p class="meta">reason: The summary reproduces the source&#39;s subject, scope, direction, and register with high precision.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">CH6</span><span class="claim">The model writing our code has read poppler and mupdf; if it reproduces a misre…</span></summary>
+<div class="body">
+<p class="claimfull">The model writing our code has read poppler and mupdf; if it reproduces a misreading of the PDF spec poppler also contains, the two agree and the comparison passes.</p>
+<p class="meta">report: §Choosing what to work on</p>
+<p class="meta">reason: The claim matches the source almost verbatim in substance and register — same subject (the model), same mechanism (shared misreading), same consequence (comparison passes). Fully faithful.</p>
+<blockquote>The model writing our code has read poppler and mupdf. If it reproduces a misreading of the PDF spec that poppler also contains, the two agree and the comparison passes. (passage report#p1#37, unresolved)</blockquote>
+</div></details>
+</details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">REC4</span><span class="prop">A checker must say &#34;didn&#39;t look&#34;, not only &#34;found nothing&#34;, and state the one channel it watches.</span><span class="dc">(F5)</span></summary>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">F5</span><span class="prop">A pass that could mean &#34;never examined the input&#34; is not a pass, and a right answer on the wrong channel is not coverage (the 65/65 WPP result).</span><span class="dc">(ST7)</span></summary>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">ST7</span><span class="claim">A test must say &#34;didn&#39;t look&#34; as well as &#34;found nothing&#34;: a pass that could als…</span></summary>
+<div class="body">
+<p class="claimfull">A test must say &#34;didn&#39;t look&#34; as well as &#34;found nothing&#34;: a pass that could also mean the checker never examined the input is not a pass.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §What a statement is</p>
+<p class="meta">reason: The summary matches the source exactly in subject, scope, direction, and register — no hedges removed, no scope shifted.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">ST8</span><span class="claim">A redaction scan of a PDF whose text is an image finds zero matches and looks i…</span></summary>
+<div class="body">
+<p class="claimfull">A redaction scan of a PDF whose text is an image finds zero matches and looks identical to a clean document; the tool has to report that it could not see.</p>
+<p class="meta">report: §What a statement is</p>
+<p class="meta">reason: The summary is a verbatim copy of the passage; subject, scope, direction, and register all match exactly.</p>
+<blockquote>A redaction scan of a PDF whose text is an image finds zero matches and looks identical to a clean document; the tool has to report that it could not see. (passage report#p1#25, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">ST9</span><span class="claim">The codec property test counts how many inputs the writer refused before the ro…</span></summary>
+<div class="body">
+<p class="claimfull">The codec property test counts how many inputs the writer refused before the round trip ran: 0 refused out of 10,000 is what makes 10,000 passes mean 10,000.</p>
+<p class="meta">report: §What a statement is</p>
+<p class="meta">reason: The summary reproduces the source&#39;s point exactly: the codec test tracks refusals before the round trip, and zero refusals out of 10,000 is what gives the 10,000 passes their meaning.</p>
+<blockquote>Likewise the codec property test below counts how many of its inputs the writer refused before the round trip ran: 0 refused out of 10,000 is what makes 10,000 passes mean 10,000. (passage report#p1#25, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">TC2</span><span class="claim">A checker watches one channel and says nothing about the others; every checker …</span></summary>
+<div class="body">
+<p class="claimfull">A checker watches one channel and says nothing about the others; every checker states what it observes, and a partition is covered only when every channel a bug could live on has a checker.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §Tests are code too</p>
+<p class="meta">reason: The claim matches the source exactly in subject, scope, direction, and register.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-open">unverifiable</span><span class="note">6/6</span><span class="id">TC3</span><span class="claim">Text gone from a PDF&#39;s content stream can still be in its metadata; bytes can b…</span></summary>
+<div class="body">
+<p class="claimfull">Text gone from a PDF&#39;s content stream can still be in its metadata; bytes can be clean while the rendered page is not.</p>
+<p class="meta">report: §Tests are code too</p>
+<p class="meta">reason: schema failure: the judge reason carried a raw tag (&lt;/antml_parameter&gt;)</p>
+<blockquote>Text gone from a PDF&#39;s content stream can still be in its metadata; bytes can be clean while the rendered page is not. (passage report#p1#78, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">TC5</span><span class="claim">Our 65/65 WPP result is the same shape — right answer, wrong channel.</span></summary>
+<div class="body">
+<p class="claimfull">Our 65/65 WPP result is the same shape — right answer, wrong channel.</p>
+<p class="meta">report: §Tests are code too</p>
+<p class="meta">reason: The claim is a verbatim sentence from passage report#p1#78, attributed to the report&#39;s own voice, with no hedging or context stripped. Subject, scope, direction, and register all match exactly.</p>
+<blockquote>Our 65/65 WPP result is the same shape — right answer, wrong channel. (passage report#p1#78, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">WP-65</span><span class="claim">Our own 65/65 result measured PDFs received, not the transport binding it was m…</span></summary>
+<div class="body">
+<p class="claimfull">Our own 65/65 result measured PDFs received, not the transport binding it was meant to measure — a passing check watching the wrong thing.</p>
+<p class="meta">report: §WPP</p>
+<p class="meta">reason: The source passage states almost word-for-word what the claim says: the 65/65 result measured PDFs received rather than the transport binding it was meant to measure, and that a passing check may be watching the wrong thing. The claim faithfully captures the subject, scope, and direction.</p>
+<blockquote>What we cannot: whether Windows&#39;s behaviour matches what we assumed. A passing check may be watching the wrong thing — our own 65/65 result measured PDFs received, not the transport binding it was meant to measure. (passage report#p1#60, unresolved)</blockquote>
+</div></details>
+</details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">REC5</span><span class="prop">Prefer changes that alter no behaviour — the old code is the checker — and start there; put new behaviour through the loop only where a test can be written.</span><span class="dc">(F6)</span></summary>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">F6</span><span class="prop">No-behaviour-change work is machine-checkable and the compression bet is nearly guaranteed; whether a test is shorter than the code for NEW behaviour is the open question — the two do not stand or fall together.</span><span class="dc">(EL4)</span></summary>
+<details class="card leaf"><summary><span class="badge b-contested">faithful</span><span class="note">4/6 ≠ unsupported</span><span class="id">EL1</span><span class="claim">Changes that alter no behaviour (refactor, consolidation, port, dedup) already …</span></summary>
+<div class="body">
+<p class="claimfull">Changes that alter no behaviour (refactor, consolidation, port, dedup) already have a checker — the old code; run old and new on the same inputs and compare, and start there.</p>
+<p class="meta">report: §Which changes are eligible</p>
+<p class="meta">reason: The claim matches the source in subject, scope, direction, and register.</p>
+<blockquote>**Changes that alter no behaviour** — refactor, consolidation, port, dedup — already have a checker: the old code. Run old and new on the same inputs and compare. Start there: large in lines, zero in behaviour, because &#34;changes nothing&#34; is a question a machine can answer and a human reading the diff cannot. (passage report#p1#47, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">EL2</span><span class="claim">Three things a person still decides for a no-behaviour-change comparison: which…</span></summary>
+<div class="body">
+<p class="claimfull">Three things a person still decides for a no-behaviour-change comparison: which inputs to run, what to compare (bytes, rendered output, both), and how close counts as equal.</p>
+<p class="meta">report: §Which changes are eligible</p>
+<p class="meta">reason: The passage states exactly the three human decisions for no-behaviour-change comparisons. The summary matches subject, scope, and direction precisely, with no omission or distortion.</p>
+<blockquote>Three things a person still decides: which inputs to run, what to compare (bytes, rendered output, both), and how close counts as equal. (passage report#p1#47, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-contested">faithful</span><span class="note">4/6 ≠ unsupported</span><span class="id">EL3</span><span class="claim">New behaviour goes through the loop wherever a test can be written; where it ca…</span></summary>
+<div class="body">
+<p class="claimfull">New behaviour goes through the loop wherever a test can be written; where it cannot, a human reads it and it stays small — the whole rule is whether a test can be written or not.</p>
+<p class="meta">report: §Which changes are eligible</p>
+<p class="meta">reason: The summary closely mirrors the source passage, preserving subject, scope, direction, and the explicit &#34;whole rule&#34; framing. Nothing is added, dropped, or strengthened.</p>
+<blockquote>**New behaviour** goes through the loop wherever a test can be written for it. Where it cannot — no way to generate inputs, no automatic check — a human reads it, and it stays small. **That is the whole rule: can a test be written or not.** (passage report#p1#48, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">EL4</span><span class="claim">Exception: where keeping old behaviour means keeping a security hole (redaction…</span></summary>
+<div class="body">
+<p class="claimfull">Exception: where keeping old behaviour means keeping a security hole (redaction, sanitisation, parsing untrusted input), &#34;the old code is the spec&#34; is wrong; a person marks each extracted statement keep or fix before any AI change.</p>
+<p class="meta">so what: The report says security-sensitive code needs human review of every statement before AI edits it. No held source says this.</p>
+<p class="meta">report: §Which changes are eligible</p>
+<p class="meta">reason: The passage matches the claim exactly: same exception condition (security-sensitive code), same rule (&#34;old code is the spec&#34; is wrong), same required action (person marks each extracted statement keep or fix before any AI change).</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-contested">unsupported</span><span class="note">5/6 ≠ faithful</span><span class="id">LP6</span><span class="claim">The bet: this pays off only if the test plus its description, all revisions cou…</span></summary>
+<div class="body">
+<p class="claimfull">The bet: this pays off only if the test plus its description, all revisions counted, is shorter to write and review than the code it accepts.</p>
+<p class="meta">so what: The report says the whole approach is worthwhile only when the test and description together take less effort than reading the code. No held source says this.</p>
+<p class="meta">report: §The loop</p>
+<p class="meta">reason: The summary closely mirrors the source sentence, preserving the conditional framing (&#34;only if&#34;), the scope (&#34;all revisions counted&#34;), and the comparison (&#34;shorter to write and review than the code it accepts&#34;). No distortion, overstatement, or omission.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">LP7</span><span class="claim">For no-behaviour-change work the bet is nearly guaranteed; for new behaviour ea…</span></summary>
+<div class="body">
+<p class="claimfull">For no-behaviour-change work the bet is nearly guaranteed; for new behaviour each function needs its own test and whether that is shorter is the open question — the two do not stand or fall together.</p>
+<p class="meta">report: §The loop</p>
+<p class="meta">reason: The summary matches the source passage almost word-for-word in substance: near-guarantee for no-behaviour-change, open question for new behaviour per function, and explicit statement that the two do not stand or fall together.</p>
+<blockquote>This only pays off if the test plus its description — all revisions counted — is shorter to write and review than the code it accepts. For changes that alter no behaviour, that is nearly guaranteed: the test is &#34;old and new agree on these inputs&#34;, written once for the whole partition. For new behaviour, each function needs its own test, and whether that is shorter than the code is the open question. The two do not stand or fall together. (passage report#p1#33, unresolved)</blockquote>
+</div></details>
+</details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">REC6</span><span class="prop">Iterate the test, not the code, until it stops changing; draft it before the code and count the review time of every revision.</span><span class="dc">(F7)</span></summary>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">F7</span><span class="prop">You learn the missing condition only after the code fails the test — the codec test grew a year-range and a 32-bit condition round by round until it stabilised.</span><span class="dc">(LP4)</span></summary>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">LP1</span><span class="claim">You don&#39;t know the right test until the code has failed it a few times; what yo…</span></summary>
+<div class="body">
+<p class="claimfull">You don&#39;t know the right test until the code has failed it a few times; what you keep is the version of the test that stopped changing.</p>
+<p class="meta">report: §The loop</p>
+<p class="meta">reason: The summary closely mirrors the passage&#39;s core assertions: the right test emerges only after the code fails it repeatedly, and the keeper is the version that stabilised.</p>
+<blockquote>You don&#39;t know the right test until the code has failed it a few times. Start with a rough one, let the AI write code against it, run it, see what breaks, add the missing condition, and go again. What you keep is the version of the test that stopped changing. (passage report#p1#27, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">LP2</span><span class="claim">In the codec work, a generated date with year 57760 read back as −7776 because …</span></summary>
+<div class="body">
+<p class="claimfull">In the codec work, a generated date with year 57760 read back as −7776 because the test had no condition about year range; the writer was changed to refuse such dates and the test amended.</p>
+<p class="meta">report: §The loop</p>
+<p class="meta">reason: The passage states exactly what the claim says: year 57760 read back as −7776, no year-range condition in the test, writer changed to refuse such dates, test amended. Subject, scope, and direction match precisely.</p>
+<blockquote>First test: a message written and read back should be equal. It passed. Then a generated date with year 57760 read back as −7776 — the test had no condition about year range, because nobody had thought about years the wire format could carry but the code could not. The writer was changed to refuse such dates; the test was amended to say so. (passage report#p1#28, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-weakened">partial</span><span class="note">6/6</span><span class="id">LP3</span><span class="claim">Then integers wider than 32 bits read back wrong for the same reason, and the t…</span></summary>
+<div class="body">
+<p class="claimfull">Then integers wider than 32 bits read back wrong for the same reason, and the test was amended again; after a few rounds the test stopped changing.</p>
+<p class="meta">so what: The report says After the 32-bit integer issue, the test was updated again, and then it settled after a few rounds.. The source only says After the 32-bit issue the test was changed again, and the final stable version became the accepted statement — but this was one step in a longer chain starting with a year-range bug..</p>
+<p class="meta">report: §The loop</p>
+<p class="meta">reason: The claim omits the prior amendment (year-range bug) that preceded the 32-bit fix, presenting the 32-bit step as if it directly led to the test stopping, which strips the full sequential context the source provides.</p>
+<blockquote>Then integers wider than 32 bits read back wrong, for the same reason; the test was amended again. After a few rounds the test stopped changing. That final version is the statement. (passage report#p1#28, unresolved)</blockquote>
+<blockquote>Then a generated date with year 57760 read back as −7776 — the test had no condition about year range, because nobody had thought about years the wire format could carry but the code could not. The writer was changed to refuse such dates; the test was amended to say so. (passage report#p1#28, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">LP4</span><span class="claim">The PDF library update established the rule: run the checks while you&#39;re develo…</span></summary>
+<div class="body">
+<p class="claimfull">The PDF library update established the rule: run the checks while you&#39;re developing, over and over, not once at the end.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §The loop</p>
+<p class="meta">reason: The summary matches the source on subject, scope, and direction exactly.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">LP5</span><span class="claim">Count the review time for every version of the test, not just the last, and rep…</span></summary>
+<div class="body">
+<p class="claimfull">Count the review time for every version of the test, not just the last, and report the number of revisions alongside; write the first draft before the code.</p>
+<p class="meta">so what: The report says Track time spent on all test drafts, show how many drafts there were, and begin drafting before coding. No held source says this.</p>
+<p class="meta">report: §The loop</p>
+<p class="meta">reason: The source passage states both rules explicitly and in the same order: count review time for every version plus report revisions, and write the first draft before the code. The summary captures both accurately with no overstatement.</p>
+</div></details>
+</details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">REC7</span><span class="prop">Choose what to work on by how good a checker is available, not by where the pain is.</span><span class="dc">(F8)</span></summary>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">F8</span><span class="prop">The choice is a checklist, not a formula — what checker exists, what inputs, what channel, how long to triage — and no number has been computed from it.</span><span class="dc">(CH3)</span></summary>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">CH1</span><span class="claim">Choose by how good a checker is available, not by where the pain is.</span></summary>
+<div class="body">
+<p class="claimfull">Choose by how good a checker is available, not by where the pain is.</p>
+<p class="meta">report: §Choosing what to work on</p>
+<p class="meta">reason: The summary claim is a verbatim restatement of the source sentence. Subject, scope, direction, and register all match exactly.</p>
+<blockquote>Choose by how good a checker is available, not by where the pain is. (passage report#p1#34, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-contested">faithful</span><span class="note">5/6 ≠ unsupported</span><span class="id">CH2</span><span class="claim">Before a partition, answer: what checker exists; what inputs it runs on and how…</span></summary>
+<div class="body">
+<p class="claimfull">Before a partition, answer: what checker exists; what inputs it runs on and how they were chosen; what it observes; how long a person takes to triage each failure.</p>
+<p class="meta">report: §Choosing what to work on</p>
+<p class="meta">reason: The claim accurately lists all four questions from the source — checker type, inputs and their selection, what is observed, and triage time per failure — matching subject, scope, and direction exactly.</p>
+<blockquote>What checker exists? Old code to compare against, an independent implementation, a round trip, a protocol tool, a real device — or nothing?
+&gt; * What inputs will it run on, and how were they chosen? How many real customer producers do they cover?
+&gt; * What does it observe — bytes, rendered output, what a device did, what appeared in metadata? A defect on a channel the checker doesn&#39;t watch is invisible.
+&gt; * How long does it take a person to work out whether each failure is real? (passage report#p1#35, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">CH3</span><span class="claim">Triage time falls as models improve [improves], so partitions too expensive to …</span></summary>
+<div class="body">
+<p class="claimfull">Triage time falls as models improve [improves], so partitions too expensive to triage today may not be next year; re-ask per model generation.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §Choosing what to work on</p>
+<p class="meta">reason: The source passage states exactly this: triage cost drops as models improve, making today&#39;s expensive partitions potentially viable later, and recommends re-asking per model generation. The summary faithfully captures subject, direction, scope, and register.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">CH4</span><span class="claim">Nobody has computed a number from these questions; they are a checklist, not a …</span></summary>
+<div class="body">
+<p class="claimfull">Nobody has computed a number from these questions; they are a checklist, not a formula.</p>
+<p class="meta">report: §Choosing what to work on</p>
+<p class="meta">reason: The summary matches the source exactly in subject, scope, and direction.</p>
+<blockquote>Nobody has computed a number from these; they are a checklist, not a formula. (passage report#p1#36, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">CH5</span><span class="claim">Differential testing catches transcription errors reliably and shared misunders…</span></summary>
+<div class="body">
+<p class="claimfull">Differential testing catches transcription errors reliably and shared misunderstandings not at all, and this gets worse as models read more [decays].</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §Choosing what to work on</p>
+<p class="meta">reason: The summary reproduces the source sentence exactly, including the [decays] tag, with the same subject, scope, and direction.</p>
+</div></details>
+</details>
+</details>
+<details class="card"><summary><span class="badge b-open">open</span><span class="id">REC8</span><span class="prop">Sample by producer and cell, evenly across cells, never in proportion to traffic volume — random inputs don&#39;t work.</span><span class="dc">(F9)</span></summary>
+<details class="card"><summary><span class="badge b-open">open</span><span class="id">F9</span><span class="prop">Real inputs from a few clustered producers cover the multi-condition combinations that reach production, which random and volume-weighted sampling miss.</span><span class="dc">(PR2)</span></summary>
+<details class="card leaf"><summary><span class="badge b-open">unverifiable</span><span class="note">6/6</span><span class="id">PR2</span><span class="claim">A check is only as good as the inputs you feed it: know what population your in…</span></summary>
+<div class="body">
+<p class="claimfull">A check is only as good as the inputs you feed it: know what population your inputs sample, and where that sample is thin.</p>
+<p class="meta">report: §The principles</p>
+<p class="meta">reason: schema failure: the judge reason carried a raw tag (&lt;/antml_parameter&gt;)</p>
+<blockquote>A check is only as good as the inputs you feed it. Know what population your inputs sample, and where that sample is thin. (passage report#p1#16, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">SA1</span><span class="claim">Sampling is the precondition, and it is harder than building the checker.</span></summary>
+<div class="body">
+<p class="claimfull">Sampling is the precondition, and it is harder than building the checker.</p>
+<p class="meta">report: §Sampling</p>
+<p class="meta">reason: Passage report#p1#39 states exactly this, placed directly under the &#34;Sampling&#34; heading (report#p1#38), confirming that sampling is the precondition referred to and that it is harder than building the checker.</p>
+<blockquote>This is the precondition, and it is harder than building the checker. (passage report#p1#39, unresolved)</blockquote>
+<blockquote>## **Sampling: what to feed the checker** (passage report#p1#38, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">SA2</span><span class="claim">Random inputs don&#39;t work: if a bug needs three unusual conditions each showing …</span></summary>
+<div class="body">
+<p class="claimfull">Random inputs don&#39;t work: if a bug needs three unusual conditions each showing up one input in ten, a random input hits all three one time in a thousand; four conditions, one in ten thousand.</p>
+<p class="meta">report: §Sampling</p>
+<p class="meta">reason: The claim reproduces the source&#39;s exact numerical reasoning (three conditions → one in a thousand; four → one in ten thousand) and its conclusion that random inputs fail for multi-condition bugs. Subject, scope, direction, and register all match.</p>
+<blockquote>Suppose a bug needs three unusual conditions to line up, and each shows up in one input in ten. A random input hits all three one time in a thousand. Four conditions, one in ten thousand. Random fuzzing is fine for one-condition bugs and hopeless for the interaction bugs that reach production. (passage report#p1#40, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">SA3</span><span class="claim">The standard answer is combinatorial testing: build the input set so every pair…</span></summary>
+<div class="body">
+<p class="claimfull">The standard answer is combinatorial testing: build the input set so every pair or triple of conditions appears together at least once — affordable because most software failures are triggered by two or three conditions (Kuhn, Wallace and Gallo, IEEE TSE 30(6), 2004).</p>
+<p class="meta">report: §Sampling</p>
+<p class="meta">reason: The claim matches the source exactly in subject, scope, direction, and citation.</p>
+<blockquote>The standard answer is combinatorial testing: build the input set so that every pair (or triple) of conditions appears together at least once. That is affordable because, empirically, most software failures are triggered by two or three conditions, rarely more (Kuhn, Wallace and Gallo, IEEE TSE 30(6), 2004). (passage report#p1#40, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">SA4</span><span class="claim">Real inputs are cheaper still: they are made by a small number of producers, ea…</span></summary>
+<div class="body">
+<p class="claimfull">Real inputs are cheaper still: they are made by a small number of producers, each making the same choices every time, so a few hundred real files cover the combinations that actually occur — this is why the PDF corpus worked.</p>
+<p class="meta">report: §Sampling</p>
+<p class="meta">reason: The claim accurately captures the subject (real inputs from few producers), the direction (cheaper/more effective), and the mechanism (consistent producer behaviour → few hundred files suffice), matching the source&#39;s substance and register.</p>
+<blockquote>The inputs our code sees are not random. They are made by a small number of producers — printer drivers, applications, one Windows print stack — and each producer makes the same choices every time: its own font handling, its own text layout, its own structure. So one real file from one real producer contains a whole bundle of conditions that go together, and a few hundred real files cover the combinations that actually occur. This is why the PDF corpus worked: a few hundred files, chosen by producer, beat unbounded random generation. (passage report#p1#41, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-contested">unsupported</span><span class="note">4/6 ≠ faithful</span><span class="id">SA5</span><span class="claim">Producers cluster by time, customer and application, giving a coverage count: w…</span></summary>
+<div class="body">
+<p class="claimfull">Producers cluster by time, customer and application, giving a coverage count: which producer × application × version cells we hold, and which shipped cells are empty.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §Sampling</p>
+<p class="meta">reason: The claim directly mirrors the source passage in all key details.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-open">unverifiable</span><span class="note">6/6</span><span class="id">SA6</span><span class="claim">Customers cluster too, so a pattern that is 0.1% of global traffic can be 100% …</span></summary>
+<div class="body">
+<p class="claimfull">Customers cluster too, so a pattern that is 0.1% of global traffic can be 100% of one customer&#39;s; sample evenly across cells, never in proportion to volume.</p>
+<p class="meta">report: §Sampling</p>
+<p class="meta">reason: schema failure: the judge reason carried a raw tag (&lt;/antml_parameter&gt;)</p>
+<blockquote>Customers cluster too — one site tends to run one driver and one application suite — so a pattern that is 0.1% of global traffic can be 100% of one customer&#39;s. Sample evenly across cells, never in proportion to volume. (passage report#p1#42, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">SA7</span><span class="claim">New driver versions open new cells so the corpus goes stale; watch the fraction…</span></summary>
+<div class="body">
+<p class="claimfull">New driver versions open new cells so the corpus goes stale; watch the fraction of newly seen inputs that match no held cell.</p>
+<p class="meta">report: §Sampling</p>
+<p class="meta">reason: The claim matches the source exactly in subject, scope, direction, and register.</p>
+<blockquote>New driver versions open new cells, so the corpus goes stale; watch the fraction of newly seen inputs that match no held cell. (passage report#p1#42, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">SA8</span><span class="claim">Independent implementations (poppler, mupdf) are weakest on common files and st…</span></summary>
+<div class="body">
+<p class="claimfull">Independent implementations (poppler, mupdf) are weakest on common files and strongest on our tail — enterprise MFP drivers, line-of-business applications, old versions at regulated customers.</p>
+<p class="meta">report: §Sampling</p>
+<p class="meta">reason: The claim accurately captures the subject (poppler/mupdf), direction (weakest on common, strongest on tail), and the specific tail producers named. No qualification is dropped or added.</p>
+<blockquote>poppler and mupdf were tuned on the same public PDFs everyone has. The producers that are only ours — enterprise MFP drivers, line-of-business applications, old versions that persist at regulated customers — are where those tools are untested and therefore give an independent opinion. Differential testing is weakest on common files and strongest on our tail. (passage report#p1#43, unresolved)</blockquote>
+</div></details>
+</details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">REC9</span><span class="prop">Order the work easiest→hardest by who makes the input: document products, then WPP, then security.</span><span class="dc">(F10)</span></summary>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">F10</span><span class="prop">Document products — easy, already done once: the PDF library shipped and drew no customer-reported defect over several years, with stated caveats.</span><span class="dc">(OV8)</span></summary>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">OV8</span><span class="claim">Document products are easy: PDFs come from a small, known set of printer driver…</span></summary>
+<div class="body">
+<p class="claimfull">Document products are easy: PDFs come from a small, known set of printer drivers; we already did this and it worked — no customer-reported PDF bug in several years.</p>
+<p class="meta">so what: The report says The document-products case is easy, with no bugs from customers in years. No held source says this.</p>
+<p class="meta">report: §Overview</p>
+<p class="meta">reason: The summary reproduces the headline claim accurately but omits the significant caveats the source attaches to the &#34;no customer-reported PDF bug&#34; result, making an explicitly hedged finding sound like a clean success.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">DP1</span><span class="claim">The producer is a printer driver — a small, known, fixed set; independent imple…</span></summary>
+<div class="body">
+<p class="claimfull">The producer is a printer driver — a small, known, fixed set; independent implementations exist (mupdf, poppler, qpdf, pdftk, pikepdf) and the corpora are large.</p>
+<p class="meta">report: §Document-based products</p>
+<p class="meta">reason: The claim matches the source exactly in subject, scope, direction, and detail.</p>
+<blockquote>The producer is a printer driver: a small, known, fixed set. Independent implementations exist (mupdf, poppler, qpdf, pdftk, pikepdf) and the corpora are large. (passage report#p1#52, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">DP2</span><span class="claim">The PDF library update shipped with a stated success criterion — no serious bug…</span></summary>
+<div class="body">
+<p class="claimfull">The PDF library update shipped with a stated success criterion — no serious bugs from product testing or customers in the first six months — and over several years in production there has been no customer-reported PDF defect.</p>
+<p class="meta">report: §Document-based products</p>
+<p class="meta">reason: The claim matches the source exactly in subject, scope, direction, and register.</p>
+<blockquote>The PDF library update shipped with a stated success criterion — no serious bugs from product testing or customers in the first six months — and over several years in production there has been no customer-reported PDF defect. (passage report#p1#53, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-open">unverifiable</span><span class="note">6/6</span><span class="id">DP3</span><span class="claim">Caveats: it is one project, self-reported; exposure figures are order-of-magnit…</span></summary>
+<div class="body">
+<p class="claimfull">Caveats: it is one project, self-reported; exposure figures are order-of-magnitude estimates; the author found and fixed bugs himself after shipping; and the reporting channel is weak.</p>
+<p class="meta">report: §Document-based products</p>
+<p class="meta">reason: schema failure: the judge reason carried a raw tag (&lt;/antml_parameter&gt;)</p>
+<blockquote>Caveats: it is one project, self-reported, and the exposure figures (customers, processing events) are estimates spanning orders of magnitude; the author found and fixed bugs himself after shipping; and a PDF defect would likely be reported as &#34;printing is broken at site X&#34;, so the reporting channel is weak. (passage report#p1#53, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-contested">unsupported</span><span class="note">5/6 ≠ faithful</span><span class="id">DP4</span><span class="claim">A count of PDF defects reported through that channel before the method is neede…</span></summary>
+<div class="body">
+<p class="claimfull">A count of PDF defects reported through that channel before the method is needed before this result carries more weight than &#34;promising&#34;.</p>
+<p class="meta">so what: The report says prior PDF defect data is needed before the result means more than promising. No held source says this.</p>
+<p class="meta">report: §Document-based products</p>
+<p class="meta">reason: The summary claim is a verbatim restatement of the final sentence of passage report#p1#53. Subject, scope, direction, and register all match exactly.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">DP5</span><span class="claim">Five parts of the PDF method transfer and one does not: (a) bound inputs by pro…</span></summary>
+<div class="body">
+<p class="claimfull">Five parts of the PDF method transfer and one does not: (a) bound inputs by producers, (b) bound functions by product settings, (c) choose corpus files by origin not count, (d) checks that need no spec, (e) run checks during development; (f) one person who chose what to sample does NOT transfer.</p>
+<p class="meta">report: §Document-based products</p>
+<p class="meta">reason: The source lists all six items (a)–(f) with exactly the same meaning: (a)–(e) carry over, (f) — the one expert who decided what to sample — does not.</p>
+<blockquote>* **(a) Bound the inputs by their producers.** Works wherever the producers can be listed. The most valuable part.
+&gt; * **(b) Bound the functions by product settings.** Works where we can list which functions the products call, with which options. That list is what the other two cases lack.
+&gt; * **(c) Choose corpus files by where they came from, not how many.** Every file that caused a bug, every file from feature work, every licensed test suite, some random ones. Caveat: two of those four sources are our own fix history, which cannot contain a bug class we never fixed.
+&gt; * **(d) Checks that need no spec**, derived from what the function is for: render and count pages, render before and after and compare. Hardest to port. The question for any partition is &#34;what is the rendered page here?&#34;
+&gt; * **(e) Run the checks during development, repeatedly.** Transfers completely; the loop above is (e) applied to tests.
+&gt; * **(f) One person with deep domain knowledge chose what to sample.** Does not transfer. Everything below about extraction and succession is an attempt to replace (f). (passage report#p1#55, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">DP6</span><span class="claim">(f) does not transfer, and everything about extraction and succession is an att…</span></summary>
+<div class="body">
+<p class="claimfull">(f) does not transfer, and everything about extraction and succession is an attempt to replace (f).</p>
+<p class="meta">so what: The report says part f cannot be carried over, and all the work on extraction and succession aims to fill that gap. No held source says this.</p>
+<p class="meta">report: §Document-based products</p>
+<p class="meta">reason: The source passage states exactly this: (f) does not transfer, and everything about extraction and succession is an attempt to replace (f). The claim matches subject, scope, and direction precisely.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-contested">unsupported</span><span class="note">4/6 ≠ faithful</span><span class="id">DP7</span><span class="claim">The loop here is an experiment stated in advance: can an AI extract statements …</span></summary>
+<div class="body">
+<p class="claimfull">The loop here is an experiment stated in advance: can an AI extract statements from existing code well enough that a reviewer reading only the statements spots the bugs — tested on the bugs the author found and fixed after shipping.</p>
+<p class="meta">so what: The report says &lt;/antml.parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §Document-based products</p>
+<p class="meta">reason: The passage matches the claim exactly: a pre-registered experiment asking whether AI-extracted statements let a reviewer catch the post-ship bugs the author later fixed. No strengthening or distortion.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">DP8</span><span class="claim">Criterion: the reviewer&#39;s marks identify at least K of the N post-ship bugs (K …</span></summary>
+<div class="body">
+<p class="claimfull">Criterion: the reviewer&#39;s marks identify at least K of the N post-ship bugs (K fixed before the run); control is the same reviewer reading code directly on the other half; recorded are test size, review minutes over revisions, and revisions per function.</p>
+<p class="meta">report: §Document-based products</p>
+<p class="meta">reason: The claim reproduces the criterion, control, and recorded items verbatim in substance. All three elements — the K-of-N success threshold, the same-reviewer code-reading control, and the three recorded measures — appear explicitly in passage report#p1#57.</p>
+<blockquote>* *Criterion:* the reviewer&#39;s marks identify at least K of the N post-ship bugs, K fixed before the run.
+&gt; * *Control:* same reviewer, same time budget, reading the code directly, on the other half of the bug set.
+&gt; * *Recorded:* test size per function, review minutes summed over revisions, revisions per function. (passage report#p1#57, unresolved)</blockquote>
+</div></details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">F11</span><span class="prop">WPP — hard, closed reference: the first codec property test found nothing itself but forced four bugs into view and measured the metric at 0.5 declarations per review-hour.</span><span class="dc">(WP2)</span></summary>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">WP1</span><span class="claim">The producer is Windows: one producer, closed source, many versions, and we can…</span></summary>
+<div class="body">
+<p class="claimfull">The producer is Windows: one producer, closed source, many versions, and we can observe only some of what it does.</p>
+<p class="meta">report: §WPP</p>
+<p class="meta">reason: The claim is a word-for-word reproduction of the source passage, matching subject, scope, and direction exactly.</p>
+<blockquote>The producer is Windows: one producer, closed source, many versions, and we can observe only some of what it does. (passage report#p1#59, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">WP2</span><span class="claim">We can check automatically the wire protocol layer (client and server written a…</span></summary>
+<div class="body">
+<p class="claimfull">We can check automatically the wire protocol layer (client and server written as mirror images), conformance with ipptool, and behaviour on the handful of real printers in the lab; we cannot check whether Windows matches what we assumed.</p>
+<p class="meta">so what: The report says Those three things are auto-checkable; Windows matching our assumptions is not. No held source says this.</p>
+<p class="meta">report: §WPP</p>
+<p class="meta">reason: The claim maps precisely to the passage: same three automated-check items, same limitation about Windows. Subject, scope, and direction all match.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">WP2b</span><span class="claim">The statements are the WPP install gates; the number reported is the count of g…</span></summary>
+<div class="body">
+<p class="claimfull">The statements are the WPP install gates; the number reported is the count of gates that cannot be made into a test (only check: &#34;Windows installed it&#34;), because those are the ones a human still reads.</p>
+<p class="meta">report: §WPP</p>
+<p class="meta">reason: The summary reproduces the source passage almost exactly in substance: the statements are WPP install gates, the reported number is the count of gates that cannot be automated (only check: &#34;Windows installed it&#34;), and those are the ones a human still reads. Fully faithful.</p>
+<blockquote>The statements are the WPP install gates — a short list of conditions, each observed in Windows and each linked to the code that implements it. When a new Windows observation contradicts a gate, a new gate replaces it. The number we report is the count of gates that cannot be made into a test — where the only check is &#34;Windows installed it&#34; — because those are the ones a human still reads. (passage report#p1#61, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-contested">unsupported</span><span class="note">4/6 ≠ faithful</span><span class="id">WP3</span><span class="claim">First result (2026-09-05, branch human-to-ai/rapid-ipp-codec, evidence docs/rev…</span></summary>
+<div class="body">
+<p class="claimfull">First result (2026-09-05, branch human-to-ai/rapid-ipp-codec, evidence docs/reviews/2026-09-05-rapid-ipp-codec.md @ a46a4b7): a property test over the IPP wire codec — any message the writer accepts, once written and read back, equals the original — over Rapid&#39;s full-wire-range generators.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §WPP</p>
+<p class="meta">reason: The claim matches the source on date, branch, evidence file, round-trip property, and Rapid&#39;s full-wire-range generators. Nothing is added, dropped, or strengthened.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">WP3b</span><span class="claim">Eleven commits, each with a refuter on record; about 5.5 hours of agent time ac…</span></summary>
+<div class="body">
+<p class="claimfull">Eleven commits, each with a refuter on record; about 5.5 hours of agent time across five prompts and roughly two hours of human review.</p>
+<p class="meta">report: §WPP</p>
+<p class="meta">reason: The claim reproduces the exact figures and qualifications from the passage: eleven commits, refuters on record, 5.5 agent-hours, five prompts, two review-hours.</p>
+<blockquote>Eleven commits, each with a refuter on record; about 5.5 hours of agent time across five prompts and roughly two hours of human review. (passage report#p1#62, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">WP4</span><span class="claim">The property itself found nothing: zero counterexamples in 10,000 checks, with …</span></summary>
+<div class="body">
+<p class="claimfull">The property itself found nothing: zero counterexamples in 10,000 checks, with 0 inputs refused, so all 10,000 were real; its refuter is the same test failing at the commit before be9e85c on a year overflow (57760 → −7776) that shipped, so it can see at least one real bug.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §WPP</p>
+<p class="meta">reason: The summary reproduces the source passage almost verbatim, preserving the subject, scope, direction, and all key details — zero counterexamples, 10,000 checks, 0 refused inputs, the refuter failing on the year-overflow bug. Fully faithful.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">WP5</span><span class="claim">Building it found four bugs: two in the codec (small integer types changed valu…</span></summary>
+<div class="body">
+<p class="claimfull">Building it found four bugs: two in the codec (small integer types changed value — uint8(200) came back as −56 — and integers too large for 32 bits, and floats, were silently truncated onto the wire) and two in the validator (it crashed outside a special build, and it compared a string containing the current time). All four fixed, each with a refuter.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §WPP</p>
+<p class="meta">reason: The claim matches the source exactly in subject, scope, direction, and detail: four bugs, two in the codec, two in the validator, with the same descriptions and the same conclusion that all four were fixed with refuters.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">WP7</span><span class="claim">A refuter checks behaviour not design: the first timestamp fix added a flag and…</span></summary>
+<div class="body">
+<p class="claimfull">A refuter checks behaviour not design: the first timestamp fix added a flag and a second rendering method and its refuter passed; the proper fix (move the timestamp to the log line, delete the second method) passed the same refuter and cost more agent time — the fix shape is a human&#39;s call and was skipped once before it was made.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §WPP</p>
+<p class="meta">reason: The summary accurately captures all key elements from the source: the principle stated, the two fixes described, both passing the refuter, the cost comparison, and the human-call note with the skip detail. No distortion.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">WP8</span><span class="claim">Against the plan: the test&#39;s value was mostly in what building it forced us to …</span></summary>
+<div class="body">
+<p class="claimfull">Against the plan: the test&#39;s value was mostly in what building it forced us to look at; its blind spot was exactly where it shared code with its subject; the expensive step was human review. First metric: one declaration closed in about two review-hours — 0.5 declarations per review-hour, review time recalled not timed.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §WPP</p>
+<p class="meta">reason: The summary reproduces the source passage almost verbatim, capturing the same subject, direction, qualifications, and metric. Every element matches exactly.</p>
+</div></details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">F12</span><span class="prop">Security — hardest: the attacker adapts and reads our product, so inputs can&#39;t be enumerated; no coverage figure exists until every entry point is listed (a day&#39;s work not done).</span><span class="dc">(SA10)</span></summary>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">SA9</span><span class="claim">Everything above assumes the producer doesn&#39;t care about us; an attacker change…</span></summary>
+<div class="body">
+<p class="claimfull">Everything above assumes the producer doesn&#39;t care about us; an attacker changes inputs based on our responses, can read our product, and creates inputs no driver would — so random sampling is back to hopeless.</p>
+<p class="meta">report: §Sampling</p>
+<p class="meta">reason: The summary closely mirrors the source passage in subject, scope, and direction: the prior assumption about passive producers, the attacker&#39;s three distinguishing traits, and the conclusion that random sampling fails. No material distortion.</p>
+<blockquote>Everything above assumes the producer is a program that doesn&#39;t care about us. An attacker is different: it changes its inputs based on our responses, it can download our product and read it, and it deliberately creates inputs no driver would. For attacker-supplied input, the input space is the whole file format again and random sampling is back to hopeless. (passage report#p1#44, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">SA10</span><span class="claim">The case is decided by who makes the input, not which product the code is in: a…</span></summary>
+<div class="body">
+<p class="claimfull">The case is decided by who makes the input, not which product the code is in: a redaction feature in a document product parses attacker-chosen input and belongs to the security case.</p>
+<p class="meta">so what: The report says what matters is who supplies the input, and a redaction tool belongs in the security bucket. No held source says this.</p>
+<p class="meta">report: §Sampling</p>
+<p class="meta">reason: The summary matches the source passage almost word for word in substance, direction, and scope. The source explicitly states the redaction feature belongs to the security case because an attacker chose its input, not because of which product it ships in.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">SE1</span><span class="claim">The producer is an attacker: it has our product, changes its next input based o…</span></summary>
+<div class="body">
+<p class="claimfull">The producer is an attacker: it has our product, changes its next input based on our last response, and is not limited to any bug class we have seen, so we cannot list its inputs; this case also covers every untrusted-input path in the other two products.</p>
+<p class="meta">report: §Security</p>
+<p class="meta">reason: The claim closely mirrors the source passage on every point: attacker as producer, adaptive inputs, no bug-class limit, inputs cannot be listed, and coverage of untrusted-input paths in the other products.</p>
+<blockquote>The producer is an attacker. It has our product and can read it. It changes its next input based on how we responded to the last one. It is not limited to any bug class we have seen. So we cannot list its inputs; we can only estimate them by running something that behaves like it. This case also covers every untrusted-input path in the other two products. (passage report#p1#65, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">SE2</span><span class="claim">The loop is a deterministic exploit check plus adversarial simulation: point an…</span></summary>
+<div class="body">
+<p class="claimfull">The loop is a deterministic exploit check plus adversarial simulation: point an LLM at the shipped product with no internal knowledge; anything it finds that our own review missed is a measured gap.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §Security</p>
+<p class="meta">reason: The summary reproduces the source&#39;s exact meaning, direction, and register. The source explicitly defines the loop as a deterministic exploit check combined with adversarial LLM simulation, with the same framing of &#34;measured gap&#34; for findings missed by internal review.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">SE3</span><span class="claim">Three non-negotiables: the blind (if it sees our findings/history/notes it is s…</span></summary>
+<div class="body">
+<p class="claimfull">Three non-negotiables: the blind (if it sees our findings/history/notes it is simulating us, not an attacker, and the result is void); a deterministic check (looking at the response not the path certifies attacks that never happened); several runs and a known positive (one run is one sample; finding nothing means nothing until the instrument has found something).</p>
+<p class="meta">report: §Security</p>
+<p class="meta">reason: The claim matches the source on all three points with the same meaning and register.</p>
+<blockquote>Three non-negotiables. **The blind:** if it can see our findings, fix history or notes, it is simulating us, not an attacker, and the result is void. **A deterministic check:** an LLM is a poor judge of its own findings, and a check that looks at the response rather than the path taken will certify attacks that never happened. **Several runs and a known positive:** one run is one sample from a noisy process, and finding nothing means nothing until the instrument has been shown to find something. (passage report#p1#66, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">SE4</span><span class="claim">Use more than one model family and a human red team, because our model&#39;s blind …</span></summary>
+<div class="body">
+<p class="claimfull">Use more than one model family and a human red team, because our model&#39;s blind spots are the attacker&#39;s model&#39;s blind spots but not a human attacker&#39;s [decays].</p>
+<p class="meta">so what: The report says &lt;/antml;parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §Security</p>
+<p class="meta">reason: The summary is a word-for-word copy of the source passage, preserving subject, scope, direction, and the [decays] qualifier.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">SE5</span><span class="claim">Re-run every model release against the frozen exploit checks and count what the…</span></summary>
+<div class="body">
+<p class="claimfull">Re-run every model release against the frozen exploit checks and count what the new model finds that they miss — that count is the rate at which our security tests go stale; a test with no such measurement since the last release should be treated as unreviewed.</p>
+<p class="meta">report: §Security</p>
+<p class="meta">reason: The summary reproduces the source&#39;s subject (re-running against frozen exploit checks at each model release), direction (counting what the new model finds that checks miss as the staleness rate), and conclusion (no such measurement = treated as unreviewed) with the same force and scope.</p>
+<blockquote>Re-run it every time a new model is released, against the frozen exploit checks, and count what the new model finds that the checks miss. That count is the rate at which our security tests go stale. A security test with no such measurement since the last model release should be treated as unreviewed. (passage report#p1#67, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">SE6</span><span class="claim">None of this gives a coverage figure until we have listed every externally reac…</span></summary>
+<div class="body">
+<p class="claimfull">None of this gives a coverage figure until we have listed every externally reachable entry point — that list is the denominator, and it is a day&#39;s work that has not been done.</p>
+<p class="meta">report: §Security</p>
+<p class="meta">reason: The summary claim reproduces the source passage almost verbatim in substance: same subject (coverage figure), same condition (listing every reachable entry point as denominator), same status (work not yet done). Fully faithful.</p>
+<blockquote>None of this gives a coverage figure until we have listed every externally reachable entry point — that list is the denominator, and it is a day&#39;s work that has not been done. (passage report#p1#67, unresolved)</blockquote>
+</div></details>
+</details>
+</details>
+<details class="card"><summary><span class="badge b-holds">holds</span><span class="id">REC10</span><span class="prop">Measure exported declarations closed per review-hour, paired with escaped bugs and coverage cells; grade a figure provisional until every number in it is reproducible.</span></summary>
+<details class="card"><summary><span class="badge b-holds">holds</span><span class="id">F13</span><span class="prop">First provisional row, IPP wire codec, 2026-09-05: 1 declaration closed, ~2 review-hours, 0.5 declarations per review-hour.</span></summary>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">OV12</span><span class="claim">What we measure is public functions covered by an approved test, per hour of hu…</span></summary>
+<div class="body">
+<p class="claimfull">What we measure is public functions covered by an approved test, per hour of human review; first measurement about half a function per review-hour, on the IPP wire codec, review time recalled not timed.</p>
+<p class="meta">report: §Overview</p>
+<p class="meta">reason: The claim matches the source exactly on every detail: the metric definition, the first measured value, the product it was measured on, and the caveat about timing.</p>
+<blockquote>**What we measure.** Public functions covered by an approved test, per hour of human review. First measurement: about half a function per review-hour, on the IPP wire codec, with the review time recalled rather than timed. (passage report#p1#7, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">ME1</span><span class="claim">Main number: exported declarations closed per hour of human review — exported o…</span></summary>
+<div class="body">
+<p class="claimfull">Main number: exported declarations closed per hour of human review — exported only so it can&#39;t be inflated by splitting helpers, though it can be gamed by moving code into internal/, so it is reported alongside statements per partition, lines accepted, and revisions per declaration.</p>
+<p class="meta">report: §What we measure</p>
+<p class="meta">reason: The claim matches the source on every point: the metric definition, the exported-only scope, the helper-splitting caveat, the internal/ gaming risk, and all four companion figures.</p>
+<blockquote>**Main number:** exported declarations closed per hour of human review. Exported only, so it can&#39;t be inflated by splitting helpers — though it can still be gamed by moving code into internal/, which is why it is always reported alongside **statements per partition**, **lines of code accepted**, and **revisions per declaration**. (passage report#p1#71, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">ME2</span><span class="claim">Paired with bugs that escaped, per closed declaration, measured later; neither …</span></summary>
+<div class="body">
+<p class="claimfull">Paired with bugs that escaped, per closed declaration, measured later; neither number is reported without the other.</p>
+<p class="meta">report: §What we measure</p>
+<p class="meta">reason: The summary reproduces the source&#39;s exact meaning: the main metric is always paired with escaped-bug data per closed declaration, and both must be reported together. Subject, scope, and direction match precisely.</p>
+<blockquote>**Paired with:** bugs that escaped, per closed declaration, measured later. Neither number is reported without the other. (passage report#p1#72, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">ME3</span><span class="claim">Coverage: producer × application × version cells held against cells shipped, an…</span></summary>
+<div class="body">
+<p class="claimfull">Coverage: producer × application × version cells held against cells shipped, and how fast that goes stale — no cell count, no coverage claim.</p>
+<p class="meta">report: §What we measure</p>
+<p class="meta">reason: The summary reproduces the source&#39;s definition of coverage, the staleness requirement, and the no-cell-count/no-coverage-claim rule almost verbatim. Subject, scope, and direction all match exactly.</p>
+<blockquote>**Coverage:** producer × application × version cells held, against cells shipped; and how fast that goes stale. No cell count, no coverage claim. (passage report#p1#73, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">ME4</span><span class="claim">Reach: the fraction of each partition that no test could cover and a human stil…</span></summary>
+<div class="body">
+<p class="claimfull">Reach: the fraction of each partition that no test could cover and a human still reads.</p>
+<p class="meta">report: §What we measure</p>
+<p class="meta">reason: The claim reproduces the passage&#39;s definition of &#34;Reach&#34; exactly — same subject, same scope, same meaning.</p>
+<blockquote>**Reach:** the fraction of each partition that no test could cover and a human still reads. (passage report#p1#74, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">ME5</span><span class="claim">Evidence grade: a figure is provisional until every number in it has a producin…</span></summary>
+<div class="body">
+<p class="claimfull">Evidence grade: a figure is provisional until every number in it has a producing command or a timestamp; provisional figures may be tracked but not quoted.</p>
+<p class="meta">report: §What we measure</p>
+<p class="meta">reason: The summary reproduces the source&#39;s definition and rule for provisional figures exactly — same subject, same direction, same conditions. No distortion, overstatement, or omission.</p>
+<blockquote>**Evidence grade.** A figure is *provisional* until every number in it has a producing command or a timestamp. Provisional figures may be tracked but not quoted. (passage report#p1#75, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">ME6</span><span class="claim">First row, provisional (IPP wire codec, 2026-09-05): 1 declaration closed; ~2 r…</span></summary>
+<div class="body">
+<p class="claimfull">First row, provisional (IPP wire codec, 2026-09-05): 1 declaration closed; ~2 review-hours (recalled); 0.5 declarations per review-hour; 5.5 agent-hours (timed); 11 commits; 4 bugs fixed; 1 checker blind spot found.</p>
+<p class="meta">report: §What we measure</p>
+<p class="meta">reason: The summary reproduces every figure in the source row exactly: 1 declaration, ~2 review-hours (recalled), 0.5 per hour, 5.5 agent-hours, 11 commits, 4 bugs, 1 blind spot. All numbers, qualifiers, and labels match.</p>
+<blockquote>**First row, provisional (IPP wire codec, 2026-09-05):** 1 declaration closed; \~2 review-hours (recalled); **0.5 declarations per review-hour**; 5.5 agent-hours (timed); 11 commits; 4 bugs fixed; 1 checker blind spot found. (passage report#p1#76, unresolved)</blockquote>
+</div></details>
+</details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">REC11</span><span class="prop">Build an asset that outlives its author — a written sampling procedure someone else can use unchanged (succession).</span><span class="dc">(F14)</span></summary>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">F14</span><span class="prop">The scarce knowledge (what to sample) is in one head; the procedure is not written down until someone else uses it to sample a new cell and the author accepts it unchanged.</span><span class="dc">(SU2)</span></summary>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">SU1</span><span class="claim">The point is an asset that outlives its author; right now the PDF method&#39;s most…</span></summary>
+<div class="body">
+<p class="claimfull">The point is an asset that outlives its author; right now the PDF method&#39;s most important part — knowing what to sample — is in one person&#39;s head.</p>
+<p class="meta">report: §Succession</p>
+<p class="meta">reason: The summary reproduces the source&#39;s exact meaning, direction, and subject: the goal is a lasting asset, and the key sampling knowledge currently sits with one individual. No hedging is removed, no scope is altered.</p>
+<blockquote>The point of all this is an asset that outlives its author. Right now the PDF method&#39;s most important part — knowing what to sample — is in one person&#39;s head. (passage report#p1#80, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">SU2</span><span class="claim">The succession test: someone other than the author, using only the written proc…</span></summary>
+<div class="body">
+<p class="claimfull">The succession test: someone other than the author, using only the written procedure and the corpus, chooses what to sample for a new cell, and the author accepts it unchanged; until that has happened once the procedure is not written down.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §Succession</p>
+<p class="meta">reason: The claim matches the source exactly in subject, scope, direction, and register.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">SU3</span><span class="claim">The asset must contain the sampling procedure, the corpus with each file&#39;s orig…</span></summary>
+<div class="body">
+<p class="claimfull">The asset must contain the sampling procedure, the corpus with each file&#39;s origin and cell, the tests with refuter records, the descriptions with review marks, and the staleness measurements; a partition missing any cannot be handed on.</p>
+<p class="meta">report: §Succession</p>
+<p class="meta">reason: The summary closely and accurately restates the source&#39;s subject, scope, and direction. Every listed component matches, and the consequence (&#34;cannot be handed on&#34;) is directly stated in the source.</p>
+<blockquote>What the asset has to contain: the sampling procedure; the corpus, with where each file came from and which cell it fills; the tests with their refuter records; the descriptions with their review marks; the staleness measurements. A partition missing any of these cannot be handed on. (passage report#p1#81, unresolved)</blockquote>
+</div></details>
+</details>
+</details>
+<details class="card"><summary><span class="badge b-open">open</span><span class="id">REC12</span><span class="prop">Avoid anything that still needs a human per change, and anything that samples the wrong inputs.</span><span class="dc">(F15)</span></summary>
+<details class="card"><summary><span class="badge b-open">open</span><span class="id">F15</span><span class="prop">The anti-list: better generators, better prompts, specs without tests, tests without refuters, shared-code checkers, trusting a model as a compiler, counting lines; and random / volume-weighted / product-filed sampling.</span><span class="dc">(AV2)</span></summary>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">OV13</span><span class="claim">What we don&#39;t do: buy better code generators, write better review prompts, rewr…</span></summary>
+<div class="body">
+<p class="claimfull">What we don&#39;t do: buy better code generators, write better review prompts, rewrite old code from a spec, or count lines.</p>
+<p class="meta">report: §Overview</p>
+<p class="meta">reason: The summary matches the source exactly in subject, scope, and direction. All four items listed appear verbatim in the passage under &#34;What we don&#39;t do.&#34; No hedging or qualification is omitted.</p>
+<blockquote>**What we don&#39;t do.** Buy better code generators. Write better review prompts. Rewrite old code from a spec. Count lines. (passage report#p1#8, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-weakened">partial</span><span class="note">5/6 ≠ faithful</span><span class="id">AV1</span><span class="claim">Avoid anything that still needs a human per change: better code generators (acc…</span></summary>
+<div class="body">
+<p class="claimfull">Avoid anything that still needs a human per change: better code generators (acceptance, not generation, is the bottleneck), better review prompts, specifications without tests, tests without refuters, checkers that share code with what they check, trusting a model version as if it were a compiler, counting lines or defects per KLOC.</p>
+<p class="meta">so what: The report says All those listed items should be avoided because each still needs a human per change. The source only says The source lists those items under things to avoid, but only the first two (better generators, better review prompts) are explicitly tied to &#34;still a human per change&#34;; the rest are listed as things to avoid for their own stated reasons.</p>
+<p class="meta">report: §What to avoid</p>
+<p class="meta">reason: The summary frames all seven items as things to avoid because they &#34;still need a human per change.&#34; The source only applies that label to the first two; the remaining five are listed as things to avoid for distinct reasons (tests never seen red, shared-code blind spots, model replacement, wrong metrics). The framing collapses different rationales into one.</p>
+<blockquote>* Better code generators. Generation is not the bottleneck; acceptance is.
+&gt; * Better review prompts. Still a human per change.
+&gt; * Specifications without tests.
+&gt; * Tests without refuters. A test never seen red is not evidence.
+&gt; * Checkers that share code with what they check.
+&gt; * Trusting a model version as if it were a compiler. It will be replaced.
+&gt; * Counting lines or defects per KLOC. Neither measures the thing that fails to scale. (passage report#p1#69, unresolved)</blockquote>
+<blockquote>Anything that still needs a human per change: (passage report#p1#68, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-contested">faithful</span><span class="note">5/6 ≠ unsupported</span><span class="id">AV2</span><span class="claim">Avoid anything that samples the wrong inputs: random inputs, corpora weighted b…</span></summary>
+<div class="body">
+<p class="claimfull">Avoid anything that samples the wrong inputs: random inputs, corpora weighted by traffic volume, filing code by product instead of by who produces its input, and using the PDF result as evidence about WPP or security.</p>
+<p class="meta">report: §What to avoid</p>
+<p class="meta">reason: The claim lists exactly the four items the source lists, in the same framing (things to avoid), with the same scope and direction. No hedging removed, no meaning changed.</p>
+<blockquote>* Random inputs. Hopeless on multi-condition bugs, and no customer sends them.
+&gt; * Corpora weighted by traffic volume. They miss the cell that is one customer&#39;s whole workload.
+&gt; * Filing code by product instead of by who produces its input.
+&gt; * Using the PDF result as evidence about WPP or security. (passage report#p1#70, unresolved)</blockquote>
+</div></details>
+</details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">base<span class="q"> ?</span></span><span class="prop">The plan&#39;s descriptive base — its vocabulary, goal and premises, the questions it does not settle, the provenance of its rules, and the design cautions carried across all cases.</span><span class="dc">(B-GOAL)</span></summary>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">B-GOAL</span><span class="prop">Goal and premises: survive the transition from a legacy of unspecified working code; the three pieces look alike but differ, and the input&#39;s producer decides which case each partition is.</span><span class="dc">(PR3)</span></summary>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">OV1</span><span class="claim">AI can now write more code than we can read; a 13,000-line pull request is not …</span></summary>
+<div class="body">
+<p class="claimfull">AI can now write more code than we can read; a 13,000-line pull request is not reviewable by a person.</p>
+<p class="meta">report: §Overview</p>
+<p class="meta">reason: The summary reproduces the source&#39;s exact two claims verbatim in substance: AI writes more code than humans can read, and a 13,000-line pull request is not reviewable by a person. Both subject, scope, and direction match precisely.</p>
+<blockquote>AI can now write more code than we can read. A 13,000-line pull request is not reviewable by a person. (passage report#p1#2, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">OV2</span><span class="claim">If we keep reviewing by reading, either the code doesn&#39;t get read or it doesn&#39;t…</span></summary>
+<div class="body">
+<p class="claimfull">If we keep reviewing by reading, either the code doesn&#39;t get read or it doesn&#39;t get written.</p>
+<p class="meta">report: §Overview</p>
+<p class="meta">reason: The claim is copied word-for-word from the source passage, preserving subject, scope, direction, and register exactly.</p>
+<blockquote>If we keep reviewing by reading, either the code doesn&#39;t get read or it doesn&#39;t get written. (passage report#p1#2, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-open">unverifiable</span><span class="note">6/6</span><span class="id">OV5</span><span class="claim">A test is only as good as the inputs it runs on: if the inputs don&#39;t look like …</span></summary>
+<div class="body">
+<p class="claimfull">A test is only as good as the inputs it runs on: if the inputs don&#39;t look like what customers send, the test passes and the customer finds the bug.</p>
+<p class="meta">report: §Overview</p>
+<p class="meta">reason: schema failure: the judge reason carried a raw tag (The summary reproduces the source&#39;s exact point, direction, and scope: test quality depends on input quality, and mismatched inputs mean customers discover failures instead of tests. Fully faithful.&lt;/antml_parameter&gt;)</p>
+<blockquote>A test is only as good as the inputs it runs on. If the inputs don&#39;t look like what customers send, the test passes and the customer finds the bug. (passage report#p1#4, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">OV6</span><span class="claim">The hard part is not writing tests; it is knowing what inputs to feed them, and…</span></summary>
+<div class="body">
+<p class="claimfull">The hard part is not writing tests; it is knowing what inputs to feed them, and that differs per piece of work.</p>
+<p class="meta">report: §Overview</p>
+<p class="meta">reason: The passage directly states both propositions in the claim: the hard part is knowing what inputs to feed tests, and this varies across the pieces of work. The claim faithfully captures subject, scope, and direction.</p>
+<blockquote>So the hard part is not writing tests; it is knowing what inputs to feed them. That is different for each of our three current pieces of work, and it gets harder in this order: (passage report#p1#4, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">OV7</span><span class="claim">The three pieces of work get harder in this order: document products (easy), WP…</span></summary>
+<div class="body">
+<p class="claimfull">The three pieces of work get harder in this order: document products (easy), WPP (hard), security (hardest).</p>
+<p class="meta">report: §Overview</p>
+<p class="meta">reason: The source explicitly ranks the three work areas in exactly this order with the same difficulty labels.</p>
+<blockquote>They look like the same problem but aren&#39;t. What makes each one hard is different, and putting them in order from easiest to hardest is the main thing this document has to say. (passage report#p1#13, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-contested">faithful</span><span class="note">4/6 ≠ unsupported</span><span class="id">OV9</span><span class="claim">WPP is hard: the thing we have to match is inside Windows, closed source, and w…</span></summary>
+<div class="body">
+<p class="claimfull">WPP is hard: the thing we have to match is inside Windows, closed source, and we can only see part of it.</p>
+<p class="meta">report: §Overview</p>
+<p class="meta">reason: The summary reproduces the source&#39;s exact characterisation of WPP — hard, inside Windows, closed source, partially observable — with the same subject, scope, and direction. No distortion or overstatement.</p>
+<blockquote>**WPP** — hard. The thing we have to match is inside Windows, closed source, and we can only see part of it. (passage report#p1#5, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-contested">unsupported</span><span class="note">4/6 ≠ faithful, overstated</span><span class="id">OV10</span><span class="claim">Security is hardest: the input comes from an attacker who adapts to us, and not…</span></summary>
+<div class="body">
+<p class="claimfull">Security is hardest: the input comes from an attacker who adapts to us, and nothing about the easy case carries over.</p>
+<p class="meta">so what: The report says The security problem is the toughest, driven by an adaptive attacker, with no lessons from the simple case. No held source says this.</p>
+<p class="meta">report: §Overview</p>
+<p class="meta">reason: The summary maps directly onto the source bullet: &#34;hardest&#34;, &#34;attacker who adapts&#34;, and &#34;nothing about the easy case carries over&#34; all appear verbatim in the passage with the same meaning and register.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">GO1</span><span class="claim">The goal is to survive the transition to AI-generated code — not to build the b…</span></summary>
+<div class="body">
+<p class="claimfull">The goal is to survive the transition to AI-generated code — not to build the best AI coder or reviewer.</p>
+<p class="meta">report: §Goal</p>
+<p class="meta">reason: The passage states exactly this: survive the transition to AI-generated code, not build the best AI coder or reviewer. The summary captures the subject, direction, and contrast faithfully with no overstatement or distortion.</p>
+<blockquote>Survive the transition to AI-generated code. Not build the best AI coder or reviewer. We start from a legacy of working code with no written specification for most of it. (passage report#p1#10, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">GO2</span><span class="claim">We start from a legacy of working code with no written specification for most o…</span></summary>
+<div class="body">
+<p class="claimfull">We start from a legacy of working code with no written specification for most of it.</p>
+<p class="meta">report: §Goal</p>
+<p class="meta">reason: The summary claim reproduces the source sentence exactly. Subject, scope, and direction all match.</p>
+<blockquote>We start from a legacy of working code with no written specification for most of it. (passage report#p1#10, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-weakened">faithful</span><span class="note">4/6 ≠ partial</span><span class="id">GO3</span><span class="claim">The three pieces of work (WPP, document-based products, security) look like the…</span></summary>
+<div class="body">
+<p class="claimfull">The three pieces of work (WPP, document-based products, security) look like the same problem but aren&#39;t; ordering them easiest to hardest is the main thing this document has to say.</p>
+<p class="meta">report: §Goal</p>
+<p class="meta">reason: The source passage directly matches the claim&#39;s two assertions: the three cases are not the same problem, and ranking them easiest to hardest is the document&#39;s main purpose. The claim is faithful.</p>
+<blockquote>They look like the same problem but aren&#39;t. What makes each one hard is different, and putting them in order from easiest to hardest is the main thing this document has to say. (passage report#p1#13, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">PR3</span><span class="claim">The plan runs over years and models will get stronger; claims hold at any model…</span></summary>
+<div class="body">
+<p class="claimfull">The plan runs over years and models will get stronger; claims hold at any model strength unless tagged [improves] or [decays].</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §The principles</p>
+<p class="meta">reason: The summary matches the passage on all three axes: the plan spans years, models grow stronger, and assertions hold unless tagged.</p>
+</div></details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">B-GL</span><span class="prop">Glossary — the shared vocabulary the rest of the plan is stated in.</span><span class="dc">(GL2)</span></summary>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">GL1</span><span class="claim">Checker: anything that says pass or fail about a change without a person readin…</span></summary>
+<div class="body">
+<p class="claimfull">Checker: anything that says pass or fail about a change without a person reading it — a test, a comparison against an independent program, a round trip, a real device.</p>
+<p class="meta">report: §Words used in this document</p>
+<p class="meta">reason: The summary matches the glossary entry exactly in subject, scope, and direction.</p>
+<blockquote>Checker | Anything that says pass or fail about a change without a person reading it: a test, a comparison against an independent program, a round trip, a real device. (passage report#p1#9, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">GL2</span><span class="claim">Test: an automated test in the ordinary Go sense — a _test.go function that pas…</span></summary>
+<div class="body">
+<p class="claimfull">Test: an automated test in the ordinary Go sense — a _test.go function that passes or fails, either a property or a check over a fixed set of files.</p>
+<p class="meta">so what: The report says &lt;/antml :parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §Words used in this document</p>
+<p class="meta">reason: The claim matches the glossary entry exactly in subject, scope, and direction.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">GL5</span><span class="claim">Declaration: Go&#39;s word for a top-level func, type, var, const or method; the un…</span></summary>
+<div class="body">
+<p class="claimfull">Declaration: Go&#39;s word for a top-level func, type, var, const or method; the unit we count.</p>
+<p class="meta">report: §Words used in this document</p>
+<p class="meta">reason: The summary reproduces the glossary entry verbatim in substance: same term, same definition, same scope.</p>
+<blockquote>Declaration | Go&#39;s word for a top-level func, type, var, const or method. The unit we count. (passage report#p1#9, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">GL6</span><span class="claim">Producer: whatever creates the inputs a piece of code receives — a printer driv…</span></summary>
+<div class="body">
+<p class="claimfull">Producer: whatever creates the inputs a piece of code receives — a printer driver, a Windows print stack, an attacker; not a property-test generator.</p>
+<p class="meta">report: §Words used in this document</p>
+<p class="meta">reason: The summary matches the glossary entry exactly in subject, scope, direction, and register.</p>
+<blockquote>Producer | Whatever creates the inputs a piece of code receives: a printer driver, a Windows print stack, an attacker. Not to be confused with a property-test *generator*, which is a random-input source inside a test. (passage report#p1#9, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-open">unverifiable</span><span class="note">6/6</span><span class="id">GL7</span><span class="claim">Partition: a part of the codebase whose inputs all come from the same kind of p…</span></summary>
+<div class="body">
+<p class="claimfull">Partition: a part of the codebase whose inputs all come from the same kind of producer.</p>
+<p class="meta">report: §Words used in this document</p>
+<p class="meta">reason: schema failure: the judge reason carried a raw tag (The claim reproduces the glossary definition verbatim in substance. Subject, scope, and direction match exactly.&lt;/antml_parameter&gt;)</p>
+<blockquote>Partition | A part of the codebase whose inputs all come from the same kind of producer. The PDF parser is one partition; the redaction path is another, even though both are in the same product. (passage report#p1#9, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">GL8</span><span class="claim">Cell: one producer, one application, one version — the unit we count coverage i…</span></summary>
+<div class="body">
+<p class="claimfull">Cell: one producer, one application, one version — the unit we count coverage in.</p>
+<p class="meta">report: §Words used in this document</p>
+<p class="meta">reason: The summary reproduces the glossary definition exactly in substance and direction.</p>
+<blockquote>Cell | One producer, one application, one version. The unit we count coverage in. (passage report#p1#9, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">GL9</span><span class="claim">Differential testing: run our code and an independent implementation on the sam…</span></summary>
+<div class="body">
+<p class="claimfull">Differential testing: run our code and an independent implementation on the same input and compare results.</p>
+<p class="meta">report: §Words used in this document</p>
+<p class="meta">reason: The claim reproduces the glossary definition of differential testing word-for-word in substance. Subject, scope, and direction all match exactly.</p>
+<blockquote>Differential testing | Run our code and an independent implementation on the same input and compare results. (passage report#p1#9, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">GL10</span><span class="claim">Closed: a declaration is closed when its test passes, its refuter is on record,…</span></summary>
+<div class="body">
+<p class="claimfull">Closed: a declaration is closed when its test passes, its refuter is on record, and its description has been read and approved.</p>
+<p class="meta">report: §Words used in this document</p>
+<p class="meta">reason: The summary reproduces the glossary entry word for word. All three conditions — test passes, refuter on record, description read and approved — are present with the same meaning and no added or removed qualifications.</p>
+<blockquote>Closed | A declaration is closed when its test passes, its refuter is on record, and its description has been read and approved. (passage report#p1#9, unresolved)</blockquote>
+</div></details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">B-OPEN</span><span class="prop">What the plan does not settle — extraction, the compression bet for new behaviour, the before-method PDF bug count, counting producers, keeping the security blind, training, timing review.</span><span class="dc">(NS1)</span></summary>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">NS1</span><span class="claim">Extraction is unsettled; the experiment above is its first test, on the easiest…</span></summary>
+<div class="body">
+<p class="claimfull">Extraction is unsettled; the experiment above is its first test, on the easiest case.</p>
+<p class="meta">so what: The report says Extraction is unsettled; the experiment above is its first test, on the easiest case.. No held source says this.</p>
+<p class="meta">report: §What this does not settle</p>
+<p class="meta">reason: The passage states exactly this: extraction&#39;s first test is the experiment above, on the easiest case. The summary reproduces subject, scope, and direction without distortion.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-weakened">partial</span><span class="note">6/6</span><span class="id">NS2</span><span class="claim">Whether tests are shorter than code for new behaviour is unknown (nearly certai…</span></summary>
+<div class="body">
+<p class="claimfull">Whether tests are shorter than code for new behaviour is unknown (nearly certain for no-behaviour-change work).</p>
+<p class="meta">so what: The report says tests being shorter than code for new work is unknown; nearly certain for no-change work. The source only says for no-behaviour-change work the test being shorter is nearly guaranteed; for new behaviour it is an open question.</p>
+<p class="meta">report: §What this does not settle</p>
+<p class="meta">reason: The source says &#34;nearly guaranteed&#34; (not &#34;nearly certain&#34;) for no-behaviour-change work, and &#34;open question&#34; (not &#34;unknown&#34;) for new behaviour. The claim inverts the parenthetical and the main clause, and softens &#34;nearly guaranteed&#34; to &#34;nearly certain&#34;. Minor but the parenthetical misrepresents the source&#39;s stronger word.</p>
+<blockquote>For changes that alter no behaviour, that is nearly guaranteed: the test is &#34;old and new agree on these inputs&#34;, written once for the whole partition. For new behaviour, each function needs its own test, and whether that is shorter than the code is the open question. The two do not stand or fall together. (passage report#p1#33, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">NS3</span><span class="claim">The before-method bug count that would make the PDF result evidence rather than…</span></summary>
+<div class="body">
+<p class="claimfull">The before-method bug count that would make the PDF result evidence rather than anecdote is missing.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §What this does not settle</p>
+<p class="meta">reason: The passage explicitly lists this as an open item still needed, matching the claim exactly in subject, scope, and direction.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">NS4</span><span class="claim">Counting the producers is unsettled: &#34;a handful of patterns&#34; has held as a judg…</span></summary>
+<div class="body">
+<p class="claimfull">Counting the producers is unsettled: &#34;a handful of patterns&#34; has held as a judgement for a decade and has never been counted; the count must key on file structure, not the Producer string.</p>
+<p class="meta">so what: The report says How many producer types exist is still unknown; file layout must drive the tally. No held source says this.</p>
+<p class="meta">report: §What this does not settle</p>
+<p class="meta">reason: The summary accurately captures all three elements from the source: the open status of the count, the decade-long informal estimate, and the rule that file structure (not the Producer string) must be used. No distortion or omission.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">NS5</span><span class="claim">Whether the security blind can be kept in practice is unsettled; enforcing &#34;new…</span></summary>
+<div class="body">
+<p class="claimfull">Whether the security blind can be kept in practice is unsettled; enforcing &#34;new version, never edit&#34; in a git repo is currently a convention; training and measuring review time are open.</p>
+<p class="meta">so what: The report says Security blind, no-edit rule, training, and review timing are all open issues. No held source says this.</p>
+<p class="meta">report: §What this does not settle</p>
+<p class="meta">reason: The claim accurately lists four open items — security blind, &#34;new version never edit&#34; as convention, training, and measuring review time — each directly supported verbatim in report#p1#82 with matching direction and scope.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">AP0</span><span class="claim">Sources marked [cite path] have not yet been verified in this document and shou…</span></summary>
+<div class="body">
+<p class="claimfull">Sources marked [cite path] have not yet been verified in this document and should be read as claims, not citations.</p>
+<p class="meta">so what: The report says Items tagged cite path are unverified and count only as claims. No held source says this.</p>
+<p class="meta">report: §Appendix</p>
+<p class="meta">reason: The summary reproduces the passage almost verbatim and accurately captures the meaning: tagged sources are unverified and should be treated as claims rather than confirmed citations.</p>
+</div></details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">B-PROV</span><span class="prop">Where the rules came from — internal projects the reader may not know, several self-graded [cite path] (unverified in the document).</span><span class="dc">(AP2)</span></summary>
+<details class="card leaf"><summary><span class="badge b-contested">unsupported</span><span class="note">4/6 ≠ faithful</span><span class="id">AP1</span><span class="claim">&#34;Didn&#39;t look&#34; as a distinct result came from local PDF redaction tooling: PASS/…</span></summary>
+<div class="body">
+<p class="claimfull">&#34;Didn&#39;t look&#34; as a distinct result came from local PDF redaction tooling: PASS/FAIL/ERROR/REFUSED outcomes and an Incomplete() gate [cite path].</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §Appendix</p>
+<p class="meta">reason: The summary matches the passage exactly in subject, scope, and wording, including the [cite path] placeholder.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">AP2</span><span class="claim">Wrong channel came from redaction: text removed from the content stream but pre…</span></summary>
+<div class="body">
+<p class="claimfull">Wrong channel came from redaction: text removed from the content stream but present in /Info metadata in 11 of 24 real files, plus an XPS case where bytes were clean and the render was not [cite path]; and WPP&#39;s 65/65 transport finding.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §Appendix</p>
+<p class="meta">reason: The summary matches the source passage almost exactly in subject, scope, and direction.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">AP3</span><span class="claim">Producer string is not the cell key: 24 of 24 redaction corpus files read &#34;Aspo…</span></summary>
+<div class="body">
+<p class="claimfull">Producer string is not the cell key: 24 of 24 redaction corpus files read &#34;Aspose&#34; after an upload pipeline rewrote them; structural clustering placed 89% of files in 49 clusters [cite path].</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §Appendix</p>
+<p class="meta">reason: The claim matches the passage exactly in subject, scope, direction, and figures, including the [cite path] caveat.</p>
+</div></details>
+</details>
+<details class="card"><summary><span class="badge b-fails">fails</span><span class="id">B-DESIGN</span><span class="prop">Design cautions carried across the cases: a refuter checks behaviour not design, frozen is not forever, and where a statement lives in the repo.</span><span class="dc">(TC6)</span></summary>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">ST10</span><span class="claim">Where a statement lives: the test is a _test.go function, the description is it…</span></summary>
+<div class="body">
+<p class="claimfull">Where a statement lives: the test is a _test.go function, the description is its doc comment, the refuter is a dated entry under docs/reviews/ quoting the red run and its commit; whether to make refuters executable is open.</p>
+<p class="meta">report: §What a statement is</p>
+<p class="meta">reason: The claim matches the source on every point: test is a _test.go function, description is its doc comment, refuter is a dated docs/reviews/ entry quoting the red run and commit, and making refuters executable remains open.</p>
+<blockquote>The test is a \_test.go function; the description is its doc comment. The refuter is a dated entry under docs/reviews/ quoting the red run and the commit it was run against. That is current practice on ipp; whether to also make refuters executable (a build-tagged test that asserts red against a reverted fix) is open. (passage report#p1#26, unresolved)</blockquote>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-fails">unsupported</span><span class="note">6/6</span><span class="id">TC6</span><span class="claim">A refuter checks behaviour not design: a fix can pass its refuter and still be …</span></summary>
+<div class="body">
+<p class="claimfull">A refuter checks behaviour not design: a fix can pass its refuter and still be the wrong shape, and that judgement stays with a person.</p>
+<p class="meta">so what: The report says &lt;/antml_parameter&gt;
+&lt;parameter name=&#34;source_says&#34;&gt;. No held source says this.</p>
+<p class="meta">report: §Tests are code too</p>
+<p class="meta">reason: The claim matches the source exactly in subject, direction, and force. Both the principle and its implication — that human judgement is still required — are stated plainly and without hedging in the passages.</p>
+</div></details>
+<details class="card leaf"><summary><span class="badge b-holds">faithful</span><span class="note">6/6</span><span class="id">TC7</span><span class="claim">Frozen is not forever: tests against a driver population go stale as drivers up…</span></summary>
+<div class="body">
+<p class="claimfull">Frozen is not forever: tests against a driver population go stale as drivers update (trigger: the corpus staleness figure); tests against an attacker go stale as models improve (trigger: a model release).</p>
+<p class="meta">report: §Tests are code too</p>
+<p class="meta">reason: The claim mirrors the source sentence-for-sentence: same two test categories, same two staleness triggers, same framing that &#34;frozen&#34; has limits.</p>
+<blockquote>Frozen is not forever. Tests against a driver population go stale as drivers update; the trigger to re-review is the corpus staleness figure. Tests against an attacker go stale as models improve; the trigger is a model release. (passage report#p1#79, unresolved)</blockquote>
+</div></details>
+</details>
+</details>
+<div class="key">
+<b>R</b> = recommendation, <b>F</b> = finding. Each badge shows its class as a word, so the colour is redundant.<br>
+<span class="badge b-holds">holds</span> every claim underneath was found in a source saying what the report says.<br>
+<span class="badge b-weakened">weakened</span> found, but the source says less.<br>
+<span class="badge b-open">open</span> the report doesn't say what this rests on, or the sources don't settle a claim.<br>
+<span class="badge b-fails">fails</span> a claim it rests on was not found in any held source.<br>
+<span class="badge b-opinion">opinion</span> the Committee's own view; not checked.<br>
+<span class="badge b-contested">contested</span> a claim the runs could not settle.
+</div>
+<p class="nav"><a href="review.html">Open the two-pane reading — the report on the left, this tree on the right</a> · <a href="sources/report.pdf">the report as published</a></p>
+</main>
+<script>
+{const p=new URLSearchParams(location.search).get("open")==="all",d=document.querySelectorAll("details.card"),b=document.querySelector(".toggle");if(p)d.forEach(x=>{x.open=true});if(b)b.onclick=()=>{const o=[...d].some(x=>!x.open);d.forEach(x=>{x.open=o});b.textContent=o?"Collapse all":"Expand all"}}
+</script>
+</body></html>

@@ -1,0 +1,3 @@
+# Held sources are analysis inputs, not redistributed. MANIFEST is the tracked record.
+sources/*
+!sources/MANIFEST.md

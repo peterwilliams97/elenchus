@@ -1,0 +1,149 @@
+model claude-sonnet-4-6 · backend anthropic · calls 620 · $6.6328 (rates 2026-06-01) · wall 59m19s
+124 findings checked against 5 source documents
+
+Holds: 63 findings say what their sources say.
+Unsupported by any held source: 60
+  OV8: The report says The document-products case is easy, with no bugs from customers in years. No held source says this.
+  OV10: The report says The security problem is the toughest, driven by an adaptive attacker, with no lessons from the simple case. No held source says this.
+  GL2: The report says </antml :parameter> <parameter name="source_says">. No held source says this.
+  and 57 more
+Generalised from narrower evidence: 1
+  LP3: The report says After the 32-bit integer issue, the test was updated again, and then it settled after a few rounds.. The source only says After the 32-bit issue the test was changed again,…
+
+Changes 11 summary lines across 11 chapters.
+
+tree — depth 4, max width 7, score 19.0 (target ≤20) ok
+
+  1–7  1–7  [7]
+    1  Overview  [2]
+      OV1–OV7  OV1–OV7  [7]
+      OV8–OV13  OV8–OV13  [6]
+        OV8  Document products are easy: PDFs come from a small, known s…  unsupported 3/3
+            ↳ so what: The report says The document-products case is easy, with no bugs from customers in years. No held source says this.
+        OV9  WPP is hard: the thing we have to match is inside Windows, …  faithful 2/3 ≠ unsupported
+        OV10  Security is hardest: the input comes from an attacker who a…  unsupported 3/3
+            ↳ so what: The report says The security problem is the toughest, driven by an adaptive attacker, with no lessons from the simple case. No held source says this.
+        OV11  Four rules: a test doesn't count until it has been seen to …  faithful 3/3
+        OV12  What we measure is public functions covered by an approved …  faithful 3/3
+        OV13  What we don't do: buy better code generators, write better …  faithful 3/3
+    2  Words used in this document  [2]
+      GL1–GL7  GL1–GL7  [7]
+        GL1  Checker: anything that says pass or fail about a change wit…  faithful 3/3
+        GL2  Test: an automated test in the ordinary Go sense — a _test.…  unsupported 3/3
+            ↳ so what: The report says </antml :parameter>
+<parameter name="source_says">. No held source says this.
+        GL3  Refuter: the run that proves a test can fail — revert the c…  faithful 3/3
+        GL4  Statement: a test plus a plain-English description of what …  faithful 3/3
+        GL5  Declaration: Go's word for a top-level func, type, var, con…  faithful 3/3
+        GL6  Producer: whatever creates the inputs a piece of code recei…  faithful 3/3
+        GL7  Partition: a part of the codebase whose inputs all come fro…  faithful 3/3
+      GL8–GL10  GL8–GL10  [3]
+    3  Goal  [3]
+    4  The principles  [3]
+      PR1  Use one check for many changes wherever you can; where you …  faithful 3/3
+      PR2  A check is only as good as the inputs you feed it: know wha…  faithful 3/3
+      PR3  The plan runs over years and models will get stronger; clai…  unsupported 3/3
+          ↳ so what: The report says </antml_parameter>
+<parameter name="source_says">. No held source says this.
+    5  Why the test, not the code  [5]
+      WT1  There are three ways to trust machine-written code: one che…  faithful 3/3
+      WT2  Every earlier shift (assembly→compilers, hand code→librarie…  faithful 3/3
+      WT3  The model we use will be replaced repeatedly, and trust in …  faithful 3/3
+      WT4  The FLT formalisation worked because Lean's kernel checked …  unsupported 3/3
+          ↳ so what: The report says The FLT project succeeded because a machine checked all 13 million lines, so no human had to read them. No held source says this.
+      WT5  We have no kernel, so a statement here has to bring its own…  faithful 3/3
+    6  What a statement is  [2]
+      R-REF–ST6  R-REF–ST6  [7]
+        R-REF  When we ran refuters on the IPP library in August (refuter …  faithful 3/3
+        ST1  A statement has two parts: an automated test that returns p…  unsupported 3/3
+            ↳ so what: The report says </antml_parameter>
+<parameter name="source_says">. No held source says this.
+        ST2  A failure is proof of a defect; a pass is only the absence …  faithful 3/3
+        ST3  When we ask whether a statement is shorter than the code it…  faithful 3/3
+        ST4  Prove2Me, the platform behind the FLT proof, has the same p…  faithful 3/3
+        ST5  A test is not a statement until it has a refuter: revert th…  faithful 3/3
+        ST6  The refuter is mutation testing with one mutation and only …  faithful 3/3
+      ST7–ST10  ST7–ST10  [4]
+        ST7  A test must say "didn't look" as well as "found nothing": a…  unsupported 3/3
+            ↳ so what: The report says </antml_parameter>
+<parameter name="source_says">. No held source says this.
+        ST8  A redaction scan of a PDF whose text is an image finds zero…  faithful 3/3
+        ST9  The codec property test counts how many inputs the writer r…  faithful 3/3
+        ST10  Where a statement lives: the test is a _test.go function, t…  faithful 3/3
+    7  The loop  [7]
+      LP1  You don't know the right test until the code has failed it …  faithful 3/3
+      LP2  In the codec work, a generated date with year 57760 read ba…  faithful 3/3
+      LP3  Then integers wider than 32 bits read back wrong for the sa…  partial 3/3
+          ↳ so what: The report says After the 32-bit integer issue, the test was updated again, and then it settled after a few rounds.. The source only says After the 32-bit issue the test was changed again, and the final stable version became the accepted statement — but this was one step in a longer chain starting with a year-range bug..
+      LP4  The PDF library update established the rule: run the checks…  unsupported 3/3
+          ↳ so what: The report says </antml_parameter>
+<parameter name="source_says">. No held source says this.
+      LP5  Count the review time for every version of the test, not ju…  unsupported 3/3
+          ↳ so what: The report says Track time spent on all test drafts, show how many drafts there were, and begin drafting before coding. No held source says this.
+      LP6  The bet: this pays off only if the test plus its descriptio…  unsupported 2/3 ≠ faithful
+          ↳ so what: The report says the whole approach is worthwhile only when the test and description together take less effort than reading the code. No held source says this.
+      LP7  For no-behaviour-change work the bet is nearly guaranteed; …  faithful 3/3
+  8–14  8–14  [7]
+    8  Choosing what to work on  [6]
+      CH1  Choose by how good a checker is available, not by where the…  faithful 3/3
+      CH2  Before a partition, answer: what checker exists; what input…  faithful 2/3 ≠ unsupported
+      CH3  Triage time falls as models improve [improves], so partitio…  unsupported 3/3
+          ↳ so what: The report says </antml_parameter>
+<parameter name="source_says">. No held source says this.
+      CH4  Nobody has computed a number from these questions; they are…  faithful 3/3
+      CH5  Differential testing catches transcription errors reliably …  unsupported 3/3
+          ↳ so what: The report says </antml_parameter>
+<parameter name="source_says">. No held source says this.
+      CH6  The model writing our code has read poppler and mupdf; if i…  faithful 3/3
+    9  Sampling: what to feed the checker  [2]
+      SA1–SA7  SA1–SA7  [7]
+        SA1  Sampling is the precondition, and it is harder than buildin…  faithful 3/3
+        SA2  Random inputs don't work: if a bug needs three unusual cond…  faithful 3/3
+        SA3  The standard answer is combinatorial testing: build the inp…  faithful 3/3
+        SA4  Real inputs are cheaper still: they are made by a small num…  faithful 3/3
+        SA5  Producers cluster by time, customer and application, giving…  unsupported 2/3 ≠ faithful
+            ↳ so what: The report says </antml_parameter>
+<parameter name="source_says">. No held source says this.
+        SA6  Customers cluster too, so a pattern that is 0.1% of global …  faithful 3/3
+        SA7  New driver versions open new cells so the corpus goes stale…  faithful 3/3
+      SA8–SA10  SA8–SA10  [3]
+        SA8  Independent implementations (poppler, mupdf) are weakest on…  faithful 3/3
+        SA9  Everything above assumes the producer doesn't care about us…  faithful 3/3
+        SA10  The case is decided by who makes the input, not which produ…  unsupported 3/3
+            ↳ so what: The report says what matters is who supplies the input, and a redaction tool belongs in the security bucket. No held source says this.
+    10  Which AI-written changes are eligible  [4]
+      EL1  Changes that alter no behaviour (refactor, consolidation, p…  faithful 2/3 ≠ unsupported
+      EL2  Three things a person still decides for a no-behaviour-chan…  faithful 3/3
+      EL3  New behaviour goes through the loop wherever a test can be …  faithful 2/3 ≠ unsupported
+      EL4  Exception: where keeping old behaviour means keeping a secu…  unsupported 3/3
+          ↳ so what: The report says security-sensitive code needs human review of every statement before AI edits it. No held source says this.
+    11  Document-based products (easy)  [2]
+      DP1–DP7  DP1–DP7  [7]
+        DP1  The producer is a printer driver — a small, known, fixed se…  faithful 3/3
+        DP2  The PDF library update shipped with a stated success criter…  faithful 3/3
+        DP3  Caveats: it is one project, self-reported; exposure figures…  faithful 3/3
+        DP4  A count of PDF defects reported through that channel before…  unsupported 3/3
+            ↳ so what: The report says prior PDF defect data is needed before the result means more than promising. No held source says this.
+        DP5  Five parts of the PDF method transfer and one does not: (a)…  faithful 3/3
+        DP6  (f) does not transfer, and everything about extraction and …  unsupported 3/3
+            ↳ so what: The report says part f cannot be carried over, and all the work on extraction and succession aims to fill that gap. No held source says this.
+        DP7  The loop here is an experiment stated in advance: can an AI…  unsupported 2/3 ≠ faithful
+            ↳ so what: The report says </antml.parameter>
+<parameter name="source_says">. No held source says this.
+      DP8–DP8  DP8–DP8  [1]
+    12  WPP (hard)  [2]
+      WP1–WP5  WP1–WP5  [7]
+        WP1  The producer is Windows: one producer, closed source, many …  faithful 3/3
+        WP2  We can check automatically the wire protocol layer (client …  unsupported 3/3
+            ↳ so what: The report says Those three things are auto-checkable; Windows matching our assumptions is not. No held source says this.
+        WP2b  The statements are the WPP install gates; the number report…  error 2/3 ≠ faithful
+        WP3  First result (2026-09-05, branch human-to-ai/rapid-ipp-code…  error 3/3
+        WP3b  Eleven commits, each with a refuter on record; about 5.5 ho…  error 3/3
+        WP4  The property itself found nothing: zero counterexamples in …  error 3/3
+        WP5  Building it found four bugs: two in the codec (small intege…  error 3/3
+      WP6–WP-65  WP6–WP-65  [4]
+    13  Security (hardest)  [6]
+    14  What to avoid  [2]
+  15–19  15–19  [5]
+
+Full table: evidence/2026-09-13-a/audit.md

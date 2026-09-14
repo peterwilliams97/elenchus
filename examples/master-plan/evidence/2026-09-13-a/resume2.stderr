@@ -1,0 +1,22 @@
+[resume] 83/124 claims already in evidence/2026-09-13-a/claims-machine-full.faithfulness.jsonl; judging the rest
+[ 84/124] ✗ error         "The statements are the WPP install gates; the number repo…"  3.62s
+[ 85/124] ✗ error         "First result (2026-09-05, branch human-to-ai/rapid-ipp-co…"  2.92s
+[ 86/124] ✗ error         "Eleven commits, each with a refuter on record; about 5.5 …"  2.87s
+[ 87/124] ✗ error         "The property itself found nothing: zero counterexamples i…"  1.58s
+[ 88/124] ✗ error         "Building it found four bugs: two in the codec (small inte…"  1.51s
+[ 89/124] ✗ error         "The test could not see one bug and passed over it twice: …"  2.51s
+[ 90/124] ✗ error         "A refuter checks behaviour not design: the first timestam…"  1.91s
+[ 91/124] ✗ error         "Against the plan: the test's value was mostly in what bui…"  3.08s
+[ 92/124] ✗ error         "The producer is an attacker: it has our product, changes …"  2.45s
+[ 93/124] ✗ error         "The loop is a deterministic exploit check plus adversaria…"  1.96s
+[ 94/124] ✗ error         "Three non-negotiables: the blind (if it sees our findings…"  2.27s
+[ 95/124] ✗ error         "Use more than one model family and a human red team, beca…"  1.92s
+[ 96/124] ✗ error         "Re-run every model release against the frozen exploit che…"  1.9s
+[ 97/124] ✗ error         "None of this gives a coverage figure until we have listed…"  1.29s
+[ 98/124] ✗ error         "Avoid anything that still needs a human per change: bette…"  2.08s
+[ 99/124] ✗ error         "Avoid anything that samples the wrong inputs: random inpu…"  1.75s
+[100/124] ✗ error         "Main number: exported declarations closed per hour of hum…"  2.06s
+[101/124] ✗ error         "Paired with bugs that escaped, per closed declaration, me…"  2.25s
+[102/124] ✗ error         "Coverage: producer × application × version cells held a…"  1.87s
+[103/124] ✗ error         "Reach: the fraction of each partition that no test could …"  3.02s
+[104/124] ✗ error         "Evidence grade: a figure is provisional until every numbe…"  1.8s
