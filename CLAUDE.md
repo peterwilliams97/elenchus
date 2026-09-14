@@ -148,6 +148,8 @@ weaken a result; they invert the tool's entire purpose.
   conclusion INVALID / inconclusive. Never present it as a finding.
 - "Looks like the real thing" ≠ "is the real thing." Optimize for the substrate, not the artifact.
 
+Never call the model API, never disable the sandbox; print the block and stop; Peter runs it
+
 ## Testing
 
 Run `go test ./...` after every code change — including fixture edits, prompt tweaks, and

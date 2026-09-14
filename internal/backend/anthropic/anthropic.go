@@ -57,7 +57,11 @@ func (c *Client) Complete(req backend.Request) (backend.Response, error) {
 		content = append(content, textBlock{Type: "text", Text: req.Cached, CacheControl: ephemeral})
 	}
 	content = append(content, textBlock{Type: "text", Text: req.Prompt})
-	ar := apiReq{Model: c.model, MaxTokens: backend.MaxTokens,
+	maxTok := backend.MaxTokens
+	if req.MaxTokens > 0 {
+		maxTok = req.MaxTokens
+	}
+	ar := apiReq{Model: c.model, MaxTokens: maxTok,
 		Messages: []apiMsg{{Role: "user", Content: content}}}
 	if req.System != "" {
 		// The system prompt is stable per mode, so cache it too — one breakpoint, reused every call.
@@ -148,7 +152,7 @@ func (c *Client) Complete(req backend.Request) (backend.Response, error) {
 	if resp.StopReason == "max_tokens" {
 		return out, fmt.Errorf(
 			"response truncated: stop_reason=max_tokens (limit=%d tokens); raise backend.MaxTokens",
-			backend.MaxTokens)
+			maxTok)
 	}
 
 	var sb strings.Builder

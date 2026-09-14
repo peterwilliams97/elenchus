@@ -21,14 +21,14 @@ Most of the field ships an OpenAI-compatible HTTP API, so a single
 `internal/backend/openaicompat` parameterised by `{baseURL, apiKey, model}` reaches all of these
 with no per-vendor code:
 
-| Provider | How | Notes |
-|---|---|---|
-| OpenAI | native | base case |
-| **DeepSeek** (V3/R1) | `api.deepseek.com`, OpenAI-compatible | strongest open Chinese model, drop-in |
-| **Qwen** (Alibaba, Qwen-Max/2.5) | DashScope OpenAI-compat endpoint | |
-| Moonshot (Kimi), Zhipu (GLM) | OpenAI-compat endpoints | |
-| **Gemini** | Google's OpenAI-compat layer (`…/v1beta/openai/`) | works; native has better schema support |
-| OpenRouter / Groq / local vLLM | OpenAI-compat | reach everything through one gateway |
+| Provider                       | How                                   | Notes |
+|--------------------------------|---------------------------------------|-------|
+| OpenAI                         | native                                | base case |
+| **DeepSeek** (V3/R1)           | `api.deepseek.com`, OpenAI-compatible | strongest open Chinese model, drop-in |
+| **Qwen** (Alibaba, Qwen-Max/2.5) | DashScope OpenAI-compat endpoint    | |
+| Moonshot (Kimi), Zhipu (GLM)   | OpenAI-compat endpoints               | |
+| **Gemini**                     | Google's OpenAI-compat layer (`…/v1beta/openai/`) | works; native has better schema support |
+| OpenRouter / Groq / local vLLM | OpenAI-compat                         | reach everything through one gateway |
 
 One ~1-day backend covers OpenAI + the Chinese models + Gemini-via-compat. The `-backend` flag gains
 an `openaicompat` case reading a base-URL/model env pair.

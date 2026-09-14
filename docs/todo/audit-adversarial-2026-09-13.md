@@ -18,17 +18,18 @@ Verdict tally across the committed corpus chains (`grep '"verdict"'`):
 
 ### Faithfulness axis — the report tree (the only axis run on the corpora)
 
-| verdict class | code path that computes it | axis |
+
+| verdict class | axis | code path that computes it |
 |---|---|---|
-| `faithful`/`partial`/`overstated`/`absent`/`contradicted` | `faithJudge` `assay.go:1352` → `callSchema` (schema-enforced) | faithfulness |
-| quote-presence downgrade → `unsupported`/`absent` | `groundVerdict` `assay.go:1585` (no verified quote ⇒ contradicted→absent, faithful/partial/overstated→unsupported) | faithfulness |
-| verbatim quote check that feeds the downgrade | `quoteInPassage` `assay.go:1675` (substring, normalised whitespace/curly punct only — `normQuote` :1693) | faithfulness |
-| `unverifiable` (cited doc not held) | manifest held-check; `internal/manifest/manifest.go` (`Held` :105), decided pre-model | faithfulness |
-| `absent` (retrieval floor / cite-scoped miss) | `passagesForClaim` `assay.go:870`, `citedExternalBases` :907, `-floor` | faithfulness |
-| `unverifiable` (schema gate — empty/raw-tag reason) | `brief.SchemaFailed` (`spec/TREE.md` §rules 5) | faithfulness |
-| modal verdict + `k/N` spread + stability class (`settled`/`wobble`/`contested`/`split`) | `faithJudgeRepeat` `assay.go:1609`, `modalVerdict` :2306, `spreadFromSamples` :1638 | faithfulness |
-| single-source direction rules (overstated/contradicted only vs. a narrower, more-detailed passage) | `faithJudgeSingleSourceRules`; `dropOwnParagraph` — active on `quocirca`, `dora`, `master-plan` (`single_source: true`); `ai-index` is now `single_source: false` | faithfulness |
-| report-tree rollup (§-heading tree, root block, Needs-you tiers) | `internal/tree/tree.go`, `root.go`; selection `internal/brief` `Qualify` | faithfulness (rollup only) |
+| `faithful`/`partial`/`overstated`/`absent`/`contradicted` | faithfulness | `faithJudge` `assay.go:1352` → `callSchema` (schema-enforced) |
+| quote-presence downgrade → `unsupported`/`absent` | faithfulness | `groundVerdict` `assay.go:1585` (no verified quote ⇒ contradicted→absent, faithful/partial/overstated→unsupported) |
+| verbatim quote check that feeds the downgrade | faithfulness | `quoteInPassage` `assay.go:1675` (substring, normalised whitespace/curly punct only — `normQuote` :1693) |
+| `unverifiable` (cited doc not held) | faithfulness | manifest held-check; `internal/manifest/manifest.go` (`Held` :105), decided pre-model |
+| `absent` (retrieval floor / cite-scoped miss) | faithfulness | `passagesForClaim` `assay.go:870`, `citedExternalBases` :907, `-floor` |
+| `unverifiable` (schema gate — empty/raw-tag reason) | faithfulness | `brief.SchemaFailed` (`spec/TREE.md` §rules 5) |
+| modal verdict + `k/N` spread + stability class (`settled`/`wobble`/`contested`/`split`) | faithfulness | `faithJudgeRepeat` `assay.go:1609`, `modalVerdict` :2306, `spreadFromSamples` :1638 |
+| single-source direction rules (overstated/contradicted only vs. a narrower, more-detailed passage) | faithfulness | `faithJudgeSingleSourceRules`; `dropOwnParagraph` — active on `quocirca`, `dora`, `master-plan` (`single_source: true`); `ai-index` is now `single_source: false` |
+| report-tree rollup (§-heading tree, root block, Needs-you tiers) | faithfulness (rollup only) | `internal/tree/tree.go`, `root.go`; selection `internal/brief` `Qualify` |
 
 **Argument-tree rollup.** `internal/tree/argument.go` derives internal-node judgements
 (`holds`/`weakened`/`open`/`fails`) bottom-up from leaf verdicts: `Judgement()` :159, `leafJudgement`
@@ -59,15 +60,15 @@ report compresses its source without distortion," never "the claim is true or th
 So for every probe defect, **the current corpus pipeline can pass a claim carrying it** — not because
 the critic misses it, but because the critic is never invoked.
 
-| probe / defect | would the faithfulness-only corpus pipeline pass a claim with this defect? |
-|---|---|
+| probe / defect                                                    | would the faithfulness-only corpus pipeline pass a claim with this defect? |
+|-------------------------------------------------------------------|------------------------------|
 | motte-and-bailey (equivocation: strong sense retreats to trivial) | **Yes** — faithfulness checks fidelity to the source term, not which sense is load-bearing |
-| reference-class / base-rate (real number vs. gamed baseline) | **Yes** — the number is quoted verbatim; the comparison class is never assessed |
-| hidden-premise (conclusion valid only under unstated premise) | **Yes** — the stated words match the source; the missing premise is invisible to faithfulness |
-| unfalsifiable-dress (no observation could disconfirm) | **Yes** — falsifiability is a substance axis, not run |
-| causal-narrative (mechanism story over one correlation) | **Yes** — the correlational sentence is faithful; causal overreach is unchecked |
-| axis-gaps (category error, composition, survivorship) | **Yes** — not named by any axis, faithfulness included |
-| laundering (faithful + substantive + **false**) | **Yes** — the whole point: faithful+substantive can co-occur with world-falsity; only the grounding column (not run) would catch it |
+| reference-class / base-rate (real number vs. gamed baseline)      | **Yes** — the number is quoted verbatim; the comparison class is never assessed |
+| hidden-premise (conclusion valid only under unstated premise)     | **Yes** — the stated words match the source; the missing premise is invisible to faithfulness |
+| unfalsifiable-dress (no observation could disconfirm)             | **Yes** — falsifiability is a substance axis, not run |
+| causal-narrative (mechanism story over one correlation)           | **Yes** — the correlational sentence is faithful; causal overreach is unchecked |
+| axis-gaps (category error, composition, survivorship)             | **Yes** — not named by any axis, faithfulness included |
+| laundering (faithful + substantive + **false**)                   | **Yes** — the whole point: faithful+substantive can co-occur with world-falsity; only the grounding column (not run) would catch it |
 
 ### Three real `faithful` leaves where the verified quote is present but the claim doesn't follow
 

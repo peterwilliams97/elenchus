@@ -72,6 +72,7 @@ type cfg struct {
 	substanceFile  string              // <chain-dir>/<fixture>.substance.jsonl, when substanceOn (spec/SUBSTANCE-CORPUS.md)
 	ceScoped       bool                // -ce-scoped: substance critic uses the Counterexample-scope variant prompt
 	narrowBoundary bool                // -narrowing-boundary: verdict keys on how far the surviving claim was narrowed, not axis severity
+	asOf           bool                // -as-of: judge the claim as of its date, barring the critic from citing the realised outcome
 	renderMode     string              // stdout renderer: "brief" (default), "full", or "tree"
 	treeAll        bool                // -tree=full: expand every node rather than only Needs-you branches
 	retrieveMode   string              // "bm25" (default) retrieves per-claim passages; "none" sends the full corpus
@@ -200,6 +201,7 @@ func main() {
 	flag.IntVar(&c.maxRounds, "max-rounds", 2, "producer-critic rounds per claim (substance)")
 	flag.BoolVar(&c.ceScoped, "ce-scoped", false, "substance: scope the Counterexample axis (variant prompt; default off) — fatal only for an in-scope instance of a universal claim; a constructed hypothetical only weakens; an observed-outcome counterexample is left to grounding")
 	flag.BoolVar(&c.narrowBoundary, "narrowing-boundary", false, "substance: key the verdict on how far the surviving claim was narrowed, not axis severity (variant prompt; default off) — substantive = the claim as stated or trivially qualified, partial = materially narrower, hollow = no defensible core; whether the claim is TRUE is left to grounding")
+	flag.BoolVar(&c.asOf, "as-of", false, "substance: judge the claim as of the date it was made (variant prompt; default off) — the critic may use only what a careful reader could have known then and must not cite a prediction's realised outcome; that belongs to the evidence axis")
 	flag.IntVar(&c.maxClaims, "max-claims", 0, "bound evidence grounding (0 = unlimited)")
 	flag.IntVar(&c.repeat, "n", 1, "repeat each claim N times, show modal verdict + agreement (faithfulness)")
 	flag.BoolVar(&c.showProgress, "progress", true, "show per-claim progress on stderr (default on)")
@@ -1398,14 +1400,17 @@ func (c cfg) assayClaim(claim string) substance {
 		}
 		u := "CLAIM:\n" + current + "\n\nPRODUCER STEELMAN:\n" + p.Steelman + "\n\nPRODUCER CONDITIONS:\n" + p.Conditions
 		criticSys := substanceCriticSys
-		// The two variants are separate and mutually exclusive; -narrowing-boundary does NOT include
-		// the -ce-scoped rule (it wins if both flags are set). Each is the default prompt with one
-		// surgical change, so a run names exactly which boundary produced its verdicts.
+		// The three variants are separate and mutually exclusive; none includes another's change.
+		// Precedence when more than one flag is set: -narrowing-boundary, then -ce-scoped, then -as-of.
+		// Each is the default prompt with one surgical change, so a run names exactly which produced its
+		// verdicts.
 		switch {
 		case c.narrowBoundary:
 			criticSys = substanceCriticSysNarrowingBoundary // verdict keys on narrowing distance, not axis severity
 		case c.ceScoped:
 			criticSys = substanceCriticSysCEScoped // default prompt + the Counterexample-scope rule
+		case c.asOf:
+			criticSys = substanceCriticSysAsOf // default prompt + the as-of rule, barring hindsight
 		}
 		if err := c.callJSON(criticSys, "", u, false, &last); err != nil {
 			return substance{Claim: claim, Verdict: "error", Reason: err.Error()}
@@ -2456,7 +2461,7 @@ func (c cfg) evidenceClaim(claim string) evidence {
 		return evidence{Claim: claim, Verdict: "error", Finding: err.Error()}
 	}
 	out := evidence{
-		Claim: claim, Verdict: e.Verdict, Finding: e.Finding,
+		Claim: claim, Verdict: e.Verdict, Finding: e.Finding, Horizon: e.Horizon,
 		RetrievedSources: rs,
 	}
 	for _, s := range e.Sources {
@@ -2470,7 +2475,20 @@ func (c cfg) evidenceClaim(claim string) evidence {
 // This closes the grounding-integrity gap: the axis boundary requires a real truth-maker for
 // supported/mixed/refuted — positive grounding cannot be confirmed from parametric knowledge alone.
 // Only "unverifiable" and "error" are exempt (they make no external-evidence assertion).
+//
+// The horizon gate runs first and independently of retrieval: a claim whose truth is settled only
+// in the future is a forecast, and no set of retrieved sources — however real and well-matched —
+// can ground an outcome that has not happened. This is the axis boundary applied to time; reasoning
+// cannot confirm an unobserved outcome. See spec/EVIDENCE.md.
 func crossCheckEvidence(e evidence) evidence {
+	if e.Horizon == "future" && e.Verdict != "error" {
+		if e.Verdict != "unverifiable" {
+			e.OriginalVerdict = e.Verdict
+		}
+		e.Verdict = "unverifiable"
+		e.DowngradeReason = "forecast — projections are not evidence"
+		return e
+	}
 	if e.Verdict == "unverifiable" || e.Verdict == "error" || e.DowngradeReason != "" {
 		return e
 	}
@@ -2630,6 +2648,24 @@ var substanceCriticSysNarrowingBoundary = strings.Replace(
 	strings.Replace(substanceCriticSys, substanceVerdictLinesDefault, narrowingBoundaryVerdicts, 1),
 	`"verdict":"substantive"|"partial"|"hollow","surviving_claim":string|null`,
 	`"surviving_claim":string|null,"verdict":"substantive"|"partial"|"hollow"`, 1)
+
+// asOfRule is the one rule the -as-of variant inserts before the axes. Intervention 2 item 2
+// (docs/todo/destructive-sonnet-2026-09-13.md § Why false.txt is sunk) found the substance critic
+// sinks a well-formed prediction by importing the realised outcome — on `false.txt` the fatal reason
+// cites the actual 2010s shipment figures, the job CLAUDE.md's axis boundary reserves for grounding
+// (reasoning may refute a self-contradiction but must never settle how the world turned out). This
+// block bars that on predictions without touching any axis; it is spliced before the axis list so the
+// critic reads it first.
+const asOfRule = `Judge the claim as of the date it was made, using only what a careful reader could
+have known then. Whether the prediction later came true is not a substance question; if you find
+yourself citing the realised outcome, stop — that belongs to the evidence axis. Predictions are
+judged on scope, falsifiability, and whether a mechanism is offered, not on hindsight.`
+
+// substanceCriticSysAsOf is the -as-of variant: the default critic prompt with `asOfRule` inserted
+// just before the first axis, so every axis and the verdict block are byte-unchanged and only the
+// hindsight bar is added. A no-op strings.Replace (needle absent) would leave it equal to the default.
+var substanceCriticSysAsOf = strings.Replace(
+	substanceCriticSys, "- Evidence: is support", asOfRule+"\n\n- Evidence: is support", 1)
 
 const faithDefenderSys = `You are the Defender. You are given a SUMMARY CLAIM and a SOURCE
 transcript. Find the STRONGEST evidence in the SOURCE that the speaker actually asserts this claim.
@@ -2835,9 +2871,15 @@ true. Search for data, primary sources, and credible reporting; weigh what you f
 - "refuted": credible evidence contradicts the claim.
 - "unverifiable": a prediction, opinion, or otherwise not checkable against current evidence.
 
+Also set "horizon": the time by which the claim's truth is settled, relative to today:
+- "past": already settled by events that have happened.
+- "present": settled by the current state of the world.
+- "future": settled only by an event or outcome that has not happened yet (a forecast, a target date).
+A projection OF a future outcome is not an observation of it, no matter how many forecasters agree.
+
 Keep finding to one sentence. List the sources you actually used, with real URLs from your search
 results. Return ONLY JSON after searching:
-{"verdict":"supported"|"mixed"|"refuted"|"unverifiable","finding":string,"sources":[{"title":string,"url":string}]}`
+{"verdict":"supported"|"mixed"|"refuted"|"unverifiable","horizon":"past"|"present"|"future","finding":string,"sources":[{"title":string,"url":string}]}`
 
 const defaultInput = `1. The future of work will happen inside Codex or Claude Code.
 2. Every company will have one super-agent inside their Slack.
@@ -2917,9 +2959,16 @@ func (c cfg) dispatch(system, prompt string, withTools bool) (string, []retrieve
 		}
 		fmt.Println(c.grey("│ user:\n│   " + strings.ReplaceAll(prompt, "\n", "\n│   ")))
 	}
+	// The evidence path (withTools) shares its output budget with web_search blocks, so it needs the
+	// raised cap or the verdict JSON truncates before it is emitted; every other path keeps the default.
+	maxTok := 0
+	if withTools {
+		maxTok = backend.WebSearchMaxTokens
+	}
 	resp, err := c.backend.Complete(backend.Request{
 		System: system, Prompt: prompt, Cached: c.cachedSource, WithTools: withTools,
 		Schema: c.reqSchema, SchemaName: c.reqSchemaName, Temperature: c.reqTemp,
+		MaxTokens: maxTok,
 	})
 	if c.usage != nil {
 		u := resp.Usage
@@ -3062,6 +3111,7 @@ type faith struct {
 type source struct{ Title, URL string }
 type evidence struct {
 	Claim, Verdict, Finding string
+	Horizon                 string // when the claim's truth is settled: past|present|future
 	Sources                 []source
 	RetrievedSources        []retrievedSource
 	SourcesVerified         int
@@ -3106,6 +3156,7 @@ type faithJSON struct {
 }
 type evidenceJSON struct {
 	Verdict string `json:"verdict"`
+	Horizon string `json:"horizon"`
 	Finding string `json:"finding"`
 	Sources []struct {
 		Title string `json:"title"`
@@ -3583,6 +3634,7 @@ type faithDetail struct {
 
 type evidenceDetail struct {
 	Finding          string            `json:"finding,omitempty"`
+	Horizon          string            `json:"horizon,omitempty"` // past|present|future — settles the forecast gate
 	Sources          []source          `json:"sources,omitempty"`
 	RetrievedSources []retrievedSource `json:"retrieved_sources,omitempty"`
 	SourcesVerified  int               `json:"sources_verified,omitempty"`
@@ -3641,6 +3693,7 @@ func evidenceChainRecord(i, total int, claim string, e evidence, start time.Time
 	}
 	det := evidenceDetail{
 		Finding:          e.Finding,
+		Horizon:          e.Horizon,
 		Sources:          e.Sources,
 		RetrievedSources: e.RetrievedSources,
 		SourcesVerified:  e.SourcesVerified,
@@ -3676,6 +3729,7 @@ func auditChainRecord(i, n int, claim string, f faith, s substance, e evidence, 
 		},
 		Evidence: evidenceDetail{
 			Finding:          e.Finding,
+			Horizon:          e.Horizon,
 			Sources:          e.Sources,
 			RetrievedSources: e.RetrievedSources,
 			SourcesVerified:  e.SourcesVerified,

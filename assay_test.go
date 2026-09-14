@@ -451,6 +451,19 @@ func TestSubstanceCriticSysCEScopedLonger(t *testing.T) {
 	}
 }
 
+// TestSubstanceCriticSysAsOfLonger pins that the -as-of variant is the default prompt with `asOfRule`
+// spliced in before the first axis — so it is strictly longer than `substanceCriticSys` and still
+// contains the hindsight bar. A no-op strings.Replace (needle absent) would leave them equal.
+func TestSubstanceCriticSysAsOfLonger(t *testing.T) {
+	if !(len(substanceCriticSys) < len(substanceCriticSysAsOf)) {
+		t.Errorf("substanceCriticSysAsOf (%d) not longer than substanceCriticSys (%d); as-of rule not spliced",
+			len(substanceCriticSysAsOf), len(substanceCriticSys))
+	}
+	if !strings.Contains(substanceCriticSysAsOf, asOfRule) {
+		t.Error("as-of rule absent from substanceCriticSysAsOf; not spliced")
+	}
+}
+
 // TestSubstanceCriticSysNarrowingBoundarySwapped pins that the -narrowing-boundary variant actually
 // swapped the verdict block: the default severity-keyed lines are gone, the narrowing-keyed lines are
 // present, and the JSON emits surviving_claim before verdict. A no-op strings.Replace (needle absent)
@@ -687,6 +700,49 @@ func TestCrossCheckEvidenceZeroSources(t *testing.T) {
 	}
 	if !strings.Contains(got.DowngradeReason, "no URLs cited in response") {
 		t.Errorf("want 'no URLs cited in response' in reason, got %q", got.DowngradeReason)
+	}
+}
+
+// TestCrossCheckEvidenceHorizonFuture: a forecast (horizon=future) is forced to "unverifiable"
+// regardless of the model verdict, even when its cited sources are all present in retrieval — no
+// retrieval can ground an outcome that has not happened. The model verdict is retained in
+// OriginalVerdict and the sources are kept. "error" stays "error"; past/present pass through.
+func TestCrossCheckEvidenceHorizonFuture(t *testing.T) {
+	matched := func(v, h string) evidence {
+		return evidence{
+			Claim: "BEVs pass 25% EU share by 2029", Verdict: v, Horizon: h, Finding: "trend suggests it",
+			Sources:          []source{{Title: "Forecast", URL: "https://example.com/forecast"}},
+			RetrievedSources: []retrievedSource{{Title: "Forecast", URL: "https://example.com/forecast"}},
+		}
+	}
+	for _, v := range []string{"supported", "mixed", "refuted"} {
+		got := crossCheckEvidence(matched(v, "future"))
+		if got.Verdict != "unverifiable" {
+			t.Errorf("future/%s: want unverifiable, got %q", v, got.Verdict)
+		}
+		if got.OriginalVerdict != v {
+			t.Errorf("future/%s: want OriginalVerdict=%s, got %q", v, v, got.OriginalVerdict)
+		}
+		if !strings.HasPrefix(got.DowngradeReason, "forecast — projections are not evidence") {
+			t.Errorf("future/%s: want forecast reason, got %q", v, got.DowngradeReason)
+		}
+		if len(got.Sources) != 1 {
+			t.Errorf("future/%s: sources dropped, got %d", v, len(got.Sources))
+		}
+	}
+	// error is exempt — the horizon gate must not manufacture a verdict from an error.
+	if got := crossCheckEvidence(matched("error", "future")); got.Verdict != "error" {
+		t.Errorf("future/error: want error (exempt), got %q", got.Verdict)
+	}
+	// past/present with matched sources are unchanged by the horizon gate.
+	for _, h := range []string{"past", "present"} {
+		got := crossCheckEvidence(matched("supported", h))
+		if got.Verdict != "supported" {
+			t.Errorf("%s/supported: want supported (unchanged), got %q", h, got.Verdict)
+		}
+		if got.DowngradeReason != "" {
+			t.Errorf("%s/supported: unexpected downgrade %q", h, got.DowngradeReason)
+		}
 	}
 }
 

@@ -11,6 +11,12 @@ import "encoding/json"
 // Raise it if critiques truncate; a cutoff collapses a case to an error rather than a silent partial.
 const MaxTokens = 1500
 
+// WebSearchMaxTokens is the raised output cap for the evidence-grounding path (`Request.WithTools`).
+// A web_search round trip streams its query and result blocks into the same output budget as the
+// verdict JSON, so the default MaxTokens truncates the verdict before it is emitted. Only the
+// evidence path sets this; substance and faithfulness keep MaxTokens.
+const WebSearchMaxTokens = 8000
+
 // Request is one model call. Cached is a stable prefix (e.g. a source transcript) that a provider
 // may bill once and reuse across calls; a provider without prompt caching folds it into the prompt.
 // WithTools asks for web search — honoured only by a backend whose SupportsWebSearch reports true.
@@ -19,6 +25,9 @@ const MaxTokens = 1500
 // call, Ollama via the `format` field. SchemaName is the tool name Anthropic forces. Temperature,
 // when non-nil, is sent to the provider (nil leaves the provider default) — the faithfulness judge
 // sends 0 for a single deterministic call and >0 for repeat sampling.
+//
+// MaxTokens overrides the package MaxTokens cap for this one call; 0 leaves the default. The
+// evidence path sets WebSearchMaxTokens because its web_search blocks share the output budget.
 type Request struct {
 	System      string
 	Prompt      string
@@ -27,6 +36,7 @@ type Request struct {
 	Schema      json.RawMessage
 	SchemaName  string
 	Temperature *float64
+	MaxTokens   int
 }
 
 // Source is a URL actually fetched during a web_search round trip — the provenance record the

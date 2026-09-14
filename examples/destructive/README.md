@@ -36,15 +36,15 @@ target axis is unambiguous signal. Six target one of assay's seven substance axe
 gaps *between* the axes; one — the priority — is real, not constructed; and one targets the **critic's
 own calibration** (a suspected false-attack bias) rather than any claim defect.
 
-| Probe | Targets | Defect |
-|---|---|---|
-| [`motte-and-bailey/`](motte-and-bailey/) | Equivocation | a key term retreats from a strong sense to a trivial one |
-| [`reference-class/`](reference-class/) | Base rate / magnitude | a real number compared against a gamed reference class |
-| [`hidden-premise/`](hidden-premise/) | Hidden premise | a conclusion valid only under an unstated load-bearing premise |
-| [`unfalsifiable-dress/`](unfalsifiable-dress/) | Falsifiability | a claim no observation could disconfirm, in empirical dress |
+| Probe                                    | Targets               | Defect |
+|------------------------------------------|-----------------------|--------|
+| [`motte-and-bailey/`](motte-and-bailey/) | Equivocation          | a key term retreats from a strong sense to a trivial one |
+| [`reference-class/`](reference-class/)   | Base rate / magnitude | a real number compared against a gamed reference class |
+| [`hidden-premise/`](hidden-premise/)     | Hidden premise        | a conclusion valid only under an unstated load-bearing premise |
+| [`unfalsifiable-dress/`](unfalsifiable-dress/) | Falsifiability  | a claim no observation could disconfirm, in empirical dress |
 | [`causal-narrative/`](causal-narrative/) | Causality vs correlation | a mechanism story laid over a single correlation |
-| [`axis-gaps/`](axis-gaps/) | *(none — by design)* | category error, composition, survivorship — defects the seven axes don't name |
-| [`laundering/`](laundering/) | **all three modes** | a **real** claim that is faithful + substantive + **false** at once |
+| [`axis-gaps/`](axis-gaps/)               | *(none — by design)*  | category error, composition, survivorship — defects the seven axes don't name |
+| [`laundering/`](laundering/)             | **all three modes**   | a **real** claim that is faithful + substantive + **false** at once |
 | [`bare-vs-contextualized/`](bare-vs-contextualized/) | **the critic's calibration** (no claim defect) | the *same* claim with vs without its real in-text argument — tests a suspected false-attack penalty on bare lines |
 
 Each probe directory contains:

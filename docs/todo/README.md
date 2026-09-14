@@ -7,25 +7,18 @@ been actioned unless a file says so.
 
 ## Standing concern — don't lose adversarial review
 
-The one worry that outranks every capability below: **the adversarial-review leg is going cold, and
-if it dies the tool quietly reverts to "trust the green checks" — the exact failure
-`examples/destructive/README.md` was built to prevent.** The destructive probes are elenchus applied
-to assay's own critic, and they are the only thing standing between the instrument and unexamined
-trust. Current status (`design-notes.md`, full detail):
+The worry that outranks every capability below: **if the adversarial-review leg goes cold the tool
+reverts to "trust the green checks" — the failure `examples/destructive/README.md` exists to
+prevent.** The destructive probes are elenchus applied to assay's own critic.
 
-- **Not a gate, by design** — `run.sh` is not wired into `build.sh`/`go test`, so nothing forces it
-  to run. That is a deliberate choice (no flaky judgment gate), not neglect — but it means the leg
-  survives only if someone re-runs it on purpose.
-- **Current, not stale** — re-run on `claude-sonnet-4-6` 13–14 Sept 2026
-  (`destructive-sonnet-2026-09-13.md`); the envelope held on all 8 probes. The obligation is now to
-  re-run it on every model change, not to revive a cold leg.
-- **Weakest *and* least-exercised** — the axis boundary already marks substance/elenchus the weakest
-  validator; its calibration being the least-tested compounds the risk rather than excusing it.
-- **Proposed next direction** — `adversary-design-2026-09-14.md`: attack finding→recommendation
-  edges with named defeaters. 46 edges across the five corpora, 0 judged today.
-
-Treat reviving and *keeping* this calibration current on every model change as a first-class,
-recurring obligation, not roadmap step 4. It is cheap to run and expensive to have silently lost.
+- **Current on `claude-sonnet-4-6` as of 2026-09-14** — 8-probe calibration + three interventions in
+  [`destructive-sonnet-2026-09-13.md`](destructive-sonnet-2026-09-13.md); the envelope held on every probe.
+- **Ledger parser now reads chains** — `run.sh` reads each fragment's `"verdict"` from the per-run
+  `*.substance.jsonl` chain, not stdout (the earlier stdout grep parse-missed every run).
+- **Substance and grounding don't separate on a known-outcome claim** — a stated limit, not a bug
+  (§ Conclusion, same doc): the substance critic imports an outcome it already knows.
+- **Not a gate, by design.** The obligation: re-run `examples/destructive/run.sh` from a terminal on
+  every default-model change — cheap to run, expensive to have silently lost.
 
 ## Files
 

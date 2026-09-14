@@ -178,6 +178,44 @@ func TestCompleteNoCacheSingleBlock(t *testing.T) {
 	}
 }
 
+// TestCompleteMaxTokensOverride confirms the evidence path's raised cap reaches the wire: a request
+// carrying MaxTokens: backend.WebSearchMaxTokens sends max_tokens ≥ 8000 (web_search blocks share the
+// output budget with the verdict JSON), while a plain request keeps the backend.MaxTokens default.
+func TestCompleteMaxTokensOverride(t *testing.T) {
+	if backend.WebSearchMaxTokens < 8000 {
+		t.Fatalf("WebSearchMaxTokens must be ≥ 8000, got %d", backend.WebSearchMaxTokens)
+	}
+	var body []byte
+	cl := New("claude-sonnet-4-6", "k",
+		&http.Client{Transport: roundTripFunc(func(r *http.Request) (*http.Response, error) {
+			body, _ = io.ReadAll(r.Body)
+			return fakeResp(200, okBody, nil), nil
+		})})
+
+	if _, err := cl.Complete(backend.Request{
+		System: "SYSTEM", Prompt: "CLAIM:\nx", WithTools: true, MaxTokens: backend.WebSearchMaxTokens,
+	}); err != nil {
+		t.Fatalf("Complete: %v", err)
+	}
+	var req apiReq
+	if err := json.Unmarshal(body, &req); err != nil {
+		t.Fatalf("unmarshal req: %v", err)
+	}
+	if req.MaxTokens < 8000 {
+		t.Errorf("evidence path max_tokens: want ≥ 8000, got %d", req.MaxTokens)
+	}
+
+	if _, err := cl.Complete(backend.Request{System: "SYSTEM", Prompt: "CLAIM:\nx"}); err != nil {
+		t.Fatalf("Complete (default): %v", err)
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		t.Fatalf("unmarshal req: %v", err)
+	}
+	if req.MaxTokens != backend.MaxTokens {
+		t.Errorf("default path max_tokens: want %d, got %d", backend.MaxTokens, req.MaxTokens)
+	}
+}
+
 // TestSchemaForcesStrictTool confirms that a Request.Schema shapes the call into a forced strict tool
 // call — a custom tool carrying the schema, tool_choice pinned to it — and that the tool_use input in
 // the response is surfaced as the response text so callJSON parses it.
