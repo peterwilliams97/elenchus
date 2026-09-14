@@ -1,5 +1,9 @@
 # assay — capability roadmap
 
+The numbered capabilities and their per-item responses. Heavier items have deep-dive plans alongside
+this file: item 3.3 (multiple LLMs) → `plan-backends.md`; items 2/6/7 (retrieve generalisation) →
+`plan-segmentation.md`. Orientation is in `repo-map.md`; see `README.md` for the whole set.
+
 Items are capabilities, not bug fixes. Template:
 
 ```
@@ -86,6 +90,8 @@ this, then this mode is mostly prompt + wiring.
 5. Write a result tester
 6. Test on other reports
 7. generalise internal/retrieve/retrieve.go to other reports
+8. Link front page of reports to doc viewer. e.g. examples/vic-lceic/current/review.html:6  
+"§3.2.1 p35" should link to §3.2.1 p35 in the doc
 
 **Response (2026-09-12), per item.**
 

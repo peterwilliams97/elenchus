@@ -1,8 +1,8 @@
 # SESSION — parking lot
 
 Deferred and abandoned items, so reversals and dead ends survive the session boundary. Not a TODO
-backlog (`TODO.md`) and not a change log (`rigour-map/decision_log.jsonl`) — this is the holding pen
-for "decided to defer," with enough context to resume cold.
+backlog (`docs/todo/roadmap.md`) and not a change log (`rigour-map/decision_log.jsonl`) — this is the
+holding pen for "decided to defer," with enough context to resume cold.
 
 ## 2026-06-11 — packages A + B (d015 / d016 / d017)
 
