@@ -39,6 +39,7 @@ import (
 	"assay/internal/backend/anthropic"
 	"assay/internal/backend/ollama"
 	"assay/internal/brief"
+	"assay/internal/edge"
 	"assay/internal/embed"
 	"assay/internal/manifest"
 	"assay/internal/retrieve"
@@ -89,6 +90,8 @@ type cfg struct {
 	argumentFile   string              // -argument: argument.txt path; when set, -from renders the argument tree
 	indexHTMLPath  string              // index.html sink (the argument-tree page), alongside audit.md, when -argument is set
 	review         bool                // -review: build the self-contained review site (spec/SERVE.md)
+	edge           bool                // -edge: run the edge-level adversarial pass over in-scope F→R edges (spec/EDGE.md)
+	edgeChainDir   string              // -chain-dir for the edge pass; default testing/chains/edge-<stamp>-<model>
 	zip            bool                // -zip: write site.zip beside site/ after -review builds it
 	siteDir        string              // site/ sink under the example dir, when -review is set
 	sourcesDir     string              // -manifest's parent dir; the on-disk PDF tree the site copies from
@@ -214,6 +217,7 @@ func main() {
 	flag.StringVar(&fromChain, "from", "", "render brief/tree/audit from a saved chain JSONL (no model calls); a comma-list of chains merges them leaf-by-leaf")
 	flag.StringVar(&c.argumentFile, "argument", "", "with -from: render the argument tree keyed by this argument.txt (spec/ARGUMENT.md) into index.html, instead of the section-path tree")
 	flag.BoolVar(&c.review, "review", false, "with -argument -manifest: build a self-contained review site (site/index.html + site/review.html + site/sources/ with a copy of every linked PDF; links relative to site/) under the example dir — see spec/SERVE.md")
+	flag.BoolVar(&c.edge, "edge", false, "with -from -argument: run the edge-level adversarial pass over in-scope F→R edges (one model call each, spec/EDGE.md) and roll the open/unchallenged verdict into the recommendations; off by default")
 	flag.BoolVar(&c.zip, "zip", false, "with -review: also write site.zip beside site/ (the whole built site, one downloadable archive)")
 	flag.Parse()
 
@@ -288,10 +292,19 @@ func main() {
 		return
 	}
 
-	// -from replays a saved chain with no model calls, so it needs neither an API key nor a new
-	// chain directory. It renders straight from the JSONL and returns.
+	// -from replays a saved chain with no model calls, so it renders straight from the JSONL and
+	// returns. The one exception is -edge: the edge-level adversarial pass (spec/EDGE.md) makes one
+	// model call per in-scope F→R edge, so -from -edge wires a backend + key first and writes its own
+	// chain under testing/chains/. Without -edge the render is unchanged and needs no key.
 	if fromChain != "" {
 		c.usage = newUsageCounters()
+		if c.edge {
+			if c.argumentFile == "" {
+				fatal("-edge needs -argument (the tree whose F→R edges it attacks)")
+			}
+			c.wireBackend(backendName, ollamaURL, think)
+			c.edgeChainDir = chainDir // "" ⇒ the edge pass defaults to testing/chains/edge-<stamp>-<model>
+		}
 		c.runFromChain(fromChain, flag.Arg(0))
 		return
 	}
@@ -327,21 +340,7 @@ func main() {
 		return
 	}
 
-	// Wire the backend before any model call. Only Anthropic needs a key; Ollama talks to a local
-	// server, so requiring ANTHROPIC_API_KEY there would be a false gate.
-	switch backendName {
-	case "anthropic":
-		c.apiKey = os.Getenv("ANTHROPIC_API_KEY")
-		if c.apiKey == "" {
-			fatal("set ANTHROPIC_API_KEY in your environment first (or pass -backend ollama).")
-		}
-		c.backend = anthropic.New(c.model, c.apiKey, nil)
-	case "ollama":
-		c.backend = ollama.New(c.model, ollamaURL, think, nil)
-	default:
-		fatal("unknown -backend " + backendName + ": use anthropic or ollama")
-	}
-	c.backendName = backendName
+	c.wireBackend(backendName, ollamaURL, think)
 	c.usage = newUsageCounters()
 	input := readInput(text)
 
@@ -2943,6 +2942,26 @@ func (c cfg) callSchema(system, cached, prompt string, schema json.RawMessage, n
 	return unmarshalLoose(out2, v)
 }
 
+// wireBackend selects the LLM provider for the run's model calls. Only Anthropic needs a key; Ollama
+// talks to a local server, so requiring ANTHROPIC_API_KEY there would be a false gate. It sets
+// c.backend and c.backendName, and is called by the main judge path and by -from -edge (whose edge
+// pass is the one -from mode that makes model calls, spec/EDGE.md).
+func (c *cfg) wireBackend(backendName, ollamaURL string, think bool) {
+	switch backendName {
+	case "anthropic":
+		c.apiKey = os.Getenv("ANTHROPIC_API_KEY")
+		if c.apiKey == "" {
+			fatal("set ANTHROPIC_API_KEY in your environment first (or pass -backend ollama).")
+		}
+		c.backend = anthropic.New(c.model, c.apiKey, nil)
+	case "ollama":
+		c.backend = ollama.New(c.model, ollamaURL, think, nil)
+	default:
+		fatal("unknown -backend " + backendName + ": use anthropic or ollama")
+	}
+	c.backendName = backendName
+}
+
 // dispatch runs one model call. When the test seam `call` is set it is used directly (canned JSON,
 // no network); otherwise the configured backend's Complete is invoked, its usage accumulated, and —
 // under -v — the request and response are traced. Usage is added even on an error return, because a
@@ -3610,6 +3629,27 @@ func (c *cfg) appendChainTo(path string, rec chainRecord) {
 	fmt.Fprintln(f, string(data))
 }
 
+// edgeDetail is the per-edge record the edge pass writes to its chain (spec/EDGE.md §2–§4): the
+// reconstructed warrant, how many defeaters the N samples OFFERED against how many the admission check
+// ADMITTED (their gap is the calibration signal, §3), the failed step for each rejected offer, the
+// modal admitted defeater's fields (empty when the edge is unchallenged), and whether the template rule
+// lifted this edge's defeater to the root as method-level.
+type edgeDetail struct {
+	FindingID        string   `json:"finding_id"`
+	RecID            string   `json:"rec_id"`
+	Scheme           string   `json:"scheme"`
+	Warrant          string   `json:"warrant,omitempty"`
+	Offered          int      `json:"offered"`
+	Admitted         int      `json:"admitted"`
+	Rejected         []string `json:"rejected,omitempty"` // one failed admission step per rejected offer
+	World            string   `json:"world,omitempty"`
+	Kind             string   `json:"kind,omitempty"`
+	Anchor           string   `json:"anchor,omitempty"`
+	Settles          string   `json:"settles,omitempty"`
+	CriticalQuestion string   `json:"critical_question,omitempty"` // which of the scheme's fixed CQs the defeater answers
+	MethodLevel      bool     `json:"method_level,omitempty"`      // lifted to the root by the template rule (§3 rule 4)
+}
+
 type substanceDetail struct {
 	Steelman        string         `json:"steelman"`
 	CritiqueByAxis  []critiqueItem `json:"critique_by_axis"`
@@ -4184,6 +4224,227 @@ func (c *cfg) runFromChain(chainSpec, claimsPath string) {
 	c.present(rows, counts, mdTable, termTable, details)
 }
 
+// edgePair is one in-scope finding→recommendation edge: the finding node carries the scheme tag and the
+// leaf quotes, its parent is the recommendation the edge licenses.
+type edgePair struct {
+	rec     *tree.ArgNode
+	finding *tree.ArgNode
+}
+
+// inScopeEdges collects the load-bearing, stated F→R edges the pass may attack (spec/EDGE.md § Scope):
+// a finding node carrying a scheme tag, on a stated (not `?`) edge, whose leaf-derived judgement has not
+// already collapsed to `fails` — a collapsed premise has no F to hold, so attacking it spends a call to
+// no effect. The scheme tag is authored only on in-scope edges, so its presence is the primary gate.
+func inScopeEdges(root *tree.ArgNode) []edgePair {
+	var out []edgePair
+	var walk func(parent, n *tree.ArgNode)
+	walk = func(parent, n *tree.ArgNode) {
+		if n.Scheme != "" && parent != nil && !n.Query && n.Judgement() != "fails" {
+			out = append(out, edgePair{rec: parent, finding: n})
+		}
+		for _, c := range n.Children {
+			walk(n, c)
+		}
+	}
+	walk(nil, root)
+	return out
+}
+
+// edgeQuotes gathers the already-verified source spans for a finding's leaves — the `faithful`/`partial`
+// evidence the report-tree pass grounded and quoteInPassage-verified (spec/EDGE.md §2). The edge reasons
+// from what the source was shown to say, so only quotes on a faithful/partial leaf are passed; an
+// opinion or collapsed leaf contributes none.
+func edgeQuotes(finding *tree.ArgNode, byRow map[string]brief.Row, details map[string]tree.Leaf) []string {
+	var qs []string
+	for _, c := range finding.Children {
+		if len(c.Children) != 0 {
+			continue // structural child, not a claim leaf
+		}
+		r, ok := byRow[c.ID]
+		if !ok || (r.Faith != "faithful" && r.Faith != "partial") {
+			continue
+		}
+		for _, q := range details[c.ID].Quotes {
+			if strings.TrimSpace(q.Text) != "" {
+				qs = append(qs, q.Text)
+			}
+		}
+	}
+	return qs
+}
+
+// modalEdge returns the modal edge verdict over the N samples and its agreement count k (spec/EDGE.md
+// §5). A tie, or a majority of `unchallenged`, declines to open — the pass opens an edge only on a
+// genuine majority of admitted defeaters, never on a coin-flip. `error` samples count toward neither.
+func modalEdge(samples []string) (verdict string, k int) {
+	open, unch := 0, 0
+	for _, s := range samples {
+		switch s {
+		case edge.Open:
+			open++
+		case edge.Unchallenged:
+			unch++
+		}
+	}
+	if open > unch {
+		return edge.Open, open
+	}
+	return edge.Unchallenged, unch
+}
+
+// runEdgePass runs the edge-level adversarial pass over the built argument tree (spec/EDGE.md §2–§4):
+// one schema-enforced model call per in-scope F→R edge (repeated -n times), the code-side admission
+// check on each returned defeater, the cross-edge template rule that lifts a method-level defeater to
+// the root, and the rollup that writes each edge's open/unchallenged verdict onto its finding node so
+// the recommendation derives the worse of its leaf faithfulness and its edge. Every edge is recorded to
+// a chain JSONL under testing/chains/ (warrant, offered/admitted counts, rejected steps, modal defeater,
+// edge verdict). It mutates `root` in place; with -edge off it is never called, so the tree is unchanged.
+func (c *cfg) runEdgePass(root *tree.ArgNode, rows []brief.Row, details map[string]tree.Leaf) {
+	edges := inScopeEdges(root)
+	if len(edges) == 0 {
+		fmt.Fprintln(os.Stderr, "edge pass: no in-scope F→R edges (nothing tagged scheme= still stands)")
+		return
+	}
+	byRow := make(map[string]brief.Row, len(rows))
+	for _, r := range rows {
+		byRow[r.ID] = r
+	}
+	n := c.repeat
+	if n < 1 {
+		n = 1
+	}
+
+	type edgeAgg struct {
+		pair     edgePair
+		verdict  string
+		count    int
+		defeater edge.Defeater
+		warrant  string
+		offered  int
+		admitted int
+		rejected []string
+		samples  []string
+	}
+	var aggs []edgeAgg
+	var results []edge.EdgeResult
+
+	for _, p := range edges {
+		schema, ok := edge.Schema(p.finding.Scheme)
+		if !ok {
+			fmt.Fprintf(os.Stderr, "edge pass: %s carries unknown scheme %q, skipped\n", p.finding.ID, p.finding.Scheme)
+			continue
+		}
+		quotes := edgeQuotes(p.finding, byRow, details)
+		user := edge.User(p.finding.Scheme, p.finding.Content, quotes, p.rec.Content)
+		var samples, rejected []string
+		var admittedDefs []edge.Defeater
+		offered, admitted := 0, 0
+		warrant := ""
+		for s := 0; s < n; s++ {
+			var temp *float64
+			if n > 1 {
+				t := judgeSampleTemp
+				temp = &t
+			}
+			var r edge.Result
+			if err := c.callSchema(edge.System, "", user, schema, edge.SchemaName, temp, &r); err != nil {
+				samples = append(samples, "error")
+				continue
+			}
+			if warrant == "" {
+				warrant = r.Warrant
+			}
+			if r.NoneAdmitted {
+				samples = append(samples, edge.Unchallenged)
+				continue
+			}
+			offered++
+			if adm, step := edge.Admit(r.Defeater); adm {
+				admitted++
+				admittedDefs = append(admittedDefs, r.Defeater)
+				samples = append(samples, edge.Open)
+			} else {
+				rejected = append(rejected, step)
+				samples = append(samples, edge.Unchallenged)
+			}
+			if c.showProgress {
+				fmt.Fprintf(os.Stderr, "  edge %s ← %s [%s] sample %d/%d\n", p.rec.ID, p.finding.ID, p.finding.Scheme, s+1, n)
+			}
+		}
+		verdict, k := modalEdge(samples)
+		var def edge.Defeater
+		if verdict == edge.Open && len(admittedDefs) > 0 {
+			def = admittedDefs[0]
+		}
+		aggs = append(aggs, edgeAgg{p, verdict, k, def, warrant, offered, admitted, rejected, samples})
+		results = append(results, edge.EdgeResult{
+			FindingID: p.finding.ID, RecID: p.rec.ID, Verdict: verdict, Defeater: def})
+	}
+
+	// The template rule (spec/EDGE.md §3 rule 4) runs across every edge once all are sampled: an admitted
+	// defeater whose anchor recurs on more than one edge is method-level, lifted to the root and cleared
+	// from its edges, which then read unchallenged.
+	finalVerdict, world, methods := edge.Resolve(results)
+	methodEdges := make(map[string]bool)
+	for _, m := range methods {
+		for _, e := range m.Edges {
+			methodEdges[e] = true
+		}
+	}
+
+	chainPath := c.edgeChainPath()
+	for i, a := range aggs {
+		fv := finalVerdict[a.pair.finding.ID]
+		det := edgeDetail{
+			FindingID: a.pair.finding.ID, RecID: a.pair.rec.ID, Scheme: a.pair.finding.Scheme,
+			Warrant: a.warrant, Offered: a.offered, Admitted: a.admitted, Rejected: a.rejected,
+			MethodLevel: methodEdges[a.pair.finding.ID],
+		}
+		if a.verdict == edge.Open {
+			det.World, det.Kind = a.defeater.World, a.defeater.Kind
+			det.Anchor, det.Settles = a.defeater.Anchor, a.defeater.Settles
+			det.CriticalQuestion = a.defeater.CriticalQuestion
+		}
+		raw, _ := json.Marshal(det)
+		c.appendChainTo(chainPath, chainRecord{
+			Idx: i + 1, Total: len(aggs), Mode: "edge",
+			Claim:   fmt.Sprintf("%s <- %s", a.pair.rec.ID, a.pair.finding.ID),
+			Verdict: fv, Spread: fmt.Sprintf("%d/%d", a.count, n), Samples: a.samples,
+			Detail: raw,
+		})
+		a.pair.finding.EdgeVerdict = fv
+		if w := world[a.pair.finding.ID]; w != "" {
+			a.pair.finding.EdgeWorld = w
+		}
+	}
+	for _, m := range methods {
+		root.RootMethods = append(root.RootMethods, m.MethodLine())
+	}
+	if chainPath != "" {
+		fmt.Fprintf(os.Stderr, "edge pass: %d in-scope edges, %d method-level lifted → %s\n",
+			len(aggs), len(methods), chainPath)
+	}
+}
+
+// edgeChainPath resolves the edge chain's destination and truncates any stale file at it. It honours an
+// explicit -chain-dir; absent one it defaults under testing/chains/, beside the destructive-calibration
+// runs the refuter reads (spec/EDGE.md §5). The file is named for the argument file, so dora and
+// master-plan write distinct chains. Returns "" (chain writing off) only if the directory cannot be made.
+func (c *cfg) edgeChainPath() string {
+	dir := c.edgeChainDir
+	if dir == "" {
+		dir = filepath.Join("testing", "chains", "edge-"+time.Now().Format("20060102-1504")+"-"+c.model)
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		fmt.Fprintf(os.Stderr, "warning: edge chain dir %q: %v\n", dir, err)
+		return ""
+	}
+	base := strings.TrimSuffix(filepath.Base(c.argumentFile), filepath.Ext(c.argumentFile))
+	path := filepath.Join(dir, base+".edge.jsonl")
+	_ = os.Truncate(path, 0) // a re-run replaces its chain rather than appending a second pass
+	return path
+}
+
 // presentArgument renders the argument tree (spec/ARGUMENT.md) in place of the section-path tree: it
 // writes the flat verdict table to auditPath (unchanged), then builds the tree from the argument file,
 // hangs the merged rows on its leaves, derives each node's judgement bottom-up, and writes the
@@ -4211,6 +4472,13 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 	root, err := tree.BuildArgument(argText, rows)
 	if err != nil {
 		fatal("argument tree: " + err.Error())
+	}
+	// -edge: attack the standing F→R inferences (spec/EDGE.md). It runs after the tree is built (it needs
+	// each finding's leaf-derived judgement and verified quotes) and mutates the tree in place, so the
+	// rollup below renders open/unchallenged edges. With -edge off this is never reached and the tree is
+	// unchanged — the byte-identical guarantee.
+	if c.edge {
+		c.runEdgePass(root, rows, details)
 	}
 	// title names the page and its <h1>; the thesis (root.Content) stays the thesis card's alone. With
 	// no "# title:" line the fall-back is the file name, not the thesis.

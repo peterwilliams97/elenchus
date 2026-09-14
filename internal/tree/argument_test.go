@@ -476,6 +476,62 @@ func TestSchemeBadValueFailsParse(t *testing.T) {
 
 // ── fixtures ────────────────────────────────────────────────────────────────
 
+// TestEdgeOpenRollsUpToRecommendation: a recommendation whose only finding is faithful-and-settled
+// (leaf-derived holds) but whose F→R edge is open (an admitted defeater) becomes open, and its reason
+// names the edge defeater (spec/EDGE.md §4). This is the gap the edge pass exists to surface — the
+// finding is true and the recommendation still doesn't follow — which no leaf-faithfulness computation
+// can reach. The mutation, clearing the edge, must return the recommendation to holds, proving the edge
+// verdict, not the fixture, opened it.
+func TestEdgeOpenRollsUpToRecommendation(t *testing.T) {
+	arg := joinLines(
+		"root  | Root proposition.  | x",
+		"    R1  | Recommendation one.  | x",
+		"        F1  | Finding one.  | scheme=practical; x",
+		"            CM1",
+	)
+	root := mustBuild(t, arg, []brief.Row{{ID: "CM1", Text: "c", Faith: "faithful"}})
+	rec := childByID(root, "R1")
+	finding := childByID(rec, "F1")
+	if got := rec.Judgement(); got != jHolds {
+		t.Fatalf("with no edge verdict the recommendation should hold, got %q", got)
+	}
+	finding.EdgeVerdict = jOpen
+	finding.EdgeWorld = "a regulated org whose binding constraint is delivery stability"
+	if got := rec.Judgement(); got != jOpen {
+		t.Fatalf("an open edge on a holds finding should open the recommendation, got %q", got)
+	}
+	if r := recReason(rec); !strings.Contains(r, "edge defeater") {
+		t.Fatalf("the recommendation's reason should name the edge defeater, got %q", r)
+	}
+	// Mutation: clear the edge → back to holds.
+	finding.EdgeVerdict, finding.EdgeWorld = "", ""
+	if got := rec.Judgement(); got != jHolds {
+		t.Fatalf("clearing the edge should return the recommendation to holds, got %q", got)
+	}
+}
+
+// TestEdgeMethodLineRendersOnce: a method-level defeater lifted to the root (RootMethods) renders once
+// in the root block, above the recommendations, and the edges it was lifted off contribute nothing
+// (their EdgeVerdict is unchallenged after the lift). With RootMethods empty the block is unchanged.
+func TestEdgeMethodLineRendersOnce(t *testing.T) {
+	arg := joinLines(
+		"root  | Root proposition.  | x",
+		"    R1  | Recommendation one.  | x",
+		"        F1  | Finding one.  | scheme=practical; x",
+		"            CM1",
+	)
+	root := mustBuild(t, arg, []brief.Row{{ID: "CM1", Text: "c", Faith: "faithful"}})
+	childByID(root, "R1").Children[0].EdgeVerdict = "unchallenged" // lifted off this edge
+	root.RootMethods = []string{"method: a shared common-cause world — defeats every edge of this evidence type."}
+	block := argRootBlock(root)
+	if n := strings.Count(block, "method: a shared common-cause world"); n != 1 {
+		t.Fatalf("method line should render exactly once, got %d", n)
+	}
+	if got := childByID(root, "R1").Judgement(); got != jHolds {
+		t.Fatalf("an edge lifted to the root leaves the recommendation on its leaf verdict (holds), got %q", got)
+	}
+}
+
 func joinLines(lines ...string) string { return strings.Join(lines, "\n") + "\n" }
 
 // countTagged sums the nodes whose edge to the parent carries a scheme tag (spec/EDGE.md §1) — every

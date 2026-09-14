@@ -31,6 +31,17 @@ type ArgNode struct {
 	Scheme   string // the edge to this node's PARENT: its argument scheme (spec/EDGE.md §1), "" if untagged
 	Children []*ArgNode
 	row      *brief.Row // non-nil only on an atomic-claim leaf, keyed by ID from the merged rows
+
+	// EdgeVerdict/EdgeWorld carry the edge pass's rollup (spec/EDGE.md §4) onto a finding node: an "open"
+	// edge (an admitted defeater stands) contributes `open` to the recommendation above, whatever the
+	// finding's leaf faithfulness — the "F is true and R still doesn't follow" case no leaf computation
+	// reaches. Both are "" when the edge pass did not run (`-edge` off), which is what keeps the argument
+	// tree byte-identical without it. RootMethods sits only on the root: the method-level defeaters the
+	// template rule lifted off the edges (spec/EDGE.md §3 rule 4), one rendered line each, printed once
+	// above the recommendations.
+	EdgeVerdict string // "open" | "" on a finding node; "" elsewhere
+	EdgeWorld   string // the admitted defeater's world, for the recommendation's reason line
+	RootMethods []string
 }
 
 // schemes is the closed set of argument-scheme values a finding line's note column may carry
@@ -212,9 +223,17 @@ func (n *ArgNode) Judgement() string {
 		case c.Query:
 			contrib = jOpen // unestablished linkage: the reader must open the step, whatever the child holds
 		case c.Judgement() == jOpinion:
-			continue // opinion on a stated edge: not evidence, contributes nothing
+			if c.EdgeVerdict != jOpen {
+				continue // opinion on a stated edge: not evidence, contributes nothing
+			}
+			contrib = jOpen // an opinion child whose F→R edge is open still opens the step
 		default:
 			contrib = c.Judgement()
+		}
+		// An open edge (spec/EDGE.md §4) contributes `open` regardless of the finding's leaf faithfulness:
+		// F holds, yet a concrete world makes R fail. It never lowers a worse contribution (fails wins).
+		if c.EdgeVerdict == jOpen && sev(jOpen) > sev(contrib) {
+			contrib = jOpen
 		}
 		live = true
 		if s := sev(contrib); s > worst {
@@ -327,6 +346,33 @@ func decidingChild(n *ArgNode) string {
 	return ""
 }
 
+// edgeDefeater returns the world of an edge-`open` finding child of `n` (spec/EDGE.md §4), or "" when
+// no child's F→R edge is open. It names the defeater in a recommendation's reason line — "open (edge
+// defeater: <world>)" — the third reason a recommendation can be `open`, alongside a contested finding
+// and a `?` edge to the root. Empty when the edge pass did not run, so the reason line is unchanged.
+func edgeDefeater(n *ArgNode) string {
+	for _, c := range n.Children {
+		if c.EdgeVerdict == jOpen && c.EdgeWorld != "" {
+			return c.EdgeWorld
+		}
+	}
+	return ""
+}
+
+// recReason renders the small reason clause after a recommendation that does not hold: the child that
+// decides it, plus, when its F→R inference is defeated, "edge defeater: <world>". Both can fire — a
+// recommendation whose finding is contested AND whose edge is open lists both. "" when the node holds.
+func recReason(n *ArgNode) string {
+	var parts []string
+	if dc := decidingChild(n); dc != "" {
+		parts = append(parts, dc)
+	}
+	if w := edgeDefeater(n); w != "" {
+		parts = append(parts, "edge defeater: "+w)
+	}
+	return strings.Join(parts, "; ")
+}
+
 // ArgumentTitle returns the report name from an argument.txt "# title:" header line — the name the
 // site pages carry as their <title> and index.html as its <h1>. It returns "" when the file has no
 // such line; the caller then falls back to the file name, never to the thesis, which stays the root
@@ -375,6 +421,11 @@ func ArgumentPage(root *ArgNode, details map[string]Leaf, title, what string, si
 	if s := baseSentence(root); s != "" {
 		fmt.Fprintf(&b, "<p class=\"base\">%s</p>\n", html.EscapeString(s))
 	}
+	// A method-level defeater the template rule lifted to the root (spec/EDGE.md §3 rule 4) sits in the
+	// thesis card, once, so a reader meets the evidence-type defect before any recommendation.
+	for _, m := range root.RootMethods {
+		fmt.Fprintf(&b, "<p class=\"method\">%s</p>\n", html.EscapeString(m))
+	}
 	b.WriteString("</section>\n")
 	for _, c := range root.Children {
 		renderNodeCard(&b, c, details, adj)
@@ -398,7 +449,7 @@ func ArgumentPage(root *ArgNode, details map[string]Leaf, title, what string, si
 // names the load-bearing child that collapsed it.
 func rootTally(root *ArgNode) string {
 	var holds, weakened, opinion, fails []string
-	var openUnstated, openContested int
+	var openUnstated, openContested, openEdge int
 	recs := 0
 	for _, c := range root.Children {
 		if isBase(c.ID) {
@@ -424,11 +475,15 @@ func rootTally(root *ArgNode) string {
 				fails = append(fails, fmt.Sprintf("%s: no held source supports %s", c.ID, dc))
 			}
 		case jOpen:
-			// A `?`-edge or childless deciding child means the report never says what the
-			// recommendation rests on; a stated deciding child that opens means its finding is contested.
-			if dc := decidingChild(c); dc == "" || strings.HasSuffix(dc, " ?") {
+			// Three reasons a recommendation is open, in the order spec/EDGE.md §4 ranks them: an edge
+			// defeater (F holds, R still doesn't follow) heads the set; then a `?`-edge or childless
+			// deciding child (the report never says what it rests on); then a contested finding.
+			switch {
+			case edgeDefeater(c) != "":
+				openEdge++
+			case decidingChild(c) == "" || strings.HasSuffix(decidingChild(c), " ?"):
 				openUnstated++
-			} else {
+			default:
 				openContested++
 			}
 		}
@@ -444,8 +499,11 @@ func rootTally(root *ArgNode) string {
 	if len(weakened) > 0 {
 		clauses = append(clauses, clause{text: countClause(len(weakened), isAre(len(weakened))+" weakened", weakened)})
 	}
-	if open := openUnstated + openContested; open > 0 {
+	if open := openUnstated + openContested + openEdge; open > 0 {
 		var reasons []string
+		if openEdge > 0 {
+			reasons = append(reasons, fmt.Sprintf("%d because the finding holds but the recommendation doesn't follow", openEdge))
+		}
 		if openUnstated > 0 {
 			reasons = append(reasons, fmt.Sprintf("%d because the report doesn't say what they rest on", openUnstated))
 		}
@@ -531,6 +589,11 @@ func argRootBlock(root *ArgNode) string {
 	if s := baseSentence(root); s != "" {
 		fmt.Fprintln(&b, s)
 	}
+	// Method-level defeaters (spec/EDGE.md §3 rule 4) print once, above the recommendations: a world that
+	// defeats every edge of the report's evidence type is a property of that type, not any one inference.
+	for _, m := range root.RootMethods {
+		fmt.Fprintln(&b, m)
+	}
 	b.WriteString("\n")
 	for _, c := range root.Children {
 		if isBase(c.ID) {
@@ -539,8 +602,8 @@ func argRootBlock(root *ArgNode) string {
 		j := c.Judgement()
 		line := fmt.Sprintf("%s  %s  — %s", c.ID, c.Content, j)
 		if j != jHolds {
-			if dc := decidingChild(c); dc != "" {
-				line += fmt.Sprintf(" (%s)", dc)
+			if r := recReason(c); r != "" {
+				line += fmt.Sprintf(" (%s)", r)
 			}
 		}
 		fmt.Fprintln(&b, line)
@@ -563,8 +626,8 @@ func renderNodeCard(b *strings.Builder, n *ArgNode, details map[string]Leaf, adj
 	b.WriteString(idSpan(n))
 	fmt.Fprintf(b, `<span class="prop">%s</span>`, html.EscapeString(n.Content))
 	if j != jHolds {
-		if dc := decidingChild(n); dc != "" {
-			fmt.Fprintf(b, `<span class="dc">(%s)</span>`, html.EscapeString(dc))
+		if r := recReason(n); r != "" {
+			fmt.Fprintf(b, `<span class="dc">(%s)</span>`, html.EscapeString(r))
 		}
 	}
 	b.WriteString("</summary>\n")

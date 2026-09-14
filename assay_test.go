@@ -17,8 +17,10 @@ import (
 
 	"assay/internal/backend"
 	"assay/internal/backend/fake"
+	"assay/internal/brief"
 	"assay/internal/manifest"
 	"assay/internal/retrieve"
+	"assay/internal/tree"
 )
 
 func TestSplitSummaryNewlines(t *testing.T) {
@@ -182,6 +184,70 @@ func TestConditionLaunderingLoopStop(t *testing.T) {
 	}
 	if result.Verdict != "hollow" {
 		t.Errorf("want hollow, got %q", result.Verdict)
+	}
+}
+
+// TestRunEdgePassAdmitsAndRollsUp drives the REAL c.runEdgePass through the cfg.call seam (canned JSON,
+// no network), so the whole edge plumbing is exercised end to end: callSchema unmarshals the edge
+// Result, the admission check admits the concrete defeater, the verdict rolls onto the finding node, and
+// a chain record is written. It is the confirmatory (Layer 2) counterpart to the pure edge-package
+// tests — spec/EDGE.md §2–§4. The mutation half (TestRunEdgePassRejectsFreeAttack) feeds an
+// anchorless defeater and asserts the same wiring leaves the edge unchallenged.
+func TestRunEdgePassAdmitsAndRollsUp(t *testing.T) {
+	root, rows, details := edgeFixture(t)
+	const admitted = `{"warrant":"platform value transfers to every org","none_admitted":false,` +
+		`"defeater":{"world":"a regulated org whose binding constraint is delivery stability","kind":"competing_goal",` +
+		`"anchor":"binding constraint is delivery stability","settles":"the instability effect size","critical_question":"side_effects"},` +
+		`"questions_considered":["side_effects"]}`
+	dir := t.TempDir()
+	c := cfg{repeat: 1, edgeChainDir: dir, argumentFile: "x.txt",
+		call: func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
+			return admitted, nil, nil
+		}}
+	c.runEdgePass(root, rows, details)
+
+	finding := childByID(t, childByID(t, root, "R1"), "F1")
+	if finding.EdgeVerdict != "open" {
+		t.Fatalf("an admitted defeater should open the edge, got %q", finding.EdgeVerdict)
+	}
+	if finding.EdgeWorld == "" {
+		t.Fatal("an open edge should carry the defeater world onto the finding node")
+	}
+	if got := childByID(t, root, "R1").Judgement(); got != "open" {
+		t.Fatalf("the recommendation should roll up to open, got %q", got)
+	}
+	rec := readEdgeChain(t, filepath.Join(dir, "x.edge.jsonl"))
+	if len(rec) != 1 || rec[0].Verdict != "open" {
+		t.Fatalf("chain should hold one open edge record, got %+v", rec)
+	}
+}
+
+// TestRunEdgePassRejectsFreeAttack: the same wiring, fed a defeater whose anchor is not inside its world
+// (the free "could be equivocating" attack §3 exists to catch), leaves the edge unchallenged and the
+// recommendation on its leaf verdict. Proves the admission check, not the presence of a defeater,
+// decides the verdict.
+func TestRunEdgePassRejectsFreeAttack(t *testing.T) {
+	root, rows, details := edgeFixture(t)
+	const free = `{"warrant":"w","none_admitted":false,` +
+		`"defeater":{"world":"it might not generalise to other orgs","kind":"condition",` +
+		`"anchor":"a fintech startup","settles":"a study","critical_question":"goal_held"},` +
+		`"questions_considered":["goal_held"]}`
+	dir := t.TempDir()
+	c := cfg{repeat: 1, edgeChainDir: dir, argumentFile: "x.txt",
+		call: func(system, prompt string, withTools bool) (string, []retrievedSource, error) { return free, nil, nil }}
+	c.runEdgePass(root, rows, details)
+
+	if got := childByID(t, root, "R1").Judgement(); got != "holds" {
+		t.Fatalf("a rejected defeater should leave the recommendation holding, got %q", got)
+	}
+	rec := readEdgeChain(t, filepath.Join(dir, "x.edge.jsonl"))
+	if len(rec) != 1 || rec[0].Verdict != "unchallenged" {
+		t.Fatalf("chain should record one unchallenged edge, got %+v", rec)
+	}
+	var det edgeDetail
+	_ = json.Unmarshal(rec[0].Detail, &det)
+	if det.Offered != 1 || det.Admitted != 0 || len(det.Rejected) != 1 || det.Rejected[0] != "anchor" {
+		t.Fatalf("detail should show 1 offered / 0 admitted / rejected at anchor, got %+v", det)
 	}
 }
 
@@ -2119,4 +2185,58 @@ func faithfulJSON(passageID, quote string) string {
 	q, _ := json.Marshal(quote)
 	return `{"verdict":"faithful","gap":"none","evidence":[{"passage_id":` + string(p) +
 		`,"quote":` + string(q) + `}],"report_says":"","source_says":"","reason":"the report restates its own figure."}`
+}
+
+// edgeFixture builds the minimal argument tree the edge-pass integration tests drive: one
+// recommendation R1 over one practical-scheme finding F1, whose single claim leaf CM1 is faithful (so
+// F1 leaf-derives to holds and the edge is in scope). It returns the built tree, the rows, and the
+// per-leaf details carrying one verified quote — the input runEdgePass reads.
+func edgeFixture(t *testing.T) (*tree.ArgNode, []brief.Row, map[string]tree.Leaf) {
+	t.Helper()
+	arg := "root  | Root.  | x\n" +
+		"    R1  | Invest in the platform.  | x\n" +
+		"        F1  | A quality platform amplifies performance.  | scheme=practical; x\n" +
+		"            CM1\n"
+	rows := []brief.Row{{ID: "CM1", Text: "platform amplifies performance", Faith: "faithful"}}
+	root, err := tree.BuildArgument(arg, rows)
+	if err != nil {
+		t.Fatalf("BuildArgument: %v", err)
+	}
+	details := map[string]tree.Leaf{"CM1": {Quotes: []tree.Quote{{Text: "quality internal platform amplifies"}}}}
+	return root, rows, details
+}
+
+// childByID returns the direct child of n with the given id, failing the test if absent — the tests
+// navigate a small known tree, so a missing node is a fixture bug, not a case to handle.
+func childByID(t *testing.T, n *tree.ArgNode, id string) *tree.ArgNode {
+	t.Helper()
+	for _, c := range n.Children {
+		if c.ID == id {
+			return c
+		}
+	}
+	t.Fatalf("no child %q under %q", id, n.ID)
+	return nil
+}
+
+// readEdgeChain reads an edge chain JSONL back into records, so a test can assert the verdict and detail
+// the pass wrote. A missing file is a test failure — the pass is expected to have written it.
+func readEdgeChain(t *testing.T, path string) []chainRecord {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read edge chain %q: %v", path, err)
+	}
+	var out []chainRecord
+	for _, ln := range strings.Split(strings.TrimSpace(string(data)), "\n") {
+		if ln == "" {
+			continue
+		}
+		var r chainRecord
+		if err := json.Unmarshal([]byte(ln), &r); err != nil {
+			t.Fatalf("unmarshal chain line: %v", err)
+		}
+		out = append(out, r)
+	}
+	return out
 }
