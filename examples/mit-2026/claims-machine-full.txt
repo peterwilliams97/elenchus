@@ -1,0 +1,163 @@
+# title: Report of MIT's Ad Hoc Committee on AI Use in Teaching, Learning, and Research Training
+# date: August 13, 2026
+# sources: examples/mit-2026/sources/MANIFEST.md
+#
+# Five tab fields per dora: id <TAB> pNN=<label> <TAB> claim <TAB> report.pdf <TAB> route.
+# pNN is the PRINTED page (report_page_offset: 2 -> PDF page). Numbered labels (3.1.8) self-locate;
+# named appendix labels (C.2 ...) resolve via the MANIFEST sections map. route in {survey,evidence,evaluative,method}.
+#
+# === S1.1 The Landscape (premises the recommendations rest on) ===
+LS1	p3=1.1	MIT students use AI frequently and pervasively, with strongly mixed feelings ranging from curiosity, creative inspiration, and gratitude to resignation, concern, and anxiety.	report.pdf	evaluative
+LS2	p3=1.1	Instructors' attitudes toward AI range from enthusiastic exploration and growing reliance to skepticism, suspicion, and "AI refusal."	report.pdf	evaluative
+LS3	p3=1.1	AI is upending foundational elements of the MIT educational experience, especially for undergraduates, from the p-set, take-home exam, and UROPs to office hours and the study group.	report.pdf	evaluative
+LS4	p3=1.1	AI is increasing isolation, undermining student mastery and confidence, and eroding the "social contract" between instructors and students.	report.pdf	evaluative
+LS5	p3=1.1	AI is making it much harder to assess student progress.	report.pdf	evaluative
+LS6	p3=1.1	Students are confused and concerned about a lack of clarity, consistency, and justification about the use of AI, within a given subject and across the curriculum.	report.pdf	evaluative
+LS7	p3=1.1	Every subject taught at MIT will likely need to be reexamined and potentially revamped to make sure how students are taught, what they learn, and how they are assessed are "AI-aware."	report.pdf	evaluative
+LS8	p3=1.1	AI presents substantial practical concerns for the community, from data privacy and confidentiality to disparate access, bias, fairness, and accountability.	report.pdf	evaluative
+#
+# === S2 Guiding Principles ===
+P1	p4=2.1	The committee offers its proposals in a spirit of humility, expecting that course corrections, perhaps even major ones, will be inevitable as the technology evolves.	report.pdf	evaluative
+P1b	p4=2.1	Generative AI was "born" with the release of ChatGPT in late 2022, making public engagement with it less than four years old.	report.pdf	evidence
+P1c	p4=2.1	In less than four years, generative AI has amassed more than a billion users.	report.pdf	evidence
+P2	p4=2.2	Uncertainty cannot be an excuse for inaction; the challenges AI presents in teaching and learning call for a bold strategic response, especially at MIT.	report.pdf	evaluative
+P2b	p4=2.2	MIT's Social and Ethical Responsibilities of Computing program is completing its seventh year.	report.pdf	evidence
+P3	p5=2.3	The Institute's fundamental challenge and most important goal must be to nurture and protect our shared humanity and to value the MIT community and its members above all.	report.pdf	evaluative
+P3b	p5=2.3	In a listening session, some instructors said they were considering using AI agents as research assistants instead of hiring undergraduates as UROPs.	report.pdf	evidence
+P3c	p5=2.3	AI detection software is quite unreliable.	report.pdf	evidence
+P4	p5=2.4	Many problems and assignments used in MIT classes can already be accomplished by AI, which can make traditional assessments less reliable as indicators of individual learning.	report.pdf	evaluative
+P4b	p6=2.4	Leaning into learning means creating a new "social contract" between teachers and students, in which the most important product of education is the students themselves, not a GPA or diploma.	report.pdf	evaluative
+P5	p6=2.5	Most classes taught at MIT will require careful review and, in many cases, substantial adaptation to survive an encounter with AI without serious disruption.	report.pdf	evaluative
+P5b	p6=2.5	The "backward design" framework, which begins by defining the purpose of the learning experience rather than whether AI is allowed, offers a useful approach to AI-aware course design.	report.pdf	evaluative
+P6	p7=2.6	No single approach to AI in education will serve MIT well; a uniform Institute-wide rule would be too permissive for some contexts and too restrictive for others.	report.pdf	evaluative
+P6b	p7=2.6	MIT should provide a shared framework, including a common policy menu, disclosure expectations, and accountability standards, within which departments and instructors make choices.	report.pdf	evaluative
+P7	p7=2.7	There are early signals that overreliance on chatbots can have significant negative consequences, diminishing critical thinking, weakening memory, eroding confidence, and undermining mastery.	report.pdf	evidence
+P7b	p7=2.7	MIT economists Daron Acemoglu, David Autor, and Simon Johnson argue for "pro-worker AI" that lets human beings be more effective at existing tasks, tackle new tasks, and acquire new expertise.	report.pdf	evidence
+P7c	p7=2.7	AI should be used to augment and enhance curiosity, creativity, and learning, not to automate them.	report.pdf	evaluative
+P8	p8=2.8	AI should be integrated into MIT education in ways that enhance, rather than diminish, students' capacities for growth as whole human beings.	report.pdf	evaluative
+P8b	p8=2.8	Jerome Bruner argued that learning is not simply transmitting content from teacher to student but a process through which students learn to interpret the world and develop a sense of themselves as capable persons.	report.pdf	evidence
+#
+# === S3 Recommendations: framing ===
+RI1	p9=3	The recommendations are not a checklist of individual initiatives to implement bit by bit, but a set of substantive changes that must be undertaken in concert.	report.pdf	evaluative
+RI2	p9=3	In less than three years these technologies have driven major shifts in campus culture, including decreased office-hours attendance, reduced online-discussion participation, and, anecdotally, a drop in in-person study groups.	report.pdf	evaluative
+#
+# === S3.1 Adapt educational processes for an AI-aware world ===
+R311a	p11=3.1.1	Before constructing AI-aware assessments, instructors should reconsider their goals for student learning in every subject they teach.	report.pdf	evaluative
+R311b	p11=3.1.1	An instructor reported that providing personalized, course-specific AI coaches for students learning to serve as mediators eliminated the awkwardness of practicing in front of others and increased students' willingness to practice, which increased their skills.	report.pdf	evidence
+R312a	p12=3.1.2	Instructors should adopt forms of assessment less vulnerable to AI and more valuable for learning, such as oral exams, semester portfolios, and out-of-class assignments paired with in-class conversations.	report.pdf	evaluative
+R312b	p12=3.1.2	At MIT, problem sets, long-form written assignments, take-home exams, and out-of-class projects have long been used to let students solidify knowledge, and AI saps these tools of their value for teaching and assessment.	report.pdf	evaluative
+R313a	p13=3.1.3	To match the shift toward AI-resistant assessment, instructors need to increase the role of experiential and project-based learning.	report.pdf	evaluative
+R313b	p13=3.1.3	In MIT's capstone software engineering class, it is now reasonable to expect students to use AI coding tools to build near production-quality software artifacts in a single academic term.	report.pdf	evaluative
+R313c	p13=3.1.3	In a Wall Street Journal interview, Harvard economist Rafella Sadun observed that workers who will succeed in the AI era are those who can creatively think about how AI can generate value and revise their intuition through experimentation.	report.pdf	evidence
+R314a	p13=3.1.4	Every subject should include a regular in-person social component, intentionally structured by instructors to achieve desired learning objectives even in large classes.	report.pdf	evaluative
+R315a	p14=3.1.5	MIT should preserve, renew, and ideally expand its commitment to UROP and other learning experiences that emphasize mentorship, collaboration, and learning by doing.	report.pdf	evaluative
+R315b	p14=3.1.5	UROP directly engages 93% of undergraduates and 58% of faculty.	report.pdf	evidence
+R315c	p14=3.1.5	MIT's Undergraduate Research Opportunities Program (UROP) was launched in 1969.	report.pdf	evidence
+R315d	p15=3.1.5	The possibility that faculty may replace novice researchers with AI agents warrants special concern, because UROP exists to educate rather than to provide research labor.	report.pdf	evaluative
+R316a	p15=3.1.6	MIT should not limit grades through grade rationing, which would be counterproductive and would intensify the temptation to cut corners on learning by increasing reliance on AI.	report.pdf	evaluative
+R316b	p15=3.1.6	MIT should explore alternative systems of grading and assessment, including the UK percentage system and newer competency-based and mastery-based paradigms.	report.pdf	evaluative
+R316c	p15=3.1.6	MIT already refrains from the common practice of awarding summa/magna/cum-laude diplomas.	report.pdf	evidence
+R317a	p15=3.1.7	MIT should invest in creating and staffing collaborative hands-on spaces for extended assignments, exams, and AI-free or AI-limited work.	report.pdf	evaluative
+#
+# --- 3.1.8 pre-registered contradiction (PLAN S4): route=survey leaf; expected verdict CONTRADICTED
+#     against C.2 MIT Guidance (72% adequate, see C2h) and C.3 (75% clear, see C3d), neither acknowledged here.
+#     Counts as a JUDGE MISS if verdict != contradicted with C2h/C3d retrieved; RETRIEVAL/EXTRACTION MISS if
+#     C2h/C3d are not surfaced. Counter-evidence verified present as text in report.txt (lines 1682, 1707).
+R318a	p16=3.1.8	Students report that the AI guidance they receive from instructors is often confusing and unclear.	report.pdf	survey
+R318b	p16=3.1.8	Every MIT subject should have a clear policy about the use of generative AI, posted prominently in the syllabus and on the course website.	report.pdf	evaluative
+R318c	p16=3.1.8	As soon as possible, MIT should develop a clear and consistent menu of AI guidelines for instructors and departments to choose from and adapt.	report.pdf	evaluative
+R318d	p16=3.1.8	AI use policies should include a rationale, tied explicitly to the learning goals of the course, for why AI must, may, or may not be used.	report.pdf	evaluative
+R318e	p16=3.1.8	When allowing or encouraging AI use, instructors should make sure students understand that LLMs can fabricate facts and citations, code tools can produce incorrect or insecure code, and image tools can produce biased or inappropriate outputs.	report.pdf	evaluative
+R319a	p17=3.1.9	MIT should not rely on AI detectors, because they risk an arms race with "AI humanizers" and may misclassify the writing of non-native English speakers or neurodivergent students.	report.pdf	evaluative
+R319b	p17=3.1.9	AI detection tools are reasonably accurate on purely AI-generated text but are unlikely to detect AI used to complete an outline or edit a section.	report.pdf	evaluative
+R319c	p17=3.1.9	The current generation of lockdown browsers is buggy, error-prone, and feels like surveillance, so in-person proctored exams (the current MIT norm) are a better choice in most cases.	report.pdf	evaluative
+R319d	p17=3.1.9	The Committee on Discipline does not consider AI detector output alone sufficient to bring an academic integrity case.	report.pdf	evidence
+R3110a	p18=3.1.10	MIT should pursue coordinated curricular experimentation, possibly offering "AI Light" or "AI Heavy" class variants or pathways through the curriculum.	report.pdf	evaluative
+R3110b	p18=3.1.10	Faculty governance should review its processes this fall to ensure the presence of efficient pathways for curricular experiments.	report.pdf	evaluative
+#
+# === S3.2 Center people, community, and the residential experience ===
+R32a	p18=3.2	MIT should act decisively to ensure that AI augments the human communities through which education happens, rather than quietly replacing them.	report.pdf	evaluative
+R32b	p18=3.2	The backlash against AI in commencement speeches in the summer of 2026 expressed the discontent many feel about AI and the role Big Tech now plays in society.	report.pdf	evidence
+R32c	p19=3.2	Across higher education, students report high levels of anxiety, depression, loneliness, and disconnection.	report.pdf	evidence
+R321a	p19=3.2.1	As a residential institution, MIT needs to clearly define and communicate the value of bringing students to campus for face-to-face discussion, dialogue, and problem solving.	report.pdf	evaluative
+R321b	p19=3.2.1	MIT should cultivate a campus culture in which instructor-imposed AI restrictions clearly support learning and students share a culture that values residential learning and discourages excessive reliance on AI.	report.pdf	evaluative
+R322a	p20=3.2.2	MIT needs to invest in creating shared norms, establishing new community rituals, and addressing academic, social, and emotional challenges introduced or exacerbated by AI.	report.pdf	evaluative
+R322b	p20=3.2.2	Anecdotally, the rapid adoption of AI may already be affecting student well-being, with some students becoming dependent on AI for schoolwork or emotional support and losing their sense of agency and confidence.	report.pdf	evaluative
+R322c	p20=3.2.2	The technical General Institute Requirements once provided an intense bonding experience around a common core, but this core is fracturing as students rush to major-specific classes and defer GIRs to senior spring.	report.pdf	evaluative
+R323a	p20=3.2.3	Instructors who present students with substantially AI-generated content, or use AI for evaluation, grading, or feedback, should be transparent with students about how and why AI is being used.	report.pdf	evaluative
+R323b	p21=3.2.3	In a poll, most students told the Tech that they are uncomfortable with the idea of AI teaching assistants.	report.pdf	survey
+R323c	p21=3.2.3	Students notice when instructors use AI for slides, feedback, or grading while imposing restrictions on student use, and perceive it as a double standard.	report.pdf	evaluative
+R324a	p21=3.2.4	MIT should immediately integrate effective, responsible, and ethical AI use into undergraduate and graduate orientation and infuse it throughout the curriculum.	report.pdf	evaluative
+R324b	p21=3.2.4	In the fall 2025 Tech Survey, more than two-thirds of responding students felt AI would be important in their careers, yet only 25% felt MIT was adequately preparing them to use AI.	report.pdf	survey
+R325a	p22=3.2.5	MIT should recognize the broad range of attitudes toward AI, from enthusiasm to outright rejection, and should encourage research and policy efforts to mitigate AI's negative impacts.	report.pdf	evaluative
+R325b	p22=3.2.5	Many people at MIT object to the way most AI models were trained, by reading vast amounts of internet data often without the authors' explicit consent.	report.pdf	evaluative
+R326a	p22=3.2.6	All theses should include a statement about how AI was used in their production, and AI should never be listed as a co-author.	report.pdf	evaluative
+R326b	p22=3.2.6	All MIT researchers should view AI as a tool under the direction of a human who is responsible for verifying the accuracy of its output.	report.pdf	evaluative
+#
+# === S3.3 Build processes, teams, and tools for continuous reflection, iteration, and improvement ===
+R331a	p23=3.3.1	MIT should establish an ongoing AI and education committee to monitor AI's impacts, evaluate changes in AI models and technology, and coordinate policy.	report.pdf	evaluative
+R332a	p23=3.3.2	MIT should appoint AI Leads in each school and the college (or possibly each department) to help with local AI curricular planning, adaptation, and adoption.	report.pdf	evaluative
+R333a	p23=3.3.3	MIT should fund an AI Implementation Team and AI Fellows to support individual instructors, develop campus-wide tools, and study how those tools are used across campus.	report.pdf	evaluative
+R333b	p23=3.3.3	Existing instructor and curriculum support units like the Teaching and Learning Lab are already at capacity.	report.pdf	evaluative
+R334a	p24=3.3.4	MIT and its departments, schools, and college should create an AI Pilot Fund that instructors can apply to for resources such as AI credits, TAs, UROPs, and summer support.	report.pdf	evaluative
+R335a	p24=3.3.5	MIT should develop a set of resources for educators, including lunch-and-learn seminars, online and in-person training, and periodic Institute-sponsored workshops on AI and education.	report.pdf	evaluative
+R335b	p24=3.3.5	MIT should avoid "checking the box" with generic third-party AI training programs and instead invest in ways for its own community to provide these resources.	report.pdf	evaluative
+R336a	p25=3.3.6	MIT should begin tracking metrics on AI use, campus engagement, student satisfaction, and post-graduation feedback, for example through additional questions in the biennial Quality of Life survey.	report.pdf	evaluative
+R337a	p25=3.3.7	MIT should continue to provide a model-agnostic AI platform such as Parley and ensure it provides the level of access the community needs.	report.pdf	evaluative
+R337b	p25=3.3.7	The highest tier of commercial AI plans costs as much as $200/month (as of June 2026).	report.pdf	evidence
+R337c	p25=3.3.7	The Parley system gives everyone at MIT access to a range of commercial and open models with up to $30/month of free credits, and API access for coding tools was released in the summer of 2026.	report.pdf	evidence
+R337d	p25=3.3.7	The inequity in access, where some students can spend $200 or more per month on cutting-edge AI while peers cannot, has the potential to create enormous disparities in course performance.	report.pdf	evaluative
+R338a	p26=3.3.8	MIT should continue investing in state-of-the-art tools while protecting user privacy and remaining model-agnostic, not committing to any single commercial AI ecosystem.	report.pdf	evaluative
+R338b	p26=3.3.8	Recent open-source models that run on local GPUs provide capabilities similar to commercial models on many tasks, but the largest open models require very large GPU clusters.	report.pdf	evaluative
+R339a	p26=3.3.9	MIT should establish a clear policy on what types of AI-usage logging and auditing will be allowed, balancing users' expectation of confidentiality against instructors' interest in seeing how students use AI.	report.pdf	evaluative
+R339b	p26=3.3.9	Because Parley is an MIT-administered system, IS&T can in theory see every request from users to Parley and every response from the backend API models.	report.pdf	evaluative
+R339c	p26=3.3.9	The MIT-created ELIZA chatbot, one of the earliest such systems, was mainly designed to demonstrate the shallowness of human-AI interactions.	report.pdf	evidence
+R339d	p26=3.3.9	MIT students are part of the generation most likely to use AI for personal advice.	report.pdf	evidence
+R3310a	p27=3.3.10	MIT should invest in ways to provide information about the actual environmental and financial costs of using AI, and should audit its own AI footprint.	report.pdf	evaluative
+R3310b	p27=3.3.10	Both training and inference incur energy costs, and the constant churn of training newer and more powerful models has an environmental impact.	report.pdf	evaluative
+#
+# === S4 Conclusion (root thesis) ===
+CN1	p27=4	Committee members from across MIT's five schools and the college shared the same fundamental concerns about AI's risks and the same determination that MIT lead in pioneering a new model of education.	report.pdf	evaluative
+CN2	p27=4	Because of MIT's longstanding leadership in AI, its standing as a preeminent research and education institution, and its tradition of hands-on education, the Institute is uniquely positioned to lead higher education in adapting to the AI era.	report.pdf	evaluative
+#
+# === Appendix A: Committee process and AI-use provenance ===
+AA1	p29=A. Committee Process	None of the text of the report was generated with AI; the committee supplied early drafts to ChatGPT only to identify redundant or overlapping sections.	report.pdf	method
+AA2	p29=A. Committee Process	Some of the graphs and statistical summaries in Appendix C were generated with Codex, OpenAI's AI coding tool.	report.pdf	method
+AA3	p29=A. Committee Process	The committee met weekly during spring 2026 and conducted surveys, analysis of peer policies, and listening sessions, including separate sessions for graduate and undergraduate students.	report.pdf	method
+#
+# === Appendix B: Sample AI policy menu for syllabi ===
+AB1	p29=B. Sample AI Policy	The committee recommends that MIT agree on a menu of standard AI-use policies, with every class selecting and adapting a clearly stated policy from the menu.	report.pdf	evaluative
+AB2	p29=B. Sample AI Policy	The proposed four-option menu is: B.1 Unrestricted GenAI Use, B.2 Limited GenAI Use (support tool only), B.3 Required GenAI Use, and B.4 GenAI Use Strictly Prohibited.	report.pdf	evaluative
+#
+# === Appendix C.1: Spring 2026 AI Usage and Attitudes Survey ===
+C1m1	p31=C.1 Spring 2026 AI Usage and Attitudes Survey	The Spring 2026 AI Usage and Attitudes Survey received 1,632 responses, a 12% response rate ranging from 20% (SHASS) to 10% (Sloan); students responded at 12% and instructors and faculty at 16%.	report.pdf	method
+C1a	p31=C.1 Overall Usage	ChatGPT is the most widely used system, with 44% of respondents (46% of students and 35% of instructors) saying they used it "Often/Very Often."	report.pdf	survey
+C1b	p31=C.1 Overall Usage	Sloan reported a much higher rate of usage of all AI tools than any other group.	report.pdf	survey
+C1c	p32=C.1 Student Usage	Students use AI most for coding, information search, writing revision, and summarization, with fewer using it for whole-cloth generation of new text.	report.pdf	survey
+C1d	p32=C.1 AI Attitudes	Respondents broadly feel they need AI skills and that AI makes them more productive, but also that they are becoming more dependent on it, and most do not like to use it as a writing tool.	report.pdf	survey
+C1e	p33=C.1 Research Use	Most respondents felt spelling and grammar, research, and code generation were acceptable AI research uses, while most felt using it for peer review or drafting paragraphs from outlines was unacceptable.	report.pdf	survey
+C1f	p33=C.1 AI Concerns	About 10% of respondents (N=163) wrote in an "Other" AI concern; the most common (N=79) was the potential impact of AI on learning and cognitive development.	report.pdf	survey
+#
+# === Appendix C.2: Spring 2026 Quality of Life Survey ===
+C2m1	p34=C.2 Spring 2026 Quality of Life Survey	The Spring 2026 campus-wide Quality of Life Survey had about 8,200 respondents from the main MIT campus (Lincoln Labs was surveyed but omitted), grouping faculty with instructors, postdocs with grad students, and service with support staff.	report.pdf	method
+# --- C2a is the PLAN S5 / G.3.1 known-limit leaf: the label "undergrads" appears twice; the second
+#     should read grad students. The corrective chart figures (undergrads 31+15=46, grads 27+33=60) are NOT
+#     present as text in report.txt (Codex-generated image, Appendix A boundary), so no companion chart leaf
+#     is created (would be fabricating an input). Human-adjudication item, not an expected auto-catch.
+C2a	p34=C.2 Frequency of AI Tool Use	Overall about 40% of respondents said they used AI tools often or very often, with 46% of undergrads and 60% of undergrads and graduate students reporting at least often use.	report.pdf	survey
+C2b	p34=C.2 Frequency of AI Tool Use	Service and support staff had a markedly low level of AI use, with 53% reporting they never used AI tools.	report.pdf	survey
+C2c	p35=C.2 Pessimistic/Optimistic	Only 23% of respondents are optimistic about generative AI, rating a 4 or 5 on a pessimism-to-optimism scale.	report.pdf	survey
+C2d	p35=C.2 Replaceable/Capable	40% of respondents felt AI made them more capable and 27% felt it made them more replaceable, but undergrads reported feeling replaceable at a higher rate than capable (40% vs. 34%).	report.pdf	survey
+C2e	p36=C.2 Worsens/Improves Work	Respondents felt AI improved their work more than it worsened it, with 42% selecting a 4 or 5 on the worse/better axis versus 21% selecting a 1 or 2.	report.pdf	survey
+C2f	p36=C.2 Inefficient/Efficient	There was strong agreement that AI made respondents more efficient, with 60% selecting a 4 or 5 on the inefficient/efficient axis.	report.pdf	survey
+C2g	p37=C.2 Unreliable/Reliable	Significantly more respondents felt AI was unpredictable and unreliable (39% selecting a 1 or 2) than felt it was trustworthy and reliable (21% selecting a 4 or 5).	report.pdf	survey
+# --- C2h is pre-registered counter-evidence #1 for R318a (72% adequate guidance, highest of any group).
+C2h	p37=C.2 MIT Guidance	Undergrads largely reported that MIT had given them adequate guidance about AI use, with 72% somewhat or strongly agreeing, while other groups reported much lower levels of adequate support.	report.pdf	survey
+#
+# === Appendix C.3: Fall 2025 Tech Survey ===
+C3m1	p38=C.3 Fall 2025 Tech Survey	The Fall 2025 Tech survey received 1,002 responses, including 659 undergraduates, 248 graduate students and postdocs, 18 faculty, and 72 staff.	report.pdf	method
+C3a	p38=C.3 Fall 2025 Tech Survey	Among undergraduates, 46% reported using LLMs daily and 30% several times per week; among graduate students and postdocs the corresponding figures were 46% and 35%.	report.pdf	survey
+C3b	p38=C.3 Fall 2025 Tech Survey	The most common undergraduate use was explaining course material (over 80%), followed by coding assistance (around 70%); for graduate students and postdocs it was programming assistance (88%), then brainstorming ideas (55%).	report.pdf	survey
+C3c	p38=C.3 Fall 2025 Tech Survey	90% of undergraduates were somewhat or very concerned about overreliance on LLMs, including 67% who were very concerned, and 45% were very concerned about inaccurate or misleading outputs.	report.pdf	survey
+# --- C3d is pre-registered counter-evidence #2 for R318a (75% believed faculty expectations were clear).
+C3d	p38=C.3 Fall 2025 Tech Survey	75% of undergraduates believed faculty expectations regarding AI use were clear, and 70% agreed AI proficiency will be important in their careers, while only 25% believed MIT is preparing them to use AI professionally.	report.pdf	survey

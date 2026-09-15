@@ -1,0 +1,268 @@
+# argument.txt — the MIT Ad Hoc Committee report as an argument tree (spec/ARGUMENT.md)
+#
+# title: Report of MIT's Ad Hoc Committee on AI Use in Teaching, Learning, and Research Training — MIT, 13 Aug 2026
+#
+# Refinement (PLAN.md §3): root → recommendation CLUSTER (§3.1/§3.2/§3.3) → sub-recommendation
+# (R-3.x.y) → one finding (F-3.x.y) → atomic-claim leaves (ids in claims-machine-full.txt).
+# This file carries CONTENT and STRUCTURE only. Judgements are DERIVED bottom-up from a merged chain
+# (spec/TREE.md), never authored — there is none here (no judge run yet). A judgement column would be
+# a fabricated result.
+#
+# Line format (indentation = depth; a child sits one level below its parent):
+#   <id>[ ?]  | <content, the report's words, short>  | <edge / provenance note>
+# A bare id at claim depth (deepest level) is an ATOMIC-CLAIM LEAF; its text, route and source live in
+# claims-machine-full.txt and are not repeated here (one source of truth for claim text).
+#
+# Edge markers (spec/ARGUMENT.md § Edges):
+#   (default)  load-bearing, report-stated — the recommendation directly acts on / remedies the
+#              finding, or the finding decomposes to the claim.
+#   ?          the report does NOT rest the recommendation on one named finding — it presents the
+#              imperative but grounds it in the whole §1.1 Landscape / §2 Principles thesis, not a
+#              single finding. A question for a human, not a guess; candidates named in the note.
+#   [opinion]  a route=evaluative leaf — never judged; contributes nothing to a parent's hold/fail.
+#
+# scheme= (spec/EDGE.md §1): on the finding line's note, types the INFERENCE from finding to
+# recommendation, not the finding's own route. MIT's recs are overwhelmingly remedial means→ends
+# ("students are confused → mandate a clear policy"), so most stated edges are `practical`; a rec that
+# generalizes one survey figure is `survey`; an anecdote/price-point-driven rec is `example`. Only
+# STATED, load-bearing edges carry a scheme; `?` edges do not (no standing inference to attack).
+#
+# EDGE-PASS GROUNDABILITY (honest limit): the edge call reasons from the finding's faithfulness-
+# verified quote (spec/EDGE.md §2). MIT's findings are mostly route=evaluative, so their only leaves
+# are [opinion] and never get a verified quote — those practical edges are tagged for structure but the
+# automated edge run cannot fire on them. The edges with a real survey/evidence leaf (F-3.1.3, F-3.1.5,
+# F-3.1.6, F-3.1.8, F-3.1.9, F-3.2.2, F-3.2.3, F-3.3.9) are the ones the run can actually reason over.
+#
+# ATTACHMENT — §3's numbered recommendations are the report's own spine (§3.1.1 … §3.3.10). Each
+# sub-rec's imperative claims sit as [opinion] leaves under a finding node whose content is the premise
+# the section rests on; the section's survey/evidence claim (where present) is the finding's real leaf.
+# Recs the report grounds in the Landscape thesis rather than one finding are childless-? with the
+# section's imperative claims attached directly, and the candidate premises named (dora R-TRANSFORM
+# pattern).
+#
+# PRE-REGISTRATION (PLAN.md §4): F-3.1.8's real leaf R318a ("students report AI guidance is confusing")
+# is expected to judge `contradicted` against the held appendix surveys C2h (72% adequate guidance) and
+# C3d (75% found faculty expectations clear) — surfaced at RETRIEVAL time, not wired structurally here.
+# Those two counter-evidence leaves live under `base` (evidence base) below.
+#
+# ROOT is SYNTHESISED — the report states no single thesis sentence. Verbatim anchors: §4 Conclusion
+# p27 (CN2, MIT "uniquely positioned to lead higher education in adapting to the AI era") and §2.2 p4
+# (P2, "uncertainty cannot be an excuse for inaction … a bold strategic response"). Both kept as leaves
+# under `base` so they are judged for internal consistency.
+
+root  | MIT is uniquely positioned to lead higher education into the AI era, and uncertainty is no excuse for inaction — the Institute should respond boldly: adapt how it teaches and assesses, protect its human community, and build the capacity to iterate.  | SYNTHESISED; anchors = §4 p27 (CN2), §2.2 p4 (P2)
+
+    # ══ §3.1 — Adapt educational processes for an AI-aware world ══
+    REC-3.1  | Adapt educational processes for an AI-aware world.  | §3.1 head p11
+
+        R-3.1.1 ?  | Reconsider your goals for student learning in every subject before building AI-aware assessments.  | §3.1.1 p11; rests on the backward-design thesis (P5b), not one finding — candidate P5b
+            R311a [opinion]
+            R311b
+
+        R-3.1.2  | Adopt assessment forms less vulnerable to AI and more valuable for learning — oral exams, portfolios, out-of-class work paired with in-class conversation.  | §3.1.2 p12; remedies F-3.1.2
+            F-3.1.2  | AI saps problem sets, long-form writing and take-home exams of their value for teaching and assessment.  | scheme=practical; §3.1.2 p12
+                R312b [opinion]
+                R312a [opinion]
+
+        R-3.1.3  | Increase the role of experiential and project-based learning to match the shift toward AI-resistant assessment.  | §3.1.3 p13; remedies F-3.1.3
+            F-3.1.3  | Workers who succeed in the AI era are those who creatively find where AI generates value and revise their intuition through experimentation (Sadun, WSJ).  | scheme=practical; §3.1.3 p13
+                R313c
+                R313a [opinion]
+                R313b [opinion]
+
+        R-3.1.4 ?  | Give every subject a regular in-person social component, intentionally structured to meet learning objectives even in large classes.  | §3.1.4 p13; rests on the isolation thesis (LS4), not one finding — candidate LS4
+            R314a [opinion]
+
+        R-3.1.5  | Preserve, renew and ideally expand UROP and other mentorship- and collaboration-centred learning.  | §3.1.5 p14; remedies F-3.1.5
+            F-3.1.5  | UROP directly engages 93% of undergraduates and 58% of faculty, and exists to educate rather than to supply research labor — a role AI agents could quietly displace.  | scheme=practical; §3.1.5 p14
+                R315b
+                R315c
+                R315d [opinion]
+                R315a [opinion]
+
+        R-3.1.6  | Do not ration grades; instead explore alternative grading and assessment systems (percentage, competency-, mastery-based).  | §3.1.6 p15; remedies F-3.1.6
+            F-3.1.6  | Grade rationing would be counterproductive and would intensify the temptation to cut corners by increasing AI reliance.  | scheme=practical; §3.1.6 p15
+                R316a [opinion]
+                R316b [opinion]
+                R316c
+
+        R-3.1.7 ?  | Invest in and staff collaborative hands-on spaces for extended assignments, exams and AI-free / AI-limited work.  | §3.1.7 p15; rests on the upended-process thesis (LS3), not one finding — candidate LS3
+            R317a [opinion]
+
+        R-3.1.8  | Give every subject a clear, prominently posted AI policy, and develop a consistent Institute menu of AI guidelines for instructors to adapt.  | §3.1.8 p16; remedies F-3.1.8
+            F-3.1.8  | Students report that the AI guidance they receive from instructors is often confusing and unclear.  | scheme=practical; §3.1.8 p16 — POSITIVE CONTROL (finding names no cost or caveat of the means); PRE-REG contradiction vs C2h/C3d
+                R318a
+                R318b [opinion]
+                R318c [opinion]
+                R318d [opinion]
+                R318e [opinion]
+
+        R-3.1.9  | Do not rely on AI detectors; prefer in-person proctored exams (the current MIT norm) over lockdown browsers.  | §3.1.9 p17; remedies F-3.1.9
+            F-3.1.9  | AI detectors risk an arms race with "humanizers" and may misclassify non-native English speakers and neurodivergent students; the Committee on Discipline does not accept detector output alone.  | scheme=practical; §3.1.9 p17
+                R319d
+                R319a [opinion]
+                R319b [opinion]
+                R319c [opinion]
+
+        R-3.1.10 ?  | Pursue coordinated curricular experimentation — "AI Light"/"AI Heavy" variants — with efficient faculty-governance pathways.  | §3.1.10 p18; rests on the no-single-approach principle (P6), not one finding — candidate P6
+            R3110a [opinion]
+            R3110b [opinion]
+
+    # ══ §3.2 — Center people, community, and the residential experience ══
+    REC-3.2  | Center people, community, and the residential experience.  | §3.2 head p18
+
+        R-3.2.1 ?  | Clearly define and communicate the value of bringing students to campus for face-to-face discussion and problem solving.  | §3.2.1 p19; rests on the well-being/anxiety thesis (R32c), not one finding — candidate R32c
+            R321a [opinion]
+            R321b [opinion]
+
+        R-3.2.2  | Invest in shared norms, new community rituals, and the academic, social and emotional challenges AI introduces or worsens.  | §3.2.2 p20; remedies F-3.2.2
+            F-3.2.2  | Across higher education, students report high levels of anxiety, depression, loneliness and disconnection.  | scheme=practical; §3.2 p19 (R32c)
+                R32c
+                R322a [opinion]
+                R322b [opinion]
+                R322c [opinion]
+
+        R-3.2.3  | Instructors who use AI for content, evaluation, grading or feedback should be transparent with students about how and why.  | §3.2.3 p20; remedies F-3.2.3
+            F-3.2.3  | In a poll, most students told the Tech they are uncomfortable with AI teaching assistants, and perceive instructor AI use under student restrictions as a double standard.  | scheme=practical; §3.2.3 p21
+                R323b
+                R323a [opinion]
+                R323c [opinion]
+
+        R-3.2.4  | Immediately integrate responsible AI use into orientation and infuse it throughout the curriculum.  | §3.2.4 p21; remedies F-3.2.4
+            F-3.2.4  | In the fall 2025 Tech Survey more than two-thirds of students felt AI would matter to their careers, yet only 25% felt MIT was adequately preparing them.  | scheme=survey; §3.2.4 p21
+                R324b
+                R324a [opinion]
+
+        R-3.2.5 ?  | Recognize the full range of attitudes toward AI and encourage research and policy to mitigate its negative impacts.  | §3.2.5 p22; rests on the mixed-feelings Landscape (LS1/LS2), not one finding — candidates LS1, LS2
+            R325a [opinion]
+            R325b [opinion]
+
+        R-3.2.6 ?  | Require an AI-use statement in every thesis; AI is never a co-author, and a human remains responsible for verifying its output.  | §3.2.6 p22; rests on the research-integrity principle, not one finding
+            R326a [opinion]
+            R326b [opinion]
+
+    # ══ §3.3 — Build processes, teams, and tools for continuous reflection, iteration, and improvement ══
+    REC-3.3  | Build processes, teams, and tools for continuous reflection, iteration, and improvement.  | §3.3 head p23
+
+        R-3.3.1 ?  | Establish an ongoing AI-and-education committee to monitor impacts, evaluate model changes and coordinate policy.  | §3.3.1 p23; rests on the humility/course-correction principle (P1), not one finding — candidate P1
+            R331a [opinion]
+
+        R-3.3.2 ?  | Appoint AI Leads in each school and the college to help with local curricular planning, adaptation and adoption.  | §3.3.2 p23; rests on the whole iteration thesis, not one finding
+            R332a [opinion]
+
+        R-3.3.3  | Fund an AI Implementation Team and AI Fellows to support instructors, build campus tools, and study their use.  | §3.3.3 p23; remedies F-3.3.3
+            F-3.3.3  | Existing instructor- and curriculum-support units such as the Teaching and Learning Lab are already at capacity.  | scheme=practical; §3.3.3 p23
+                R333b [opinion]
+                R333a [opinion]
+
+        R-3.3.4 ?  | Create an AI Pilot Fund instructors can apply to for AI credits, TAs, UROPs and summer support.  | §3.3.4 p24; rests on the experimentation thesis, not one finding
+            R334a [opinion]
+
+        R-3.3.5 ?  | Develop educator resources — seminars, training, Institute-sponsored workshops — built in-house rather than generic third-party programs.  | §3.3.5 p24; rests on the iteration thesis, not one finding
+            R335a [opinion]
+            R335b [opinion]
+
+        R-3.3.6 ?  | Begin tracking metrics on AI use, engagement, satisfaction and post-graduation feedback, e.g. via the biennial Quality of Life survey.  | §3.3.6 p25; rests on the iterate-on-evidence thesis, not a finding of its own
+            R336a [opinion]
+
+        R-3.3.7  | Continue providing a model-agnostic AI platform such as Parley at the access level the community needs.  | §3.3.7 p25; remedies F-3.3.7
+            F-3.3.7  | Top commercial AI plans cost as much as $200/month while Parley gives everyone up to $30/month of free credits — an access gap that could create enormous disparities in course performance.  | scheme=example; §3.3.7 p25 (single price-point → subsidized-access rule)
+                R337b
+                R337c
+                R337d [opinion]
+                R337a [opinion]
+
+        R-3.3.8  | Keep investing in state-of-the-art tools while protecting privacy and staying model-agnostic — not committing to one commercial ecosystem.  | §3.3.8 p26; remedies F-3.3.8
+            F-3.3.8  | Recent open-source local models rival commercial ones on many tasks, but the largest open models require very large GPU clusters.  | scheme=practical; §3.3.8 p26 (finding names a caveat of the means)
+                R338b [opinion]
+                R338a [opinion]
+
+        R-3.3.9  | Establish a clear policy on what AI-usage logging and auditing is allowed, balancing user confidentiality against instructors' interest.  | §3.3.9 p26; remedies F-3.3.9
+            F-3.3.9  | Because Parley is MIT-administered, IS&T can in theory see every user request and every backend response.  | scheme=practical; §3.3.9 p26 (finding names a confidentiality cost)
+                R339c
+                R339d
+                R339a [opinion]
+                R339b [opinion]
+
+        R-3.3.10  | Provide information about the real environmental and financial costs of AI use, and audit MIT's own AI footprint.  | §3.3.10 p27; remedies F-3.3.10
+            F-3.3.10  | Both training and inference incur energy costs, and the constant churn of training newer models has an environmental impact.  | scheme=practical; §3.3.10 p27
+                R3310b [opinion]
+                R3310a [opinion]
+
+    # ══ base — premises, principles, framing, conclusion and the evidence base that no single rec rests on ══
+    base ?  | The §1.1 Landscape premises, §2 Principles, §3 framing, §4 Conclusion and the Appendix C survey evidence base — the descriptive and empirical ground the recommendations sit on.  | report does not route these to one recommendation
+
+        # §1.1 The Landscape — premises the recommendations rest on
+        LS1 [opinion]
+        LS2 [opinion]
+        LS3 [opinion]
+        LS4 [opinion]
+        LS5 [opinion]
+        LS6 [opinion]
+        LS7 [opinion]
+        LS8 [opinion]
+
+        # §2 Guiding Principles (evaluative posture + the evidence embedded in it)
+        P1 [opinion]
+        P1b
+        P1c
+        P2 [opinion]
+        P2b
+        P3 [opinion]
+        P3b
+        P3c
+        P4 [opinion]
+        P4b [opinion]
+        P5 [opinion]
+        P5b [opinion]
+        P6 [opinion]
+        P6b [opinion]
+        P7
+        P7b
+        P7c [opinion]
+        P8 [opinion]
+        P8b
+
+        # §3 / §3.2 framing and §4 Conclusion (root anchors)
+        RI1 [opinion]
+        RI2 [opinion]
+        R32a [opinion]
+        R32b
+        CN1 [opinion]
+        CN2 [opinion]
+
+        # Appendix A — process / AI-use provenance (method); Appendix B — the policy menu
+        AA1
+        AA2
+        AA3
+        AB1 [opinion]
+        AB2 [opinion]
+
+        # Appendix C.1 — Spring 2026 AI Usage & Attitudes Survey (evidence base)
+        C1m1
+        C1a
+        C1b
+        C1c
+        C1d
+        C1e
+        C1f
+
+        # Appendix C.2 — Spring 2026 Quality of Life Survey (evidence base); C2a = G.3.1 known-limit leaf,
+        # C2h = pre-registered counter-evidence #1 for R-3.1.8 (72% adequate guidance)
+        C2m1
+        C2a
+        C2b
+        C2c
+        C2d
+        C2e
+        C2f
+        C2g
+        C2h
+
+        # Appendix C.3 — Fall 2025 Tech Survey (evidence base); C3d = pre-registered counter-evidence #2
+        # for R-3.1.8 (75% found faculty expectations clear)
+        C3m1
+        C3a
+        C3b
+        C3c
+        C3d
