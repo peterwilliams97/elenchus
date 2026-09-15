@@ -19,6 +19,10 @@ prevent.** The destructive probes are elenchus applied to assay's own critic.
   (§ Conclusion, same doc): the substance critic imports an outcome it already knows.
 - **Not a gate, by design.** The obligation: re-run `examples/destructive/run.sh` from a terminal on
   every default-model change — cheap to run, expensive to have silently lost.
+- **Adversary design — built, calibration begun** — `adversary-design-2026-09-14.md`: built as
+  `spec/EDGE.md`; `practical` calibrated on `claude-sonnet-4-6` (dora, 15 Sept: one edge opened,
+  R-BATCH, on the report's own named cost); `example` spec'd and built, unexercised — no corpus with
+  held example findings; a constructed probe under `examples/destructive/` is the route when wanted.
 
 ## Files
 
@@ -41,9 +45,9 @@ prevent.** The destructive probes are elenchus applied to assay's own critic.
 - **`design-notes.md`** — unsettled design seeds: whether surviving refutation is the best
   validation, and where the elenchus/substance leg stands today (dormant). May graduate to
   `BACKGROUND.md`.
-- **`adversary-design-2026-09-14.md`** — built and calibrated on dora (`practical`); example scheme
-  next: attack finding→recommendation edges with named defeaters. Of 46 F→R edges across the five
-  corpora, dora's 7 in-scope now carry an edge verdict.
+- **`adversary-design-2026-09-14.md`** — the edge-attack leg, built as `spec/EDGE.md`: `practical`
+  calibrated on dora (15 Sept, edge R-BATCH on the report's own named cost); `example` spec'd and
+  built but unexercised — no corpus with held example findings yet.
 - **`Consultant & institutional reports.md`** — candidate test corpus: open-access consultant and
   institutional reports to analyse, grouped by subject (global/AU/Scotland, housing, AI-in-programming,
   EU competitiveness, AI-in-education), each with a **Test notes** column flagging where the argument
