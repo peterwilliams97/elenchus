@@ -3078,7 +3078,9 @@ func splitSummary(text string) []string {
 	var items []string
 	for _, ln := range strings.Split(text, "\n") {
 		ln = strings.TrimSpace(ln)
-		if ln == "" {
+		// Skip blank and "#"-comment lines, matching loadClaimsFile: a claims file's "# key: value"
+		// header and its comments are not claims, so the judge never sees them as leaves.
+		if ln == "" || strings.HasPrefix(ln, "#") {
 			continue
 		}
 		items = append(items, strings.TrimSpace(leadingMarkerRe.ReplaceAllString(ln, "")))

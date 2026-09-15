@@ -73,6 +73,23 @@ func TestSplitSummaryBlankLines(t *testing.T) {
 	}
 }
 
+// TestSplitSummaryComments pins that "#"-comment and blank lines are dropped, not judged as claims —
+// a claims file's "# key: value" header and its comment lines must never become leaves (the bug that
+// turned claims-objectives.txt's 33 comment lines into c1–c43).
+func TestSplitSummaryComments(t *testing.T) {
+	in := "# title: Slice 1\n# a section comment\n\n1. First claim.\n# mid-file comment\n2. Second claim."
+	got := splitSummary(in)
+	want := []string{"First claim.", "Second claim."}
+	if len(got) != len(want) {
+		t.Fatalf("want %d claims, got %d: %#v", len(want), len(got), got)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("item %d: want %q, got %q", i, want[i], got[i])
+		}
+	}
+}
+
 func TestExtractJSON(t *testing.T) {
 	cases := []struct {
 		in, want string
