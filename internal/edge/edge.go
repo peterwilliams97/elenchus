@@ -20,28 +20,28 @@ import (
 	"strings"
 )
 
-// Defeater says: the finding is true, and the recommendation still does not follow. For a
-// `practical` edge there is one allowed reason — the report itself says the recommended action has
-// a downside (a cost, e.g. F-BATCH: small batches help product performance but reduce individual
-// effectiveness), and in some setting that downside wins.
+// Defeater says: the finding is true, and the recommendation still does not follow. The allowed
+// reason is always a LIMIT the report itself states and the recommendation generalises past — for a
+// `practical` edge a cost of the recommended action (F-BATCH: small batches help product performance
+// but reduce individual effectiveness); for an `example` edge a named exception to the case, or the
+// scope that bounds it. In some setting that limit wins.
 //
 //   - `World` is the model's prose describing that setting. Not checked beyond non-empty; this is
 //     what the reader judges.
-//   - `Anchor` is the sentence in the report that states the downside, copied verbatim. `Admit`
-//     checks it: it must be a norm-substring of this edge's finding text or one of its verified
-//     quotes, else it is rejected. The model can only copy it, not write it.
+//   - `Anchor` is the clause in this edge's finding (or a verified quote) that states the limit,
+//     copied verbatim. `Admit` checks it: it must be a norm-substring of this edge's finding text or
+//     one of its verified quotes, else it is rejected. The model can only copy it, not write it.
 //   - `Settles` is what observation would decide it. Non-empty only.
 //   - `Kind` is a closed enum (see `kinds`) — what the `World` names.
 //   - `CriticalQuestion` is a closed enum per scheme (see `schemeCQs`); `practical` has only
-//     `side_effects`.
+//     `side_effects`, `example` has `named_exception`/`scope_dropped`.
 //
-// The check guarantees the downside is really in the report; it does not guarantee the `World`
-// built on it is right — R-ACCESS in run 5 quoted a sentence about friction decreasing and called
-// it a cost.
+// The check guarantees the limit is really in the report; it does not guarantee the `World` built on
+// it is right — R-ACCESS in run 5 quoted a sentence about friction decreasing and called it a cost.
 type Defeater struct {
 	World            string `json:"world"`
 	Kind             string `json:"kind"`   // population | condition | definition
-	Anchor           string `json:"anchor"` // the cost clause, verbatim in this edge's finding or verified quotes
+	Anchor           string `json:"anchor"` // the limit clause (cost/exception/scope), verbatim in this edge's finding or quotes
 	Settles          string `json:"settles"`
 	CriticalQuestion string `json:"critical_question"` // which of the scheme's fixed CQs this answers
 }
@@ -103,9 +103,16 @@ var schemeCQs = map[string][]cq{
 		{"sample_population", "Is the surveyed sample the population the recommendation is made to?"},
 		{"question_asked", "Was the question actually asked the claim now being drawn from it?"},
 	},
+	// example carries named_exception and scope_dropped (spec/EDGE.md §2). typical_case and
+	// counter_cases were removed — each is answerable for ANY anecdote by asserting a wider world the
+	// report never claims (a class the case is typical of, a search for counter-cases never run), so
+	// the report cannot be held to them, exactly as practical's goal-naming CQs went (runs 2–5). What
+	// survives is the report-internal move: the report names its own exception or bounds its own scope,
+	// and the recommendation generalises past it — both checkable against the finding by the §3 step-3
+	// anchor rule, and nothing else opens an example edge.
 	"example": {
-		{"typical_case", "Is the cited case typical of the class the rule generalises to?"},
-		{"counter_cases", "How many counter-cases were looked for before generalising?"},
+		{"named_exception", "Do the finding or its quotes name a case, condition or caveat where the pattern did NOT hold, that the recommendation states the rule as if it always does?"},
+		{"scope_dropped", "Do the finding or its quotes state the scope of the case that the recommendation states the rule without?"},
 	},
 	"trend": {
 		{"indicator_tracks", "Does the indicator actually track the thing it is read as signalling?"},
@@ -127,11 +134,12 @@ func KnownScheme(s string) bool { _, ok := schemeCQs[s]; return ok }
 // returns ok, and on failure the step that rejected the offer — "world", "settles", "kind", or
 // "anchor" — so a run logs why each offered defeater was discarded and states how many were offered
 // against how many admitted. The check is form-only: it never judges whether the world is a GOOD
-// defeater, only that the model named a concrete referent AND that referent — the cost clause
-// side_effects names — appears in this edge's own finding or its quotes (§3 step 3, run 5). The anchor
-// is confined to the premise being defeated: never the recommendation (a referent in R while the world
-// names a goal R never states, run 3), and never another finding's text (F-ACCESS anchored on F-DATA,
-// run 4). If the finding and its quotes name no cost, no concrete world opens and the offer is rejected.
+// defeater, only that the model named a concrete referent AND that referent — the limit the scheme's
+// critical question names (a cost, a named exception, a stated scope) — appears in this edge's own
+// finding or its quotes (§3 step 3, run 5). The anchor is confined to the premise being defeated:
+// never the recommendation (a referent in R while the world names a goal R never states, run 3), and
+// never another finding's text (F-ACCESS anchored on F-DATA, run 4). If the finding and its quotes
+// state no such limit, no concrete world opens and the offer is rejected.
 func Admit(d Defeater, findingAndQuotes []string) (ok bool, failedStep string) {
 	if strings.TrimSpace(d.World) == "" {
 		return false, "world"
@@ -142,7 +150,7 @@ func Admit(d Defeater, findingAndQuotes []string) (ok bool, failedStep string) {
 	if !kinds[d.Kind] {
 		return false, "kind"
 	}
-	// step 3: `anchor` is the cost clause side_effects names, verbatim in this edge's own finding or its
+	// step 3: `anchor` is the limit the scheme's CQ names, verbatim in this edge's own finding or its
 	// quotes — never the recommendation, never another finding.
 	anchor := strings.TrimSpace(d.Anchor)
 	if anchor == "" || !anchorInReport(anchor, findingAndQuotes) {

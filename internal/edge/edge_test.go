@@ -171,7 +171,7 @@ func TestSchemaPinsFieldsAndCQs(t *testing.T) {
 		}
 	}
 	// A CQ slug from another scheme must not leak into this one's enum.
-	if strings.Contains(s, "typical_case") {
+	if strings.Contains(s, "named_exception") {
 		t.Error("practical schema leaked the example scheme's CQ slug")
 	}
 	if strings.Contains(strings.ToLower(s), "sound") {
@@ -179,6 +179,76 @@ func TestSchemaPinsFieldsAndCQs(t *testing.T) {
 	}
 	if _, ok := Schema("nope"); ok {
 		t.Error("an unknown scheme must return not-ok")
+	}
+}
+
+// TestSchemaExampleCQs pins the example scheme's schema (spec/EDGE.md §2): critical_question is
+// constrained to exactly named_exception and scope_dropped, the removed typicality CQs (typical_case,
+// counter_cases) are gone, and no other scheme's CQ (practical's side_effects) leaks into the enum.
+func TestSchemaExampleCQs(t *testing.T) {
+	raw, ok := Schema("example")
+	if !ok {
+		t.Fatal("example is a known scheme; Schema returned not-ok")
+	}
+	s := string(raw)
+	for _, want := range []string{`"named_exception"`, `"scope_dropped"`} {
+		if !strings.Contains(s, want) {
+			t.Errorf("example schema missing %s", want)
+		}
+	}
+	for _, gone := range []string{`"typical_case"`, `"counter_cases"`} {
+		if strings.Contains(s, gone) {
+			t.Errorf("example schema still carries removed CQ %s", gone)
+		}
+	}
+	if strings.Contains(s, "side_effects") {
+		t.Error("example schema leaked the practical scheme's CQ slug")
+	}
+}
+
+// TestAdmitExampleScheme pins the example scheme at the code-side admission check (spec/EDGE.md §2, §3).
+// Admit is scheme-agnostic — it checks the anchor against THIS edge's own finding — so an example
+// defeater whose scope_dropped anchor is the finding's own scope phrase admits, while one anchored in the
+// recommendation (which is exactly the text that drops the scope) is rejected at step "anchor".
+func TestAdmitExampleScheme(t *testing.T) {
+	fq := exampleFinding()
+
+	scoped := Defeater{
+		World:            "outside this parser, where no such shared routine exists, the sharing hides nothing",
+		Kind:             "condition",
+		Anchor:           "in this parser",
+		Settles:          "how many other modules actually share the routine",
+		CriticalQuestion: "scope_dropped",
+	}
+	if ok, step := Admit(scoped, fq); !ok {
+		t.Errorf("an example defeater anchored on the finding's own scope phrase should admit, rejected at %q", step)
+	}
+
+	inRec := scoped
+	inRec.Anchor = "hides bugs everywhere" // present only in the recommendation, not this edge's finding
+	if strings.Contains(norm(strings.Join(fq, " ")), norm(inRec.Anchor)) {
+		t.Fatalf("fixture drift: %q leaked into the example finding", inRec.Anchor)
+	}
+	if !strings.Contains(norm(exampleRec()), norm(inRec.Anchor)) {
+		t.Fatalf("fixture drift: %q is no longer in the recommendation", inRec.Anchor)
+	}
+	if ok, step := Admit(inRec, fq); ok || step != "anchor" {
+		t.Errorf("an example defeater anchored only in the recommendation should be rejected at anchor, got ok=%v step=%q", ok, step)
+	}
+}
+
+// TestUserAnchorRulePerScheme pins the ANCHOR RULE the user message carries (spec/EDGE.md §2): practical
+// tells the model to anchor on a named cost, example on a named exception or a stated scope. The block is
+// what routes the scheme-agnostic prompt to the right limit; a missing block would leave the model with
+// no per-CQ anchor instruction, the failure the run-3/4 anchor drift traces to.
+func TestUserAnchorRulePerScheme(t *testing.T) {
+	prac := User("practical", "F.", nil, "R.")
+	if !strings.Contains(prac, "ANCHOR RULE") || !strings.Contains(prac, "COST CLAUSE") {
+		t.Errorf("practical user message should carry the cost-clause anchor rule, got:\n%s", prac)
+	}
+	ex := User("example", "F.", nil, "R.")
+	if !strings.Contains(ex, "named_exception") || !strings.Contains(ex, "scope_dropped") || !strings.Contains(ex, "BOUNDS the case") {
+		t.Errorf("example user message should carry the exception/scope anchor rule, got:\n%s", ex)
 	}
 }
 
@@ -217,4 +287,17 @@ func recText() string {
 // verbatim in it but absent from the R-PLAT premise ("broad data access") must be rejected at "anchor".
 func otherFindingText() string {
 	return "Broad data access amplifies AI's positive influence on organizational performance."
+}
+
+// exampleFinding is a scope-bounded `example` finding — master-plan's shared-code case, its scope phrase
+// ("in this parser") the limit a scope_dropped anchor copies (spec/EDGE.md §2). exampleRec generalises
+// past that scope, so its own text is what an anchor may NOT draw from under the this-edge confinement.
+func exampleFinding() []string {
+	return []string{
+		"A shared toInt32 in this parser hid a bug through 10,000 checks, both with the bug present and with the fix reverted.",
+	}
+}
+
+func exampleRec() string {
+	return "Never share code across modules — shared code hides bugs everywhere."
 }

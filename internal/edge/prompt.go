@@ -89,23 +89,22 @@ plausible in the report's domain, in which the finding STILL HOLDS yet the recom
 A defeater is admitted only if it is CONCRETE. It must:
 - name a specific referent — a population, a condition, or a definition (the "kind");
 - set "anchor" to that referent copied VERBATIM from the FINDING or its SOURCE QUOTES — never from the
-  RECOMMENDATION, never from another finding, and never a phrase you coin in the "world" you write. The
-  anchor is the COST CLAUSE this finding or its quotes name — the cost of the recommended action. A
-  world built on a referent this finding never names is not admitted.
+  RECOMMENDATION, never from another finding, and never a phrase you coin in the "world" you write.
+  WHICH limit of the finding the anchor must name is fixed per critical question and stated in the
+  ANCHOR RULE of the user message; a world built on a referent this finding never names is not admitted.
 - say what source or observation would SETTLE it ("settles").
 "It might not generalise", "could be equivocating", "the sample may be unrepresentative" are NOT
-defeaters — they name nothing and settle nothing. The anchor must be a cost this finding itself names;
-if the finding and its quotes name no cost of the recommended action, no concrete world opens and you
-decline.
+defeaters — they name nothing and settle nothing. The anchor must be a limit this finding itself
+states, of the kind the critical question names; if the finding and its quotes state no such limit, no
+concrete world opens and you decline.
 
 DOMAIN RULE. The world must hold FOR THE AUDIENCE THE REPORT ADDRESSES. The report's genre
 stipulates its audience and the goals that audience holds. A world that gives the organisation
 DIFFERENT goals or constraints — a competing goal the report never puts on its reader, a binding
 obligation outside what it addresses — is not a defeater of the inference: it varies the addressee
-rather than attacking the step from finding to recommendation. Do not offer one. This is why the
-scheme's one question does not ask whether the goal is held or conflicts with another goal, and does
-not ask whether a cheaper alternative means exists: it asks only whether the recommended action carries
-a cost the finding names (side_effects).
+rather than attacking the step from finding to recommendation. Do not offer one. The scheme's critical
+questions never ask you to invent an addressee, a rival goal, or an alternative means; they ask only
+what limit the finding itself states.
 
 If, after asking the scheme's questions, no concrete world opens, set none_admitted=true, leave the
 defeater fields "" (kind "condition" as a placeholder), and list the questions you considered in
@@ -116,10 +115,30 @@ reasoning can kill an edge with a counter-world but can never confirm one — po
 follows from F" needs a truth-maker (an intervention estimate, a typicality count), which is a
 retrieval, not a deduction. Refute the edge, or decline. Those are the only two moves.`
 
+// anchorGuidance is the per-scheme ANCHOR RULE the user message carries: what the "anchor" must be —
+// the limit of THIS finding a defeater copies verbatim, fixed per critical question (spec/EDGE.md §2).
+// practical's one CQ anchors on a named cost; example's two anchor on a named exception or a stated
+// scope, and the model declines when the finding states neither. "" for a scheme with no per-CQ anchor
+// rule authored (survey/trend/classification are out of the refuter corpora), so the block is omitted.
+func anchorGuidance(scheme string) string {
+	switch scheme {
+	case "practical":
+		return "For side_effects the anchor is the COST CLAUSE the finding or its quotes name — the " +
+			"cost of the recommended action. If the finding names no such cost, decline."
+	case "example":
+		return "For named_exception the anchor is the clause where the finding or its quotes say the " +
+			"pattern did NOT hold — the case, condition or caveat the recommendation generalises past. " +
+			`For scope_dropped the anchor is the phrase that BOUNDS the case — the scope the finding ` +
+			`states ("in this parser", "on Windows builds") that the recommendation drops. If the ` +
+			"finding states neither an exception nor a scope, decline."
+	}
+	return ""
+}
+
 // User assembles the edge call's user message: the scheme, the finding, the verified quotes, the
-// recommendation, and the scheme's critical questions verbatim (spec/EDGE.md §2). `quotes` are the
-// already-verified source spans for the finding's leaves; an edge with no verified quote still runs —
-// the finding stands on its faithfulness verdict — with a marker in their place.
+// recommendation, the scheme's critical questions verbatim, and the scheme's anchor rule (spec/EDGE.md
+// §2). `quotes` are the already-verified source spans for the finding's leaves; an edge with no verified
+// quote still runs — the finding stands on its faithfulness verdict — with a marker in their place.
 func User(scheme, finding string, quotes []string, rec string) string {
 	q := "(none — the finding stands on its faithfulness verdict)"
 	if len(quotes) > 0 {
@@ -129,7 +148,7 @@ func User(scheme, finding string, quotes []string, rec string) string {
 	for _, c := range schemeCQs[scheme] {
 		fmt.Fprintf(&cqLines, "- %s (%s)\n", c.Question, c.Slug)
 	}
-	return fmt.Sprintf(`SCHEME: %s
+	msg := fmt.Sprintf(`SCHEME: %s
 
 FINDING (stands):
 %s
@@ -143,4 +162,8 @@ RECOMMENDATION (does it follow?):
 CRITICAL QUESTIONS for this scheme — ask these, and name which one a defeater answers in
 critical_question:
 %s`, scheme, finding, q, rec, strings.TrimRight(cqLines.String(), "\n"))
+	if g := anchorGuidance(scheme); g != "" {
+		msg += "\n\nANCHOR RULE for this scheme:\n" + g
+	}
+	return msg
 }

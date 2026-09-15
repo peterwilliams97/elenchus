@@ -279,13 +279,36 @@ func TestRunEdgePassFixedMethodNote(t *testing.T) {
 		t.Fatalf("an all-practical tree should carry the fixed root method note, got RootMethods=%v", root.RootMethods)
 	}
 
-	if !allPractical(inScopeEdges(root)) {
+	if !allPractical(schemeEdges(root)) {
 		t.Error("the fixture's edges are all practical; allPractical should be true")
 	}
 	mixed, _, _ := edgeFixture(t)
 	childByID(t, childByID(t, mixed, "R1"), "F1").Scheme = "example"
-	if allPractical(inScopeEdges(mixed)) {
+	if allPractical(schemeEdges(mixed)) {
 		t.Error("a tree with a non-practical edge should make allPractical false")
+	}
+
+	// A mixed-scheme report whose `example` edge has leaf-failed out of scope still carries no fixed
+	// note (spec/EDGE.md §3 rule 4) — the master-plan case, where every `example` finding leaf-derives
+	// to `fails`. inScopeEdges then holds only the practical edge, so gating on it would wrongly emit the
+	// note; schemeEdges keeps the failed `example` edge and gates it out.
+	failed, frows, fdetails := edgeFixtureMixedFailedExample(t)
+	if !allPractical(inScopeEdges(failed)) {
+		t.Fatal("with the example finding leaf-failed, the only in-scope edge is practical — the trap the note gate must not fall into")
+	}
+	if allPractical(schemeEdges(failed)) {
+		t.Error("the leaf-failed example edge keeps the report mixed-scheme; allPractical(schemeEdges) should be false")
+	}
+	fdir := t.TempDir()
+	fc := cfg{repeat: 1, edgeChainDir: fdir, argumentFile: "x.txt",
+		call: func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
+			return `{"warrant":"w","none_admitted":true,"defeater":{"world":"","kind":"condition","anchor":"","settles":"","critical_question":"side_effects"},"questions_considered":["side_effects"]}`, nil, nil
+		}}
+	fc.runEdgePass(failed, frows, fdetails)
+	for _, m := range failed.RootMethods {
+		if m == edge.FixedMethodNote {
+			t.Fatalf("a mixed-scheme tree with the example edge leaf-failed must NOT carry the fixed note, got RootMethods=%v", failed.RootMethods)
+		}
 	}
 }
 
@@ -2236,6 +2259,32 @@ func edgeFixture(t *testing.T) (*tree.ArgNode, []brief.Row, map[string]tree.Leaf
 		"        F1  | A quality platform amplifies performance.  | scheme=practical; x\n" +
 		"            CM1\n"
 	rows := []brief.Row{{ID: "CM1", Text: "platform amplifies performance", Faith: "faithful"}}
+	root, err := tree.BuildArgument(arg, rows)
+	if err != nil {
+		t.Fatalf("BuildArgument: %v", err)
+	}
+	details := map[string]tree.Leaf{"CM1": {Quotes: []tree.Quote{{Text: "quality internal platform amplifies"}}}}
+	return root, rows, details
+}
+
+// edgeFixtureMixedFailedExample is a two-recommendation tree that mirrors master-plan's shape: one
+// `practical` edge that stands, and one `example` edge whose leaf is `contradicted` so the finding
+// leaf-derives to `fails` and drops out of `inScopeEdges`. It exists to catch the note-gate trap — with
+// the example edge gone from scope the remaining in-scope edge is all-practical, yet the report is still
+// mixed-scheme and must carry no fixed root method note (spec/EDGE.md §3 rule 4).
+func edgeFixtureMixedFailedExample(t *testing.T) (*tree.ArgNode, []brief.Row, map[string]tree.Leaf) {
+	t.Helper()
+	arg := "root  | Root.  | x\n" +
+		"    R1  | Invest in the platform.  | x\n" +
+		"        F1  | A quality platform amplifies performance.  | scheme=practical; x\n" +
+		"            CM1\n" +
+		"    R2  | Never share checker code.  | x\n" +
+		"        F2  | Shared code hid a bug across 10,000 checks.  | scheme=example; x\n" +
+		"            CM2\n"
+	rows := []brief.Row{
+		{ID: "CM1", Text: "platform amplifies performance", Faith: "faithful"},
+		{ID: "CM2", Text: "shared code hid a bug", Faith: "contradicted"},
+	}
 	root, err := tree.BuildArgument(arg, rows)
 	if err != nil {
 		t.Fatalf("BuildArgument: %v", err)

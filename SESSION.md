@@ -23,6 +23,20 @@ Spec-only. `spec/EDGE.md` (247 lines) is written but **untracked**; no code, tag
 cross-edge template rule (§ 3), and the `open`/`unchallenged` rollup into ARGUMENT.md's lattice
 (§ 4), with tests.**
 
+### 2026-09-15 — `example` CQs spec'd + built, unexercised: calibration DEFERRED
+
+The `practical` scheme cleared its refuter (spec/EDGE.md run 5, dora Sonnet PASS). The `example`
+scheme did **not** get exercised: master-plan was the chosen `example` corpus, but only **4 of its 15**
+F→R edges are on held findings and every one of those 4 is `practical` — all 6 `example` edges
+leaf-derive to `fails` and drop by § Scope (spec/EDGE.md § Master-plan run,
+`testing/chains/edge-20260915-1447-haiku-mp`). So `named_exception`/`scope_dropped` (§ 2) — check,
+anchors, code path — ship untested against any held `example` finding.
+
+**To resume:** either find a corpus with held `example` findings, or build a constructed probe under
+`examples/destructive/` — a `scope-dropped` case and a `named-exception` case, each with a **held**
+finding that states the bound its recommendation generalises past (real held source, per the Hard rule;
+no synthetic fixture). Only then is the `example` half of the pass calibrated.
+
 ## 2026-06-11 — packages A + B (d015 / d016 / d017)
 
 Fragment-attributed re-calibration, false-attack probe, and reflexive pass. What shipped and what it

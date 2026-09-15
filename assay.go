@@ -49,8 +49,8 @@ import (
 const defaultModel = "claude-sonnet-4-6"
 
 // retrievedSource is a URL actually fetched during a web_search_tool_result round trip — distinct
-// from source, which is what the model claims it used in its JSON response. Aliased to backend.Source
-// so the chain schema and the backend seam name one type.
+// from source, which is what the model claims it used in its JSON response. Aliased to
+// backend.Source so the chain schema and the backend seam name one type.
 type retrievedSource = backend.Source
 
 // ── config ────────────────────────────────────────────────────────────────────
@@ -4232,15 +4232,17 @@ type edgePair struct {
 	finding *tree.ArgNode
 }
 
-// inScopeEdges collects the load-bearing, stated F→R edges the pass may attack (spec/EDGE.md § Scope):
-// a finding node carrying a scheme tag, on a stated (not `?`) edge, whose leaf-derived judgement has not
-// already collapsed to `fails` — a collapsed premise has no F to hold, so attacking it spends a call to
-// no effect. The scheme tag is authored only on in-scope edges, so its presence is the primary gate.
-func inScopeEdges(root *tree.ArgNode) []edgePair {
+// schemeEdges collects every scheme-tagged, stated F→R edge in the tree — a finding node carrying a
+// scheme tag on a stated (not `?`) edge, whatever its leaf-derived judgement. It is the report's full
+// scheme roster: the fixed root method note gates on this set, because the note describes the report's
+// evidence type and an `example` edge that leaf-derived to `fails` still makes the report mixed-scheme
+// (spec/EDGE.md §3 rule 4 — no fixed note for `example` trees, even when the `example` edges dropped out
+// of the pass). `inScopeEdges` is this set minus the collapsed premises.
+func schemeEdges(root *tree.ArgNode) []edgePair {
 	var out []edgePair
 	var walk func(parent, n *tree.ArgNode)
 	walk = func(parent, n *tree.ArgNode) {
-		if n.Scheme != "" && parent != nil && !n.Query && n.Judgement() != "fails" {
+		if n.Scheme != "" && parent != nil && !n.Query {
 			out = append(out, edgePair{rec: parent, finding: n})
 		}
 		for _, c := range n.Children {
@@ -4251,9 +4253,25 @@ func inScopeEdges(root *tree.ArgNode) []edgePair {
 	return out
 }
 
-// allPractical reports whether every in-scope edge is `practical` (and there is at least one), the
-// condition for the fixed root method note (spec/EDGE.md §3 rule 4, §5). dora is the case; a report
-// mixing schemes, or one whose edges include an unknown scheme, does not carry the note.
+// inScopeEdges collects the load-bearing, stated F→R edges the pass may attack (spec/EDGE.md § Scope):
+// the scheme roster of `schemeEdges` minus any finding whose leaf-derived judgement has already
+// collapsed to `fails` — a collapsed premise has no F to hold, so attacking it spends a call to no
+// effect. The scheme tag is authored only on in-scope edges, so its presence is the primary gate.
+func inScopeEdges(root *tree.ArgNode) []edgePair {
+	var out []edgePair
+	for _, p := range schemeEdges(root) {
+		if p.finding.Judgement() != "fails" {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// allPractical reports whether every edge in the set is `practical` (and there is at least one). The
+// fixed root method note gates on `allPractical(schemeEdges(root))` — every scheme-tagged edge, not
+// only the in-scope ones (spec/EDGE.md §3 rule 4, §5). dora is the case; a report mixing schemes, or
+// one whose edges include an unknown scheme, does not carry the note — including a master-plan whose
+// `example` edges have all leaf-failed out of the pass but leave the report mixed-scheme.
 func allPractical(edges []edgePair) bool {
 	if len(edges) == 0 {
 		return false
@@ -4347,7 +4365,8 @@ func (c *cfg) runEdgePass(root *tree.ArgNode, rows []brief.Row, details map[stri
 	for _, p := range edges {
 		schema, ok := edge.Schema(p.finding.Scheme)
 		if !ok {
-			fmt.Fprintf(os.Stderr, "edge pass: %s carries unknown scheme %q, skipped\n", p.finding.ID, p.finding.Scheme)
+			fmt.Fprintf(os.Stderr, "edge pass: %s carries unknown scheme %q, skipped\n",
+				p.finding.ID, p.finding.Scheme)
 			continue
 		}
 		quotes := edgeQuotes(p.finding, byRow, details)
@@ -4388,7 +4407,8 @@ func (c *cfg) runEdgePass(root *tree.ArgNode, rows []brief.Row, details map[stri
 				samples = append(samples, edge.Unchallenged)
 			}
 			if c.showProgress {
-				fmt.Fprintf(os.Stderr, "  edge %s ← %s [%s] sample %d/%d\n", p.rec.ID, p.finding.ID, p.finding.Scheme, s+1, n)
+				fmt.Fprintf(os.Stderr, "  edge %s ← %s [%s] sample %d/%d\n",
+					p.rec.ID, p.finding.ID, p.finding.Scheme, s+1, n)
 			}
 		}
 		verdict, k := modalEdge(samples)
@@ -4446,10 +4466,13 @@ func (c *cfg) runEdgePass(root *tree.ArgNode, rows []brief.Row, details map[stri
 	for _, m := range methods {
 		root.RootMethods = append(root.RootMethods, m.MethodLine())
 	}
-	// A report whose in-scope edges are all `practical` carries the fixed root method note (spec/EDGE.md
-	// §3 rule 4, §5): the correlation→intervention gap is a property of the evidence type, stated once
-	// from code, never produced by the model. dora is the case — every dora edge is practical.
-	if allPractical(edges) {
+	// A report ALL of whose scheme-tagged edges are `practical` carries the fixed root method note
+	// (spec/EDGE.md §3 rule 4, §5): the correlation→intervention gap is a property of the evidence type,
+	// stated once from code, never produced by the model. dora is the case — every dora edge is
+	// practical. The gate reads the full scheme roster (`schemeEdges`), not the in-scope `edges`: a
+	// master-plan whose `example` edges have all leaf-failed out of the pass is still mixed-scheme and
+	// carries no note — gating on `edges` alone would wrongly emit it once the `example` edges dropped.
+	if allPractical(schemeEdges(root)) {
 		root.RootMethods = append(root.RootMethods, edge.FixedMethodNote)
 	}
 	if chainPath != "" {

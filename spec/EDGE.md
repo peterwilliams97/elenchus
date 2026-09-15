@@ -102,6 +102,30 @@ after run 4 (below): its four admitted worlds were all "M done nominally but not
 infeasible here" — implementation and feasibility, which are the reader's, not an inference the model
 can settle — and one anchored on a *different* finding's text, the leak § 3 step 3 now closes.
 
+**`example`'s fixed CQs are `named_exception` and `scope_dropped`.** The logic mirrors
+`practical`'s: "case C shows property P → rule: always P" is undercut, from inside the report, only
+by the report itself naming where P failed or bounding where C applies. Reasoning alone cannot
+settle whether one case generalises — that needs a typicality count, a retrieval past the axis
+boundary (§ What the edge pass is) — so the pass attacks only with a limit the report already
+states. The two CQs, each with its anchor:
+
+- **`named_exception`** — the finding or its verified quotes themselves name a case, condition or
+  caveat where the pattern did **not** hold, and the recommendation states the rule as if it always
+  does. Anchor = that exception clause, verbatim in **this edge's own** finding or its quotes.
+- **`scope_dropped`** — the finding or its verified quotes state the scope of the case ("in this
+  parser", "on Windows builds", "for our Go code") and the recommendation states the rule without
+  it. Anchor = the scope phrase, verbatim in **this edge's own** finding or its quotes.
+
+The two CQs that asked after the case's *typicality* — `typical_case` ("is the cited case typical
+of the class the rule generalises to") and `counter_cases` ("how many counter-cases were looked for
+before generalising") — are removed, for the reason `practical`'s goal-naming CQs went (runs 2–5,
+§ 5): both are answerable for **any** anecdote by asserting a wider world the report never claims —
+a class the case is or is not typical of, a search for counter-cases the report never ran — so the
+report cannot be held to them. What survives is the report-internal move: the report flags its own
+exception, or bounds its own scope, and the recommendation generalises past it. Both are checkable
+against the report by the § 3 step-3 anchor rule `practical` earned, and nothing else opens an
+`example` edge.
+
 **Output** — schema-enforced, exactly one of two shapes. There is no third "certified" shape:
 
     warrant            : string    // reconstructed W: "for R to follow from F you need W"
@@ -155,10 +179,14 @@ critic, `docs/todo/destructive-sonnet-2026-09-13.md`) buys nothing. A returned `
    attack § 3 exists to catch. It is recorded once at the root (reason line `method: <world>`) and
    **removed from every edge**, which then count as `none-admitted` for that sample. The rule stays as
    a **backstop** — a defeater recurring verbatim across edges is method-level by construction — but
-   with `practical`'s CQ set reduced to `side_effects`/`means_mismatch` (§ 2) the model no longer
-   offers the correlation-as-cause world per-edge, so the rule is no longer expected to fire on dora.
-   dora's method-level point — findings are associational, recommendations are interventions — is
-   instead emitted at the root as a fixed note by the pass (§ 5), not produced by the model.
+   with `practical`'s CQ set reduced to `side_effects` (§ 2) the model no longer offers the
+   correlation-as-cause world per-edge, so the rule is no longer expected to fire on dora. dora's
+   method-level point — findings are associational, recommendations are interventions — is instead
+   emitted at the root as a fixed note by the pass (§ 5), not produced by the model. **There is no
+   fixed root method note for `example` trees.** master-plan mixes `practical` and `example` edges
+   and no single world defeats them all — a `named_exception` clause bounds the one finding that
+   states it, not the report's evidence type — so the master-plan pass emits no root note; the
+   template rule stays as its backstop for any `anchor` that does recur across edges.
 5. **Domain rule.** The `world` must hold **for the report's addressed audience as stated**. A
    defeater that varies the addressee — swaps in an organisation with other goals or a binding
    constraint the report never puts on its reader — is not a defeater of the inference: the report's
@@ -227,8 +255,9 @@ as what would decide it — e.g.
 
 ## 5. Refuter — pre-registered before any code is judged good
 
-**Corpus.** dora (8 in-scope edges) and master-plan (15 in-scope edges — `REC1`…`REC12`, with
-`REC9`'s three cases `F10`/`F11`/`F12` as three edges; `base` is `?`, out of scope). **N=5** per edge.
+**Corpus.** dora (8 in-scope edges) and master-plan (14 in-scope edges of 15 — `REC1`…`REC12`, with
+`REC9`'s three cases `F10`/`F11`/`F12` as three edges; `REC9`'s case-ordering is `classification`, an
+R→root edge outside § 1's F→R scope (§ 5(a)); `base` is `?`, out of scope). **N=5** per edge.
 Model: the calibration model of record, `claude-haiku-4-5-20251001`, then re-run on the default
 Sonnet for the verdict to trust (`CLAUDE.md` § Testing). Log to `testing/calibration_log.jsonl`
 beside the existing destructive runs. **All lines below are registered before the run**, per
@@ -338,6 +367,56 @@ genuine hole in that recommendation. If haiku still opens edges on invented cost
 world whose cost is nowhere in the finding's quotes — the admission check has held and the model has
 not, so the pass moves to Sonnet unchanged and haiku is recorded as unable to hold the anchor
 discipline (a model-fitness finding, not a spec change).
+
+**Master-plan run — registered after dora's run-5 PASS, before any master-plan edge is judged
+(15 Sept).** Corpus `examples/master-plan/argument.txt`, N=5 on `claude-haiku-4-5-20251001` first,
+then the default Sonnet for the verdict to trust (`CLAUDE.md` § Testing). 15 F→R edges: **6
+`example`** (`REC3←F4`, `REC7←F8`, `REC9←F10`, `REC9←F11`, `REC9←F12`, `REC11←F14`) and **8
+`practical`** (`REC1`, `REC2`, `REC4`, `REC5`, `REC6`, `REC8`, `REC10`, `REC12`) in scope, **1
+`classification`** (`REC9`'s case-ordering, R→root) **out** — the F→R pass runs `practical` and
+`example` only (§ 1, § 5(a)). The dora pass/fail lines above bind, re-read for this corpus.
+Registered before the run, per `CLAUDE.md` § Pre-register the attempt.
+
+> **Retraction of the "in scope" premise (15 Sept, after the run — § Master-plan run below).** "6
+> `example` + 8 `practical` in scope" assumed all 15 findings stand; they do not. master-plan has **15
+> F→R edges but only 4 on held findings** — `F3`, `F9`, `F13`, `F15`, all `practical`. The other 11
+> (all 6 `example`, plus practical `F1`/`F2`/`F5`/`F6`/`F7`) leaf-derive to `fails` and drop by
+> § Scope, because master-plan's findings are the plan's own prescriptions with no held source
+> (`route=method` leaves). The `example` predictions below — open ≤ 3/15, the `REC3 ← F4` positive
+> control, the `named_exception`/`scope_dropped` anchors — are therefore **unreachable on this
+> corpus**; only the `practical` prediction was testable, and it held on the 4 edges that stand.
+
+Predictions:
+
+- **open ≤ 3/15.** With `example` reduced to `named_exception`/`scope_dropped` (§ 2) and `practical`
+  to `side_effects`, an edge opens only on a limit its own finding states, and most master-plan
+  findings state their rule without one.
+- **Any open `example` edge anchors on a scope phrase or exception clause its own finding contains** —
+  `F8`'s "no number has been computed", `F10`'s "with stated caveats", `F11`'s "found nothing
+  itself", `F12`'s and `F14`'s stated conditions are the report-internal limits available; nothing
+  else opens an `example` edge.
+- **Any open `practical` edge opens only on a named cost**, exactly as on dora (`R-BATCH`, run 5) —
+  the single `side_effects` anchor.
+- **Positive control: `REC3 ← F4` is predicted `unchallenged`.** Its finding — "Shared code hides
+  bugs by construction — a shared toInt32 passed 10,000 checks with the bug present and again with
+  the fix reverted" — states the rule with **no scope phrase and no exception clause**, so neither
+  `example` CQ has an anchor to quote and the § 3 step-3 admission check leaves the edge un-opened.
+  It is the one `example` finding stated without a bound.
+
+**Pass/fail for the master-plan run** (the dora lines bind unchanged; these are the corpus-specific
+adds):
+
+- **FAIL** if **every** `example` edge opens (6/6 — false-attack bias on the reachable scheme), or if
+  any admitted `anchor` is **not** verbatim in its own edge's finding or verified quotes (the run-4
+  cross-finding leak, § 3 step 3).
+- **FAIL** on an empty or partial run — fewer than the 14 in-scope edges reached (`CLAUDE.md`
+  § zero-output, § partial run).
+- **PASS** only if: open ≤ 3/15; `REC3 ← F4` is `unchallenged` (or its `open` defeater survives human
+  inspection as a report-internal bound); every admitted anchor sits in its own edge's finding or
+  quotes; and **contested-edge rate is below ⅓ on the Sonnet pass** (§ 5c).
+
+`argument.txt` currently tags every F→R finding `practical` or `example`; the `classification`
+re-tag of `REC9`'s ordering is tree work, outside this spec change.
 
 **Calibration note, not a gate.** The offered-vs-admitted gap (§ 3) is read as a signal, never a
 pass/fail line: the check is form-only, so both `offered`==`admitted` (rejected nothing) and a
@@ -519,6 +598,45 @@ record as of this run — `claude-sonnet-4-6`. `R-BATCH`'s world is that rule's 
 itself names the cost of small batches and resolves it by assertion, and the edge pass returns that
 weighing to the reader rather than certifying it — an admitted defeater to be read as a genuine hole
 in that one recommendation, not a leak in the check.
+
+## Master-plan run — haiku N=5, 15 Sept 14:47: NO-RESULT for `example` (recorded)
+
+First execution of the § 5 master-plan refuter, `claude-haiku-4-5-20251001`, N=5. Chain:
+`testing/chains/edge-20260915-1447-haiku-mp`. **Verdict: NO-RESULT for `example`** — the run reached
+none of the scheme master-plan was chosen to exercise, so it neither passes nor fails the `example`
+lines; the 4 `practical` edges that stand cleared the dora § 5 lines re-read for this corpus. Kept as a
+recorded negative per `CLAUDE.md` § Pre-register the attempt (log dead ends, not only survivors).
+
+**Results.** **4 of 15** scheme-tagged F→R edges reached — `F3→REC2`, `F9→REC8`, `F13→REC10`,
+`F15→REC12`, **all `practical`, all `unchallenged`, offered 0/20** (no defeater offered across the 20
+samples). The other **11** dropped by § Scope, their findings leaf-deriving to `fails`: every `example`
+edge (`REC3←F4`, `REC7←F8`, `REC9←F10`, `REC9←F11`, `REC9←F12`, `REC11←F14`) and five `practical`
+ones (`F1`, `F2`, `F5`, `F6`, `F7`). master-plan's findings are the plan's own prescriptions with no
+held source — `route=method` leaves — so they collapse to `fails` on the leaf and the edge has no F to
+hold. `F3` is the one finding the tree annotates with a held truth-maker
+(`refuter-runs-2026-08-15.md`); `F9`/`F13`/`F15` are the other three whose leaves do not collapse.
+Re-read against the dora § 5 lines for the 4 that stand: open **0/4**, contested **0/4**, 4/4 in-scope
+edges reached against the in-scope denominator of 4 — no empty/partial run.
+
+**The applicability premise was wrong (retraction filed at the registration, § 5).** master-plan was
+registered as the corpus that exercises `example`, on the premise that its 15 F→R edges all stand.
+Only **4 are on held findings**, and every one of those 4 is `practical`, so the `example` scheme is
+never reached. The registration's `example` predictions are unreachable here; its `practical`
+prediction is met on the 4 edges that stand.
+
+**The `example` CQs are spec'd and built but unexercised.** `named_exception` and `scope_dropped`
+(§ 2) — the admission check, their per-CQ anchors, the code path — ship, but no corpus in the refuter
+has a **held** `example` finding for them to attack. Calibrating them needs either a corpus with held
+`example` findings, or a constructed probe under `examples/destructive/`: a `scope-dropped` case and a
+`named-exception` case, each with a **held** finding stating the bound its recommendation generalises
+past. **Deferred** — parked in `SESSION.md`.
+
+**Fixed root method note — correctly withheld.** master-plan is mixed-scheme (§ 3 rule 4: no fixed
+note for `example` trees), and it stays mixed-scheme even though every `example` edge leaf-failed out
+of the pass. The note gate reads the full scheme roster, not the in-scope edges
+(`allPractical(schemeEdges)`, `assay.go`), so the pass emits no root note on master-plan. Gating on the
+in-scope edges alone would have wrongly emitted it once the `example` edges dropped —
+`assay_test.go`'s `TestRunEdgePassFixedMethodNote` pins the mixed-tree-with-leaf-failed case.
 
 ## 6. Cost — N=5 on both corpora
 

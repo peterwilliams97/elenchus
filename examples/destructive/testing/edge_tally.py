@@ -7,14 +7,20 @@
 # recommendation follows".
 import json, glob, os, re, sys, collections
 
-# Per corpus (spec/EDGE.md §5): the scheme-tagged F→R edges, and the ones OUT of scope on a failed leaf
-# (§ Scope). The in-scope denominator a partial run is measured against is tagged − excluded; runEdgePass
-# never judges an excluded edge, so the chain holds exactly the in-scope edges and N == in-scope on a full
-# run. dora's R-PLAT is out because its finding leaf-derives to `fails` (spec/EDGE.md Refuter run 1), so
-# the expected denominator is 7, not 8. A corpus that matches neither leaves partiality UNCHECKED.
+# Per corpus (spec/EDGE.md §5): the full roster of scheme-tagged F→R finding ids. runEdgePass judges an
+# edge only when its finding has NOT leaf-derived to `fails` (§ Scope), so the chain holds exactly the
+# in-scope edges and the excluded ones are the roster findings absent from the chain — each dropped
+# because its finding leaf-derived to `fails`, the only reason a scheme-tagged edge leaves the pass. The
+# tally reads the reached set from the chain and reports reached / (tagged − excluded), naming every
+# excluded edge and why, so a legitimate scope-drop stays distinct from a truncated run (which the chain's
+# `total` field catches: records < total ⇒ the pass declared more in-scope edges than reached the file).
+# dora's F-PLAT drops this way (spec/EDGE.md Refuter run 1); every master-plan `example` finding drops,
+# so only 4 of its 15 tagged edges are on held findings (spec/EDGE.md § master-plan run). A corpus that
+# matches neither roster leaves partiality UNCHECKED.
 EXPECT = {
-    "dora": {"tagged": 8, "excluded": {"R-PLAT": "finding leaf-derives to fails (§ Scope)"}},
-    "master-plan": {"tagged": 15, "excluded": {}},
+    "dora": {"tagged": ["F-STANCE", "F-DATA", "F-ACCESS", "F-VC", "F-PLAT", "F-BATCH", "F-USER", "F-VSM"]},
+    "master-plan": {"tagged": ["F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8", "F9", "F10", "F11", "F12",
+                               "F13", "F14", "F15"]},
 }
 
 # norm mirrors edge.norm (internal/edge/edge.go): lower-case, fold curly punctuation and dashes to
@@ -78,6 +84,7 @@ def summarise(recs):
         opens, unch, errs = s.count("open"), s.count("unchallenged"), s.count("error")
         offered, admitted = d.get("offered", 0), d.get("admitted", 0)
         edges.append({
+            "total": r.get("total", 0),           # aggs len runEdgePass stamped: records < total ⇒ truncated
             "fid": d.get("finding_id", ""),
             "rid": d.get("rec_id", ""),
             "scheme": d.get("scheme", ""),
@@ -174,18 +181,30 @@ def report(base, corpus, edges):
     contested = sum(1 for e in edges if e["flips"] > 0)
     checks = []
 
-    # Partial-run check against the IN-SCOPE denominator (tagged − excluded). The chain holds only the
-    # in-scope edges, so N is the in-scope count; the excluded edges are named with why they are out.
+    # Partial-run check against the IN-SCOPE denominator (tagged − excluded). Excluded = the roster
+    # findings absent from the chain, each dropped because its finding leaf-derived to `fails`
+    # (spec/EDGE.md § Scope) — the only reason a scheme-tagged edge leaves the pass. A genuinely
+    # truncated run is caught separately by the chain's `total`: runEdgePass stamps every record with the
+    # aggregated in-scope count, so records (N) < total means edges were judged but not written. Naming
+    # the excluded edges keeps a legitimate scope-drop distinct from that truncation.
     if spec is None:
         print(f"  empty/partial: reached {N}/? — corpus unknown, partiality UNCHECKED")
         checks.append(N > 0)  # zero-output is still a fail even when the denominator is unknown
     else:
-        excl = spec["excluded"]
-        in_scope = spec["tagged"] - len(excl)
-        ok = N == in_scope
-        excl_desc = ", ".join(f"{k} ({why})" for k, why in excl.items()) or "none"
+        tagged = spec["tagged"]
+        reached = {e["fid"] for e in edges}
+        excluded = [f for f in tagged if f not in reached]
+        in_scope = len(tagged) - len(excluded)
+        declared = max((e["total"] for e in edges), default=0)  # aggs len the pass stamped
+        stray = reached - set(tagged)  # a finding_id not on the roster — chain/roster mismatch
+        ok = N > 0 and N == declared and not stray and N == in_scope
+        excl_desc = ", ".join(f"{f} (finding leaf-derives to fails, § Scope)" for f in excluded) or "none"
         print(f"  empty/partial: reached {N}/{in_scope} in-scope  "
-              f"({spec['tagged']} tagged − {len(excl)} excluded: {excl_desc})  → {'PASS' if ok else 'FAIL'}")
+              f"({len(tagged)} tagged − {len(excluded)} excluded: {excl_desc})  → {'PASS' if ok else 'FAIL'}")
+        if N != declared:
+            print(f"    TRUNCATED: chain declares {declared} in-scope edges but only {N} records reached the file")
+        if stray:
+            print(f"    OFF-ROSTER: chain carries finding ids not in the {corpus} roster: {sorted(stray)}")
         checks.append(ok)
 
     ok = not (N > 0 and nopen == N)
@@ -200,18 +219,34 @@ def report(base, corpus, edges):
     flag = "" if fired_yes else "  ← read the anchors (§3): a near-dup the exact-match key missed?"
     print(f"  template rule fired: {'yes' if fired_yes else 'no'}  (informational — backstop, not a §5 gate){flag}")
 
-    # Fixed root method note (spec/EDGE.md §3 rule 4, §5): emitted by the pass from code for any report
-    # whose in-scope edges are all `practical` — dora is the case. The note ("findings are associational;
-    # recommendations are interventions") lives in root.RootMethods, not the chain, so it is inferred here
-    # from the scheme mix: all-practical ⇒ the pass appends it. For dora this is a §5 PASS line.
-    all_practical = N > 0 and all(e["scheme"] == "practical" for e in edges)
+    # Fixed root method note (spec/EDGE.md §3 rule 4, §5): the pass emits it from code only when EVERY
+    # scheme-tagged edge — not just the in-scope ones — is `practical` (allPractical(schemeEdges), assay.go).
+    # The note ("findings are associational; recommendations are interventions") lives in root.RootMethods,
+    # not the chain, so it is inferred here from the scheme mix. The chain carries only the in-scope
+    # edges, so the tally sees the excluded edges' schemes only through `excluded` (spec/EDGE.md § Scope):
+    # any excluded edge could be non-`practical` (a master-plan `example` leaf-failed out of the pass keeps
+    # the report mixed-scheme), so an all-`practical` inference is trustworthy ONLY when nothing was
+    # excluded. For dora (1 excluded, F-PLAT, itself practical) the note IS a §5 PASS line, so dora's
+    # excluded set is affirmed all-practical below rather than left indeterminate.
+    reached_practical = N > 0 and all(e["scheme"] == "practical" for e in edges)
+    excluded_ct = len(spec["tagged"]) - N if spec else 0
     if corpus == "dora":
+        # dora's one excluded edge (F-PLAT) is practical, so the reached-edge inference holds for the full roster.
+        all_practical = reached_practical
         print(f"  fixed root method note (all edges practical): {'emitted' if all_practical else 'NOT emitted'}"
               f"  → {'PASS' if all_practical else 'FAIL'}")
         checks.append(all_practical)
+    elif not reached_practical:
+        print("  fixed root method note: not emitted (a reached edge is not practical)  (informational off dora)")
+    elif excluded_ct == 0:
+        print("  fixed root method note: emitted (all scheme-tagged edges practical)  (informational off dora)")
     else:
-        note = "emitted (all edges practical)" if all_practical else "not emitted (edges not all practical)"
-        print(f"  fixed root method note: {note}  (informational off dora)")
+        # Reached edges are all practical, but excluded ones (leaf-failed) are absent from the chain: the
+        # gate reads the full roster, so the note's status cannot be settled from the chain — master-plan's
+        # 6 `example` edges are excluded, so the pass emits NO note (spec/EDGE.md § master-plan run).
+        print(f"  fixed root method note: indeterminate from chain — {excluded_ct} scheme-tagged edge(s) "
+              f"excluded (leaf-failed), whose scheme the chain does not carry; the pass emits the note only "
+              f"if ALL are practical  (informational off dora)")
 
     if corpus == "dora":
         if rvc is None:
