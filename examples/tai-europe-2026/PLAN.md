@@ -18,19 +18,19 @@ Part B detail supports the Part A claim for the same ID is a directly scorable i
 task with 11 instances, and the document supplies the mapping itself (H.2). Both statements located,
 printed page-referenced from the two tables of contents (report.txt:170–199 Part A, :213–246 Part B):
 
-| ID   | Objective                          | Part A p | Part B p |
-|------|------------------------------------|----------|----|
-| IO-1 | Create a Member State Alliance for Supply Chain Security | 28 | 79 |
-| IO-2 | Make Europe's institutions ready to act in a world with transformative AI | 31 | 90 |
-| IO-3 | Secure Europe's share of global AI compute | 36 | 99 |
-| IO-4 | Ensure resilience to AI crises | 40 | 108 |
-| IO-5 | Make Europe the global leader in AI assurance technology | 45 | 118 |
-| O1.1 | Secure ongoing access to frontier AI systems | 50 | 127 |
-| O1.2 | Protect European assets | 53 | 133 |
-| O2.1 | Make Europe the best place to build and scale high-growth companies | 57 | 141 |
-| O2.2 | Develop indispensable assets across the AI value chain | 60 | 162 |
-| O3.1 | Ensure prioritised and targeted use of EU rules to address risks from highly capable AI | 64 | 169 |
-| O3.2 | Prepare for labour market impacts | 68 | 169 |
+| ID   | Part A p | Part B p | Objective                          |
+|------|----------|----------|------------------------------------|
+| IO-1 |       28 |       79 | Create a Member State Alliance for Supply Chain Security |
+| IO-2 |       31 |       90 | Make Europe's institutions ready to act in a world with transformative AI |
+| IO-3 |       36 |       99 | Secure Europe's share of global AI compute |
+| IO-4 |       40 |      108 | Ensure resilience to AI crises |
+| IO-5 |       45 |      118 | Make Europe the global leader in AI assurance technology |
+| O1.1 |       50 |      127 | Secure ongoing access to frontier AI systems |
+| O1.2 |       53 |      133 | Protect European assets |
+| O2.1 |       57 |      141 | Make Europe the best place to build and scale high-growth companies |
+| O2.2 |       60 |      162 | Develop indispensable assets across the AI value chain |
+| O3.1 |       64 |      169 | Ensure prioritised and targeted use of EU rules to address risks from highly capable AI |
+| O3.2 |       68 |      169 | Prepare for labour market impacts |
 
 - **TOC quirk to verify at build:** Part B lists O3.1 and O3.2 both at p169; one is a TOC compression
   artefact. Confirm the O3.2 body start page against the section heading before page-referencing its
@@ -64,8 +64,8 @@ Part A claims in full (IO-1, IO-2, IO-5, O2.1, O2.2, O3.2 → `faithful`), suppo
 (a Part A clause with no Part B truth-maker → `partial`, clause quoted below), and does not support
 O3.1 at all (`unsupported`/`absent`).
 
-**The miss that matters: a `faithful` verdict on O3.1.** Part B declines the objective outright, so a
-judge that scores O3.1 `faithful` on topical overlap (both name the EU AI Act / GPAI Code) has
+**The miss that matters: a `faithful` verdict on O3.1.** Part B declines the objective outright, so 
+a judge that scores O3.1 `faithful` on topical overlap (both name the EU AI Act / GPAI Code) has
 laundered abdication into support — the single result that would most discredit this slice.
 
 - **O3.1 — `unsupported`.** Part A asserts an active mandate: "Europe must ensure that their
@@ -87,6 +87,60 @@ laundered abdication into support — the single result that would most discredi
 - **IO-3 — `partial`, community-interest clause dropped.** Part A clause with no Part B support: "A
   'European Way' of building AI compute should combine speed with respect for local community
   interests." Part B keeps only the geopolitical-weight / revocable-access framing.
+
+### Result — 15 Sept, Sonnet N=3
+
+One judge run, `-backend anthropic -model claude-sonnet-4-6 -retrieve bm25 -n 3` against
+`sources/report-partB.txt` (the whole held Part B, 128 pp, in the pool for every leaf). Chain:
+`evidence/2026-09-15-slice1-faith/sonnet/claims-objectives.faithfulness.clean.jsonl` (the 11 real
+leaves; see the comment-line bug note below). Verdicts, spread `k/N`, and the critic's named clause
+(one line each, from `critic_finding`):
+
+| ID   | Pre-reg     | Verdict     | Spread | Critic's named clause                                                                 |
+|------|-------------|-------------|--------|---------------------------------------------------------------------------------------|
+| IO-1 | faithful    | overstated  | 3/3    | "so far failed to translate" overstates source's "dispersed, never leveraged in tandem" — no active-failure framing |
+| IO-2 | faithful    | unsupported | 3/3    | "decisions under uncertainty / time pressure" and "without extraordinary capacity, none of the other objectives" not in Part B |
+| IO-3 | partial     | overstated  | 2/3    | "'European Way' combining speed with respect for local community interests" — source lists community concerns only as a political success condition |
+| IO-4 | partial     | partial     | 3/3    | "overhauling Europe's ability to **prevent** and respond" added as co-equal pillar beyond source's resist/absorb/recover/adapt |
+| IO-5 | faithful    | partial     | 3/3    | "national security vs commercial/scientific" distinction and "lead the underlying AI technology" not framed that way in Part B |
+| O1.1 | partial     | partial     | 3/3    | adds "**sovereignty**" and frames the episode as "export controls on Anthropic's most capable models" — not the predicted physical-leverage backstop |
+| O1.2 | partial     | partial     | 3/3    | "flourish **without foreign capital**" contradicts source's anti-capture fund, which mobilises public AND private capital — not the predicted inbound-screening clause |
+| O2.1 | faithful    | absent      | 3/3    | no passage makes the three-part firms-grow-fast / retain-in-Europe / supply-side-reform argument |
+| O2.2 | faithful    | unsupported | 3/3    | opening premise — "experts disagree which layer of the value chain creates most value" — not in Part B |
+| O3.1 | unsupported | absent      | 3/3    | no passage states Europe is well-positioned to lead AI safety via the AI Act / GPAI Code |
+| O3.2 | faithful    | unsupported | 3/3    | source says nothing linking Europe's share of AI value creation to its capacity to absorb labour-market shocks |
+
+**Scored against the pre-registration: 5/11.**
+
+- **The miss that would matter did not occur.** O3.1 came back `absent` (3/3), as registered — the
+  judge did not launder Part B's abdication ("there are no detailed recommendations for this
+  objective") into a `faithful` verdict on topical AI-Act/GPAI overlap.
+- **The four predicted gaps all fired** (IO-4, O1.1, O1.2, IO-3 → all non-faithful), but two on a
+  **different clause** than predicted. IO-4 (prevent leg) and IO-3 (European Way / local community)
+  fired on the predicted clause; O1.1 fired on "sovereignty" + the Anthropic-episode framing rather
+  than the physical-leverage backstop, and O1.2 on "without foreign capital" rather than the
+  inbound-vs-outbound screening asymmetry.
+- **The six predicted `faithful` all came back non-faithful** (IO-1, IO-2, IO-5, O2.1, O2.2, O3.2 →
+  overstated / unsupported / absent). This is the pre-registration's cost: the prediction that Part B
+  would fully support the majority of Part A claims was wrong across the board.
+
+**Reading — for PW's adjudication, not decided here.** Every one of the 11 verdicts names a Part A
+clause the critic reports absent from the retrieved Part B passages. Whether each is a **real gap**
+(Part A over-claims relative to its own Part B implementation) or a **clause-level false positive**
+(the critic penalising a paraphrase or a compression the same document does support elsewhere) is a
+per-leaf human call. Prior single-source-consistency precedent (DORA, ~40% flag precision) says a
+material share of these will be false positives on read; the verdicts are a worklist, not a finding.
+Adjudication drafts land in `evidence/2026-09-15-slice1-faith/adjudications.txt`.
+
+**Run notes.**
+- **Comment-line bug.** `splitSummary` did not skip `#`-prefixed lines, so the run judged all 33
+  header-comment and `# === ID ===` section-heading lines in `claims-objectives.txt` as claims (44
+  judged, only 11 real). The `.clean.jsonl` chain used above drops them to the 11 leaves; the raw
+  `claims-objectives.faithfulness.jsonl` carries all 44. Fix the parser before the next run.
+- **Cost: $6.26 gross, ~$1.50 attributable to the 11 real leaves** — the rest was spent judging the
+  33 comment/heading lines above.
+- **Retrieval did not starve any leaf:** all 11 expected Part B pages, and in fact the whole held
+  Part B (128 pp), were in the pool for every claim, so no verdict is a retrieval miss.
 
 ## Slice 2 — headline positive-control claim chain (compute: Europe vs one Malaysian site)
 

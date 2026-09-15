@@ -1,0 +1,13 @@
+# Human adjudications — Part A objective claims judged for faithfulness to the held Part B
+# (Slice 1, PLAN.md § Result — 15 Sept, Sonnet N=3; spec/SERVE.md § Adjudications).
+# Format: ID | verdict | quote | page | initials | reason
+# Read by the -review render from this example dir; shown beside the machine badge, and the
+# index reports the agreement count over every adjudicated leaf that has a machine verdict.
+#
+# Initials say who stands behind the line. `cc` marks a draft this session wrote; a human promotes
+# a draft by editing the line and replacing `cc` with their own initials. cc never files a line
+# under a human's initials — an unread draft under `PW` would read as PW's own call.
+#
+# All 11 leaves came back non-faithful (5 predicted, 6 not — PLAN.md). Every verdict names a Part A
+# clause the critic reports absent from Part B; each is PW's per-leaf call on real gap vs
+# clause-level false positive (DORA precedent ~40% flag precision). No lines drafted — awaiting read.

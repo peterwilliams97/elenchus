@@ -76,6 +76,11 @@ examples/mit-2026/sources/*
 !examples/mit-2026/sources/MANIFEST.md
 examples/tai-europe-2026/sources/*
 !examples/tai-europe-2026/sources/MANIFEST.md
+# The -review site (its sources/report.pdf is the copyrighted report) and the judge chains hold
+# verbatim quotes from the report, held for analysis not redistribution; rebuilt from the tracked
+# claims-machine.txt / adjudications.txt and MANIFEST with the render command in CLAUDE.md § Running it.
+examples/tai-europe-2026/site/
+examples/tai-europe-2026/evidence/
 # The -review site and the judge chains hold verbatim quotes from the DORA report (copyrighted,
 # held for analysis not redistribution), so they carry the same terms as the sources; rebuilt from
 # the tracked claims files and MANIFEST. REPORT.md quotes flagged leaves verbatim, so it too.

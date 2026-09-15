@@ -1,0 +1,23 @@
+# claims-machine.txt — Slice 1 render refs: each Part A objective leaf → its Part A page in the
+# full report PDF (PLAN.md § Slice 1; spec/SERVE.md). Read only by `-refs`: assay keys on the id and
+# the `ref=` field and ignores the rest, so this file's job is to annotate each rendered leaf with a
+# `report: §<ID> pNN` line that -review rewrites into a report.pdf#page=NN deep-link.
+#
+# The §-label is the objective ID; its page is resolved by the `sections:` table in
+# sources/MANIFEST.md (IO-1: 28 …), whose pages are the verified Part A statement pages from the
+# PLAN.md Part A TOC table. report.pdf is the whole 206-pp report, so Part A pp28–68 are in it; Part
+# B is the held SOURCE and shows through each leaf's quote provenance.
+#
+# Format: <id> | route=source | ref=§<ID> pNN | src=report.pdf Part A pNN
+#
+IO-1-A | route=source | ref=§IO-1 p28 | src=report.pdf Part A p28
+IO-2-A | route=source | ref=§IO-2 p31 | src=report.pdf Part A p31
+IO-3-A | route=source | ref=§IO-3 p36 | src=report.pdf Part A p36
+IO-4-A | route=source | ref=§IO-4 p40 | src=report.pdf Part A p40
+IO-5-A | route=source | ref=§IO-5 p45 | src=report.pdf Part A p45
+O11-A | route=source | ref=§O1.1 p50 | src=report.pdf Part A p50
+O12-A | route=source | ref=§O1.2 p53 | src=report.pdf Part A p53
+O21-A | route=source | ref=§O2.1 p57 | src=report.pdf Part A p57
+O22-A | route=source | ref=§O2.2 p60 | src=report.pdf Part A p60
+O31-A | route=source | ref=§O3.1 p64 | src=report.pdf Part A p64
+O32-A | route=source | ref=§O3.2 p68 | src=report.pdf Part A p68

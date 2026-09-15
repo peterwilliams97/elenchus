@@ -81,3 +81,19 @@ report_page_offset: 0   # VERIFIED 2026-09-15 (Slice 1). pdftotext -layout emits
                         # on printed p24). Offset is 0, not mit-2026's 2.
 
 single_source: true
+
+# Part A objective pages for the `report:` deep-links (spec/SERVE.md). The §-label in each leaf's
+# claims-machine.txt ref (§IO-1 …) resolves to the objective's Part A statement page here, and
+# -review rewrites it into report.pdf#page=N. Pages are the verified Part A TOC pages (PLAN.md).
+sections:
+  IO-1: 28
+  IO-2: 31
+  IO-3: 36
+  IO-4: 40
+  IO-5: 45
+  O1.1: 50
+  O1.2: 53
+  O2.1: 57
+  O2.2: 60
+  O3.1: 64
+  O3.2: 68
