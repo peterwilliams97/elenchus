@@ -1,0 +1,44 @@
+# title: A Transformative AI Strategy for Europe
+# date: Version 1.0, September 2026
+# sources: examples/tai-europe-2026/sources/MANIFEST.md
+#
+# Slice 1 (PLAN.md), reconfigured: FAITHFULNESS, not pair-consistency. Part B is the held SOURCE
+# (sources/report-partB.txt, printed pp77–204); Part A is the TARGET under assay. Each leaf is one
+# Part A objective claim (the framing paragraph printed under its heading); the judge checks whether
+# the Part B implementation SUPPORTS that claim. src=report-partB.txt — the truth-maker every leaf
+# rests on. No judge run is in this slice.
+#
+# Five TAB fields per leaf: id <TAB> pNN=<label> <TAB> statement <TAB> report-partB.txt <TAB> route.
+# pNN is the Part A PRINTED page (where the claim is stated); report_page_offset: 0 (MANIFEST,
+# verified) so printed == PDF page. The grounding source is report-partB.txt, so a claim's page is
+# NOT in the source file — it locates the claim in the report for a reader, not the passage.
+# Text is verbatim from report.txt with line-break hyphenation joined, inline footnote-reference
+# digits dropped (e.g. "securely.17" -> "securely."), and whitespace collapsed; curly quotes and
+# en-dashes are kept as in source. route=source: every leaf is judged for faithfulness to Part B.
+#
+# Same-document faithfulness (single_source: true, MANIFEST): claim and truth-maker are two parts of
+# ONE report, so a leaf `absent` means Part B does not repeat/support the Part A claim — it is not a
+# miss against a second held document (there is none). O3.1 is the leaf where that fires by design.
+#
+# === IO-1  Create a Member State Alliance for Supply Chain Security ===
+IO-1-A	p28=IO-1	Europe holds various assets that will be important in a world with transformative AI, including ones in the AI chip supply chain. However, it has so far failed to translate these assets into meaningful leverage to ensure access to frontier AI. To do this, Europe needs to build an Alliance of Member States and allies.	report-partB.txt	source
+# === IO-2  Make Europe’s institutions ready to act in a world with transformative AI ===
+IO-2-A	p31=IO-2	Europe’s institutions need to be prepared for a world in which AI becomes transformative in the next few years. They need to be able to make high-stakes decisions under uncertainty and time pressure and act at the scale and speed of transformative AI. To this end, they need expertise, information, and access to frontier technology. Without an extraordinary level of institutional capacity, it will be difficult to achieve any of the other objectives. But Europe’s institutions can rise to this challenge if they begin a fundamental shift now.	report-partB.txt	source
+# === IO-3  Secure Europe’s share of global AI compute ===
+IO-3-A	p36=IO-3	In a world with transformative AI, access to computational resources (or ‘compute’ for short) will be as crucial as access to energy. This access is precarious if the computing power is not on EU soil. Data centres in Texas or Shenzhen can lock out European customers overnight. Europe is much more robust against access restrictions and coercion if the data centres are under its jurisdictional and physical control. A ‘European Way’ of building AI compute should combine speed with respect for local community interests.	report-partB.txt	source
+# === IO-4  Ensure resilience to AI crises ===
+IO-4-A	p40=IO-4	Transformative AI will pose severe safety and security risks. Europe can only thrive in a world with transformative AI if it is prepared for and resilient to these risks. This will require an extensive resilience programme – building the capacity to resist, absorb, recover from, and adapt to shocks and harms – and overhauling Europe’s ability to prevent and respond to AI crises and emergencies.	report-partB.txt	source
+# === IO-5  Make Europe the global leader in AI assurance technology ===
+IO-5-A	p45=IO-5	Transformative AI will likely be treated as a national security issue in addition to a commercial or scientific issue, meaning that the most advanced AI models and systems will demand robust secure access controls. In such a world, companies and governments will require assurance technology: technology that can facilitate the verification of claims made about AI models and systems and their infrastructure and ensure their security. Europe should lead the development of the underlying AI technology.	report-partB.txt	source
+# === O1.1  Secure ongoing access to frontier AI systems ===
+O11-A	p50=O1.1	In a world with transformative AI, Europe’s prosperity, security, and sovereignty will depend on access to frontier AI models. Recent changes in availability, such as the export controls on Anthropic’s most capable models, illustrate that Europe could lose its frontier AI access overnight. Europe should therefore use ‘compute for access’ deals to exchange attractive data centre sites for contractually agreed frontier model access, underwritten by contractual guarantees backstopped by physical leverage.	report-partB.txt	source
+# === O1.2  Protect European assets ===
+O12-A	p53=O1.2	Europe holds several assets that could matter enormously in a world with transformative AI. However, these assets are currently insufficiently protected from foreign acquisition. Europe should protect its AI and semiconductor assets through investment screenings with sufficient enforcement capacity, while ensuring that at-risk European companies can flourish without foreign capital.	report-partB.txt	source
+# === O2.1  Make Europe the best place to build and scale high-growth companies ===
+O21-A	p57=O2.1	In a world with transformative AI, companies that adopt AI well will be able to grow fast and generate enormous value. Europe cannot afford for such companies to be built and scaled elsewhere. Since it is hard to predict where transformative AI will create most of its value, supply-side reform to improve economic conditions across the board is especially important.	report-partB.txt	source
+# === O2.2  Develop indispensable assets across the AI value chain ===
+O22-A	p60=O2.2	Experts disagree as to which layer of the AI value chain will create most of the value in the long term: foundational inputs (such as energy, land, raw materials), chips and chipmaking equipment, compute, models, or downstream applications. However, countries owning no part of the AI value chain are unlikely to be prosperous and sovereign in a world with transformative AI. A robust strategy for Europe is therefore to place uncorrelated bets across several contestable layers of the AI stack.	report-partB.txt	source
+# === O3.1  Ensure prioritised and targeted use of EU rules to address risks from highly capable AI ===
+O31-A	p64=O3.1	Europe is in an excellent position to become a global leader at addressing the unprecedented and severe risks from transformative AI. In combination, key parts of the EU AI Act and General-Purpose AI (GPAI) Code of Practice (see Box 1) present an opportunity for Europe to help ensure that the frontier of AI is developed and deployed safely and securely. To do this, Europe must ensure that their enforcement is prioritised, targeted, proportionate, driven by frontier AI expertise, and insulated from political pressures.	report-partB.txt	source
+# === O3.2  Prepare for labour market impacts ===
+O32-A	p68=O3.2	Transformative AI would likely displace human labour at levels never before seen in human history. As long as Europe only controls a small part of AI value creation, its ability to absorb such a shock and safeguard the livelihoods of its citizens is limited. While the exact pace and shape of AI’s labour market effects remain uncertain, Europe should strengthen its economic position and build capacity to address future labour market disruptions. This matters both for its own sake and for maintaining public support for many of the measures recommended in this strategy.	report-partB.txt	source

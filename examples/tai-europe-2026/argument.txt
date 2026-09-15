@@ -1,0 +1,42 @@
+# argument.txt — Slice 1 faithfulness of the 11 Part A objectives (PLAN.md, spec/ARGUMENT.md)
+#
+# title: A Transformative AI Strategy for Europe — KIRA Center, Version 1.0, September 2026
+#
+# Reconfigured from pair-consistency to FAITHFULNESS. Part B (report-partB.txt, printed pp77–204;
+# sources/MANIFEST.md) is the held SOURCE; Part A (pp16–76) is the TARGET. Each objective appears
+# once here as a single Part A claim leaf, and the leaf's question is: does the Part B implementation
+# SUPPORT the Part A objective claim (spec/TREE.md faithfulness verdict).
+#
+# Structure: root → 11 objective nodes → one atomic-claim leaf each (the Part A statement; text,
+# page and route live in claims-objectives.txt, not repeated here).
+#
+# Judgements are DERIVED bottom-up from a judge chain (spec/TREE.md), never authored. No judge run
+# is in this slice, so no judgement column appears — one would be a fabricated result.
+#
+# Line format (indentation = depth):
+#   <id>  | <content>  | <provenance note>
+# A bare id at the deepest level is an atomic-claim leaf resolved in claims-objectives.txt.
+#
+ROOT  | The 11 Part A objective claims are each supported by their Part B implementation  | derived from the 11 leaves below
+  IO-1  | Create a Member State Alliance for Supply Chain Security  | Part A p28 vs source Part B p79
+    IO-1-A  | Part A statement (p28)  | claims-objectives.txt
+  IO-2  | Make Europe’s institutions ready to act in a world with transformative AI  | Part A p31 vs source Part B p90
+    IO-2-A  | Part A statement (p31)  | claims-objectives.txt
+  IO-3  | Secure Europe’s share of global AI compute  | Part A p36 vs source Part B p99
+    IO-3-A  | Part A statement (p36)  | claims-objectives.txt
+  IO-4  | Ensure resilience to AI crises  | Part A p40 vs source Part B p108
+    IO-4-A  | Part A statement (p40)  | claims-objectives.txt
+  IO-5  | Make Europe the global leader in AI assurance technology  | Part A p45 vs source Part B p118
+    IO-5-A  | Part A statement (p45)  | claims-objectives.txt
+  O1.1  | Secure ongoing access to frontier AI systems  | Part A p50 vs source Part B p127
+    O11-A  | Part A statement (p50)  | claims-objectives.txt
+  O1.2  | Protect European assets  | Part A p53 vs source Part B p133
+    O12-A  | Part A statement (p53)  | claims-objectives.txt
+  O2.1  | Make Europe the best place to build and scale high-growth companies  | Part A p57 vs source Part B p141
+    O21-A  | Part A statement (p57)  | claims-objectives.txt
+  O2.2  | Develop indispensable assets across the AI value chain  | Part A p60 vs source Part B p162
+    O22-A  | Part A statement (p60)  | claims-objectives.txt
+  O3.1  | Ensure prioritised and targeted use of EU rules to address risks from highly capable AI  | Part A p64 vs source Part B p169 — B declines it
+    O31-A  | Part A statement (p64)  | claims-objectives.txt
+  O3.2  | Prepare for labour market impacts  | Part A p68 vs source Part B p169
+    O32-A  | Part A statement (p68)  | claims-objectives.txt
