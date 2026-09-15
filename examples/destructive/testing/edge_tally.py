@@ -192,13 +192,26 @@ def report(base, corpus, edges):
     print(f"  false-attack (all open): open={nopen}/{N}  → {'PASS' if ok else 'FAIL'}")
     checks.append(ok)
 
+    # Template rule (spec/EDGE.md §3 rule 4) is now a BACKSTOP, not a §5 pass condition: with practical's
+    # CQ set reduced to side_effects only (§2) the model no longer offers the correlation-as-cause
+    # world per edge, so the rule is not expected to fire on dora and dora's method-level point rides the
+    # fixed root note instead. Print it informationally — it fails no run.
     fired_yes = bool(fired)
     flag = "" if fired_yes else "  ← read the anchors (§3): a near-dup the exact-match key missed?"
+    print(f"  template rule fired: {'yes' if fired_yes else 'no'}  (informational — backstop, not a §5 gate){flag}")
+
+    # Fixed root method note (spec/EDGE.md §3 rule 4, §5): emitted by the pass from code for any report
+    # whose in-scope edges are all `practical` — dora is the case. The note ("findings are associational;
+    # recommendations are interventions") lives in root.RootMethods, not the chain, so it is inferred here
+    # from the scheme mix: all-practical ⇒ the pass appends it. For dora this is a §5 PASS line.
+    all_practical = N > 0 and all(e["scheme"] == "practical" for e in edges)
     if corpus == "dora":
-        print(f"  template rule fired: {'yes' if fired_yes else 'no'}  → {'PASS' if fired_yes else 'FAIL'}{flag}")
-        checks.append(fired_yes)
+        print(f"  fixed root method note (all edges practical): {'emitted' if all_practical else 'NOT emitted'}"
+              f"  → {'PASS' if all_practical else 'FAIL'}")
+        checks.append(all_practical)
     else:
-        print(f"  template rule fired: {'yes' if fired_yes else 'no'}  (not required off dora){flag}")
+        note = "emitted (all edges practical)" if all_practical else "not emitted (edges not all practical)"
+        print(f"  fixed root method note: {note}  (informational off dora)")
 
     if corpus == "dora":
         if rvc is None:

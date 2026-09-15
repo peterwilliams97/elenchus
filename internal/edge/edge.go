@@ -20,18 +20,28 @@ import (
 	"strings"
 )
 
-// Defeater is the model's offered counter-world (spec/EDGE.md §2): a state of the world, plausible in
-// the report's domain, in which the verified finding still holds and the recommendation fails. A
-// returned defeater is ADMITTED only if `Admit` passes (§3); a nil defeater is the model declining to
-// refute. `Anchor` is the concrete referent the world turns on, which the admission check requires to
-// sit verbatim inside the REPORT — the finding, the recommendation, or the verified quotes — the same
-// present-in-the-text discipline the evidence quotes run, pointed at the report rather than at the
-// model's own prose. A defeater the report names is checkable against the report; one imported from
-// outside is a claim about the world, and confirming that is a retrieval past the axis boundary.
+// Defeater says: the finding is true, and the recommendation still does not follow. For a
+// `practical` edge there is one allowed reason — the report itself says the recommended action has
+// a downside (a cost, e.g. F-BATCH: small batches help product performance but reduce individual
+// effectiveness), and in some setting that downside wins.
+//
+//   - `World` is the model's prose describing that setting. Not checked beyond non-empty; this is
+//     what the reader judges.
+//   - `Anchor` is the sentence in the report that states the downside, copied verbatim. `Admit`
+//     checks it: it must be a norm-substring of this edge's finding text or one of its verified
+//     quotes, else it is rejected. The model can only copy it, not write it.
+//   - `Settles` is what observation would decide it. Non-empty only.
+//   - `Kind` is a closed enum (see `kinds`) — what the `World` names.
+//   - `CriticalQuestion` is a closed enum per scheme (see `schemeCQs`); `practical` has only
+//     `side_effects`.
+//
+// The check guarantees the downside is really in the report; it does not guarantee the `World`
+// built on it is right — R-ACCESS in run 5 quoted a sentence about friction decreasing and called
+// it a cost.
 type Defeater struct {
 	World            string `json:"world"`
 	Kind             string `json:"kind"`   // population | condition | definition
-	Anchor           string `json:"anchor"` // the referent, verbatim within the finding/recommendation/quotes
+	Anchor           string `json:"anchor"` // the cost clause, verbatim in this edge's finding or verified quotes
 	Settles          string `json:"settles"`
 	CriticalQuestion string `json:"critical_question"` // which of the scheme's fixed CQs this answers
 }
@@ -71,21 +81,22 @@ type cq struct {
 	Question string
 }
 
-// schemeCQs maps each argument scheme (spec/EDGE.md §1) to its fixed critical questions, taken verbatim
+// schemeCQs maps each argument scheme (spec/EDGE.md §1) to its fixed s, taken verbatim
 // from the consultant-report scheme list in docs/todo/adversary-design-2026-09-14.md § Operational form.
 // The scheme names what the inference from finding to recommendation IS; its CQs are the only questions
 // the edge call may ask. `survey`/`trend`/`classification` are defined for completeness though the dora
 // and master-plan refuter corpora exercise only `practical` and `example` (spec/EDGE.md §5(a)).
 var schemeCQs = map[string][]cq{
-	// practical carries alt_means and side_effects only (spec/EDGE.md §2, 14 Sept). The three CQs that
-	// named the recommendation's goal — goal_held, feasible, goal_conflict — are removed: each is
-	// answerable for any practical recommendation by inventing an addressee with other goals or
-	// constraints, and a world that varies the addressee is outside the report's domain (§3 step 5).
-	// The two that remain stay report-internal — alt_means names a cheaper route to the same goal,
-	// side_effects a cost the recommendation's own text already carries.
+	// practical carries side_effects only (spec/EDGE.md §2, run 5, 15 Sept). The goal-naming CQs
+	// (goal_held, feasible, goal_conflict) are removed — each is answerable for any practical
+	// recommendation by inventing an addressee with other goals, a world outside the report's domain
+	// (§3 step 5). alt_means is removed (run 3): a cheaper route M' defeats only "do M rather than M'",
+	// a comparative no recommendation makes. means_mismatch is removed (run 4): its admitted worlds were
+	// implementation or feasibility questions — the reader's, not an inference the model can settle. The
+	// one CQ that remains attacks the F→R gap from inside the report: side_effects names a cost of M in
+	// the finding's own text, which is checkable against the report.
 	"practical": {
-		{"alt_means", "Is there an alternative means to that goal the recommendation ignores?"},
-		{"side_effects", "Does the recommended action carry a side effect that defeats the goal?"},
+		{"side_effects", "Does the recommended action carry a cost the finding or its quotes already name?"},
 	},
 	"survey": {
 		{"position_to_know", "Are the respondents in a position to know what the claim reports?"},
@@ -111,16 +122,17 @@ var schemeCQs = map[string][]cq{
 func KnownScheme(s string) bool { _, ok := schemeCQs[s]; return ok }
 
 // Admit runs the mechanical, no-NLP admission check of spec/EDGE.md §3 steps 1–3 (the cross-edge
-// template rule of step 4 runs separately, in Resolve). `reportText` is the prose the anchor must land
-// in — the finding text, the recommendation text, and each verified quote, assembled by the caller. It
-// returns ok, and on failure the step that rejected the offer — "world", "settles", "kind" or "anchor"
-// — so a run logs why each offered defeater was discarded and states how many were offered against how
-// many admitted. The check is form-only: it never judges whether the world is a GOOD defeater, only
-// that the model named a concrete referent AND that referent appears in the report (§3 step 3, amended
-// 14 Sept). Anchoring in `World` (the pre-fix rule) let the model manufacture its own referent and
-// quote itself — Refuter run 1 admitted an imported compliance goal the report never names; anchoring
-// in the report rejects it, because "compliance mandate" appears nowhere in the report's text.
-func Admit(d Defeater, reportText ...string) (ok bool, failedStep string) {
+// template rule of step 4 runs separately, in Resolve). `findingAndQuotes` is the prose `anchor` must
+// land in — THIS edge's own finding text and each of its verified quotes, the premise under attack. It
+// returns ok, and on failure the step that rejected the offer — "world", "settles", "kind", or
+// "anchor" — so a run logs why each offered defeater was discarded and states how many were offered
+// against how many admitted. The check is form-only: it never judges whether the world is a GOOD
+// defeater, only that the model named a concrete referent AND that referent — the cost clause
+// side_effects names — appears in this edge's own finding or its quotes (§3 step 3, run 5). The anchor
+// is confined to the premise being defeated: never the recommendation (a referent in R while the world
+// names a goal R never states, run 3), and never another finding's text (F-ACCESS anchored on F-DATA,
+// run 4). If the finding and its quotes name no cost, no concrete world opens and the offer is rejected.
+func Admit(d Defeater, findingAndQuotes []string) (ok bool, failedStep string) {
 	if strings.TrimSpace(d.World) == "" {
 		return false, "world"
 	}
@@ -130,8 +142,10 @@ func Admit(d Defeater, reportText ...string) (ok bool, failedStep string) {
 	if !kinds[d.Kind] {
 		return false, "kind"
 	}
+	// step 3: `anchor` is the cost clause side_effects names, verbatim in this edge's own finding or its
+	// quotes — never the recommendation, never another finding.
 	anchor := strings.TrimSpace(d.Anchor)
-	if anchor == "" || !anchorInReport(anchor, reportText) {
+	if anchor == "" || !anchorInReport(anchor, findingAndQuotes) {
 		return false, "anchor"
 	}
 	return true, ""
@@ -148,10 +162,10 @@ func norm(s string) string {
 	return anchorWS.ReplaceAllString(anchorPunct.Replace(strings.ToLower(strings.TrimSpace(s))), " ")
 }
 
-// anchorInReport reports whether the anchor appears verbatim (modulo `norm`) inside any of the report
-// texts — the finding, the recommendation, or a verified quote — step 3 of the admission check. The
-// model must point at a concrete referent the report itself names, not one it coined in its own world;
-// this confirms the pointer lands in the report.
+// anchorInReport reports whether the anchor appears verbatim (modulo `norm`) inside any of the given
+// report texts — this edge's own finding and its verified quotes — step 3 of the admission check. The
+// model must point at a concrete referent the finding under attack itself names, not one it coined in
+// its own world; this confirms the pointer lands in the premise being defeated.
 func anchorInReport(anchor string, reportText []string) bool {
 	a := norm(anchor)
 	if a == "" {
@@ -245,6 +259,15 @@ func Resolve(edges []EdgeResult) (verdict, world map[string]string, methods []Me
 	}
 	return verdict, world, methods
 }
+
+// FixedMethodNote is the root method note the pass emits from CODE (spec/EDGE.md §3 rule 4, §5) for a
+// report whose in-scope edges are all `practical`: the correlation→intervention gap is a property of
+// the evidence type, not of any one inference, so it is stated once at the root rather than attacked
+// per edge. With practical's CQ set reduced to side_effects only (§2) the model no longer offers the
+// correlation-as-cause world per edge, so the template rule (Resolve) is no longer expected to lift it;
+// this fixed note carries dora's method-level point instead, produced by the pass, never by
+// the model. It rides RootMethods, rendered where MethodLine's lifted defeaters render.
+const FixedMethodNote = "method: findings are associational; recommendations are interventions."
 
 // MethodLine renders one lifted defeater as the root line spec/EDGE.md §4 prescribes: the world as the
 // claim and what would settle it, tagged as an evidence-type defect that defeats every edge of its kind.

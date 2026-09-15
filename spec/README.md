@@ -115,8 +115,10 @@ things by their known names).
   merged-leaf class over N samples.
 - **Needs-you** — the surfaced subset of leaves a reader must look at, chosen by a fixed tier rule;
   the tree collapses everything else.
-- **scheme / critical questions** — a Walton inference pattern (`practical`, `survey`, `example`,
-  `trend`, `classification`) and its fixed short list of questions the edge attacker asks.
+- **scheme / critical questions (CQ)** — a Walton inference pattern (`practical`, `survey`, `example`,
+  `trend`, `classification`) and its fixed short list of questions the edge attacker asks; one such
+  question is a **critical question**, abbreviated **CQ** in `EDGE.md` and the schema's
+  `critical_question` field.
 - **defeater / anchor** — a concrete counter-world in which the finding still holds yet the
   recommendation fails; its **anchor** is the referent the world turns on, which admission requires to
   appear verbatim in the report's own text.

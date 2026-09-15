@@ -41,8 +41,9 @@ prevent.** The destructive probes are elenchus applied to assay's own critic.
 - **`design-notes.md`** — unsettled design seeds: whether surviving refutation is the best
   validation, and where the elenchus/substance leg stands today (dormant). May graduate to
   `BACKGROUND.md`.
-- **`adversary-design-2026-09-14.md`** — proposed direction for the adversarial leg: attack
-  finding→recommendation edges with named defeaters. 46 edges across the five corpora, 0 judged today.
+- **`adversary-design-2026-09-14.md`** — built and calibrated on dora (`practical`); example scheme
+  next: attack finding→recommendation edges with named defeaters. Of 46 F→R edges across the five
+  corpora, dora's 7 in-scope now carry an edge verdict.
 - **`Consultant & institutional reports.md`** — candidate test corpus: open-access consultant and
   institutional reports to analyse, grouped by subject (global/AU/Scotland, housing, AI-in-programming,
   EU competitiveness, AI-in-education), each with a **Test notes** column flagging where the argument

@@ -3645,7 +3645,7 @@ type edgeDetail struct {
 	Rejected         []string `json:"rejected,omitempty"` // one failed admission step per rejected offer
 	World            string   `json:"world,omitempty"`
 	Kind             string   `json:"kind,omitempty"`
-	Anchor           string   `json:"anchor,omitempty"`
+	Anchor           string   `json:"anchor,omitempty"` // the cost clause, verbatim in this edge's finding or quotes
 	Settles          string   `json:"settles,omitempty"`
 	CriticalQuestion string   `json:"critical_question,omitempty"` // which of the scheme's fixed CQs the defeater answers
 	MethodLevel      bool     `json:"method_level,omitempty"`      // lifted to the root by the template rule (§3 rule 4)
@@ -4251,6 +4251,21 @@ func inScopeEdges(root *tree.ArgNode) []edgePair {
 	return out
 }
 
+// allPractical reports whether every in-scope edge is `practical` (and there is at least one), the
+// condition for the fixed root method note (spec/EDGE.md §3 rule 4, §5). dora is the case; a report
+// mixing schemes, or one whose edges include an unknown scheme, does not carry the note.
+func allPractical(edges []edgePair) bool {
+	if len(edges) == 0 {
+		return false
+	}
+	for _, p := range edges {
+		if p.finding.Scheme != "practical" {
+			return false
+		}
+	}
+	return true
+}
+
 // edgeQuotes gathers the already-verified source spans for a finding's leaves — the `faithful`/`partial`
 // evidence the report-tree pass grounded and quoteInPassage-verified (spec/EDGE.md §2). The edge reasons
 // from what the source was shown to say, so only quotes on a faithful/partial leaf are passed; an
@@ -4337,9 +4352,10 @@ func (c *cfg) runEdgePass(root *tree.ArgNode, rows []brief.Row, details map[stri
 		}
 		quotes := edgeQuotes(p.finding, byRow, details)
 		user := edge.User(p.finding.Scheme, p.finding.Content, quotes, p.rec.Content)
-		// The report text the anchor must land in (spec/EDGE.md §3 step 3): the finding, the
-		// recommendation, and each verified quote — not the model's own world.
-		reportText := append([]string{p.finding.Content, p.rec.Content}, quotes...)
+		// The anchor source of step 3 (spec/EDGE.md §3, run 5): `anchor` must land in THIS edge's own
+		// finding or one of its verified quotes — the premise under attack — never the recommendation,
+		// never another finding, never the model's own world.
+		findingAndQuotes := append([]string{p.finding.Content}, quotes...)
 		var samples, rejected []string
 		var admittedDefs []edge.Defeater
 		offered, admitted := 0, 0
@@ -4363,7 +4379,7 @@ func (c *cfg) runEdgePass(root *tree.ArgNode, rows []brief.Row, details map[stri
 				continue
 			}
 			offered++
-			if adm, step := edge.Admit(r.Defeater, reportText...); adm {
+			if adm, step := edge.Admit(r.Defeater, findingAndQuotes); adm {
 				admitted++
 				admittedDefs = append(admittedDefs, r.Defeater)
 				samples = append(samples, edge.Open)
@@ -4411,7 +4427,8 @@ func (c *cfg) runEdgePass(root *tree.ArgNode, rows []brief.Row, details map[stri
 		}
 		if a.verdict == edge.Open {
 			det.World, det.Kind = a.defeater.World, a.defeater.Kind
-			det.Anchor, det.Settles = a.defeater.Anchor, a.defeater.Settles
+			det.Anchor = a.defeater.Anchor
+			det.Settles = a.defeater.Settles
 			det.CriticalQuestion = a.defeater.CriticalQuestion
 		}
 		raw, _ := json.Marshal(det)
@@ -4428,6 +4445,12 @@ func (c *cfg) runEdgePass(root *tree.ArgNode, rows []brief.Row, details map[stri
 	}
 	for _, m := range methods {
 		root.RootMethods = append(root.RootMethods, m.MethodLine())
+	}
+	// A report whose in-scope edges are all `practical` carries the fixed root method note (spec/EDGE.md
+	// §3 rule 4, §5): the correlation→intervention gap is a property of the evidence type, stated once
+	// from code, never produced by the model. dora is the case — every dora edge is practical.
+	if allPractical(edges) {
+		root.RootMethods = append(root.RootMethods, edge.FixedMethodNote)
 	}
 	if chainPath != "" {
 		fmt.Fprintf(os.Stderr, "edge pass: %d in-scope edges, %d method-level lifted → %s\n",

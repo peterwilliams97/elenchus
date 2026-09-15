@@ -18,6 +18,7 @@ import (
 	"assay/internal/backend"
 	"assay/internal/backend/fake"
 	"assay/internal/brief"
+	"assay/internal/edge"
 	"assay/internal/manifest"
 	"assay/internal/retrieve"
 	"assay/internal/tree"
@@ -250,6 +251,41 @@ func TestRunEdgePassRejectsFreeAttack(t *testing.T) {
 	_ = json.Unmarshal(rec[0].Detail, &det)
 	if det.Offered != 1 || det.Admitted != 0 || len(det.Rejected) != 1 || det.Rejected[0] != "anchor" {
 		t.Fatalf("detail should show 1 offered / 0 admitted / rejected at anchor, got %+v", det)
+	}
+}
+
+// TestRunEdgePassFixedMethodNote: a report whose in-scope edges are all `practical` (the edgeFixture
+// tree) carries the fixed root method note from code (spec/EDGE.md §3 rule 4, §5) — the
+// correlation→intervention point emitted by the pass, never produced by the model. It rides
+// root.RootMethods, the same slice MethodLine's lifted defeaters render through. allPractical also gates
+// it: a tree with a non-practical edge does not carry the note.
+func TestRunEdgePassFixedMethodNote(t *testing.T) {
+	root, rows, details := edgeFixture(t)
+	dir := t.TempDir()
+	c := cfg{repeat: 1, edgeChainDir: dir, argumentFile: "x.txt",
+		call: func(system, prompt string, withTools bool) (string, []retrievedSource, error) {
+			// A declined sample — the note fires on the tree's scheme mix, not on any defeater.
+			return `{"warrant":"w","none_admitted":true,"defeater":{"world":"","kind":"condition","anchor":"","settles":"","critical_question":"side_effects"},"questions_considered":["side_effects"]}`, nil, nil
+		}}
+	c.runEdgePass(root, rows, details)
+
+	found := false
+	for _, m := range root.RootMethods {
+		if m == edge.FixedMethodNote {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("an all-practical tree should carry the fixed root method note, got RootMethods=%v", root.RootMethods)
+	}
+
+	if !allPractical(inScopeEdges(root)) {
+		t.Error("the fixture's edges are all practical; allPractical should be true")
+	}
+	mixed, _, _ := edgeFixture(t)
+	childByID(t, childByID(t, mixed, "R1"), "F1").Scheme = "example"
+	if allPractical(inScopeEdges(mixed)) {
+		t.Error("a tree with a non-practical edge should make allPractical false")
 	}
 }
 

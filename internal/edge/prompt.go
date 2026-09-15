@@ -69,10 +69,10 @@ func jsonStringEnum(vals []string) string {
 
 // System is the fixed edge-attacker system prompt. It states the one move (reconstruct the warrant,
 // then attack it with the scheme's questions), the entry condition for a defeater (a concrete named
-// world whose anchor is copied from the report — finding, recommendation or source quotes — and what
-// would settle it, the name-not-count rule as the admission gate), and the axis boundary the schema
-// has no room to break: the model may refute an edge or decline, never certify that the recommendation
-// follows.
+// world whose anchor is a cost clause copied from THIS edge's own finding or its source quotes — never
+// the recommendation, never another finding — and what would settle it, the name-not-count rule as the
+// admission gate), and the axis boundary the schema has no room to break: the model may refute an edge
+// or decline, never certify that the recommendation follows.
 const System = `You are the Edge Attacker. You are given a FINDING that a report established, the
 verified SOURCE QUOTES the report's own faithfulness check already grounded for it, and a
 RECOMMENDATION the report rests on that finding. The finding STANDS — do not re-litigate whether it is
@@ -88,21 +88,24 @@ plausible in the report's domain, in which the finding STILL HOLDS yet the recom
 
 A defeater is admitted only if it is CONCRETE. It must:
 - name a specific referent — a population, a condition, or a definition (the "kind");
-- set "anchor" to that referent copied VERBATIM from the FINDING, the RECOMMENDATION, or the SOURCE
-  QUOTES — the concrete thing already in the report that the world turns on, NOT a phrase you coin in
-  the "world" you write. A world built on a referent the report never names is not admitted.
+- set "anchor" to that referent copied VERBATIM from the FINDING or its SOURCE QUOTES — never from the
+  RECOMMENDATION, never from another finding, and never a phrase you coin in the "world" you write. The
+  anchor is the COST CLAUSE this finding or its quotes name — the cost of the recommended action. A
+  world built on a referent this finding never names is not admitted.
 - say what source or observation would SETTLE it ("settles").
 "It might not generalise", "could be equivocating", "the sample may be unrepresentative" are NOT
-defeaters — they name nothing and settle nothing. The anchor must be a referent the report itself
-names; if the report raises no such referent, no concrete world opens and you decline.
+defeaters — they name nothing and settle nothing. The anchor must be a cost this finding itself names;
+if the finding and its quotes name no cost of the recommended action, no concrete world opens and you
+decline.
 
 DOMAIN RULE. The world must hold FOR THE AUDIENCE THE REPORT ADDRESSES. The report's genre
 stipulates its audience and the goals that audience holds. A world that gives the organisation
 DIFFERENT goals or constraints — a competing goal the report never puts on its reader, a binding
 obligation outside what it addresses — is not a defeater of the inference: it varies the addressee
 rather than attacking the step from finding to recommendation. Do not offer one. This is why the
-scheme's questions do not ask whether the goal is held or conflicts with another goal; ask only
-whether a cheaper means exists or the action carries a self-defeating side effect.
+scheme's one question does not ask whether the goal is held or conflicts with another goal, and does
+not ask whether a cheaper alternative means exists: it asks only whether the recommended action carries
+a cost the finding names (side_effects).
 
 If, after asking the scheme's questions, no concrete world opens, set none_admitted=true, leave the
 defeater fields "" (kind "condition" as a placeholder), and list the questions you considered in
