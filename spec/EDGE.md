@@ -642,13 +642,14 @@ in-scope edges alone would have wrongly emitted it once the `example` edges drop
 
 23 in-scope edges (8 + 15) × N=5 = **115 edge calls** per model pass.
 
-Baseline unit from the Sonnet N=3 figure of ~$10 per 100 claims → $10 / 100 / 3 ≈ **$0.033 / call**.
+Baseline unit from the Sonnet N=3 figure of ~$25 per 100 claims (measured on dora, 16 Sept: $33 /
+136 claims) → $33 / 136 / 3 ≈ **$0.081 / call**.
 
-- Naive: 115 × $0.033 ≈ **$3.83**.
+- Naive: 115 × $0.081 ≈ **$9.3**.
 - Adjusted: an edge call's prompt carries finding + verified quote + recommendation + the scheme's CQ
   list, and its output is the structured-defeater object — ~1.3–1.5× a `faithJudge` call's tokens →
-  **~$5.0–5.7** total for the Sonnet pass.
-- Split: dora 8×5 = 40 calls ≈ **$1.3–2.0**; master-plan 15×5 = 75 calls ≈ **$2.5–3.8**.
+  **~$12.1–14.0** total for the Sonnet pass.
+- Split: dora 8×5 = 40 calls ≈ **$4.2–4.9**; master-plan 15×5 = 75 calls ≈ **$7.9–9.1**.
 
 The haiku calibration pass first (`claude-haiku-4-5-20251001`) is roughly an order of magnitude
 cheaper and is where the pass/fail lines above are first read; the Sonnet figures are the numbers to
