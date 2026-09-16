@@ -1,0 +1,39 @@
+# title: A Transformative AI Strategy for Europe
+# date: Version 1.0, September 2026
+# sources: examples/tai-europe-2026/sources/MANIFEST.md
+#
+# Slice 2 (PLAN.md §Slice 2): the headline positive-control claim chain — the compute comparison
+# stated three times in the report (executive summary p6, IO-3 body lead-in p24, footnote 2 p24).
+# Restructured as a two-leaf faithfulness check: the two prose statements (CMP-EXEC, CMP-BODY) are the
+# CLAIMS, and footnote 2 (report-fn2.txt) is the SOURCE they are judged against. Footnote 2 shows the
+# arithmetic — 2.1 GW (all of Europe) / 0.662 GW (Nusajaya, Malaysia) = 3.17 ≈ "three times" (CMP-EXEC)
+# and its reciprocal ≈ "one third" (CMP-BODY). This is a CALIBRATION control, not a defect probe: a run
+# that fails to reconcile a prose statement with the footnote's figures is miscalibrated. Expected
+# verdict: faithful on both leaves (pre-registered in spec/TREE.md § Refuters pre-registered for the
+# reorder, refuter (a)).
+#
+# Source for this slice is footnote 2 plus the p192 body sentence — both in sources/report-fn2.txt
+# (src=report-fn2.txt, held per MANIFEST). The two claim statements are held OUT of sources/ (the whole
+# report is not the source here): if report.txt were the source, retrieval could ground each prose
+# statement on its own wording. Footnote 2 states "2.1 GW for all of Europe" with no country scope, so
+# CMP-BODY's "including the UK and Norway" had no truth-maker and scored partial — a source-scoping error
+# in the fixture, not a distortion in the claim. The p192 sentence ("Europe as a whole – including non-EU
+# countries such as the UK and Norway – will have around 2 GW") is now held alongside the footnote, so
+# CMP-BODY grounds against this source alone. Expected verdict: faithful on both leaves. route=source:
+# each claim is judged for faithfulness to report-fn2.txt. This differs from Slice 1, whose source is
+# report-partB.txt only.
+#
+# Five TAB fields per leaf: id <TAB> pNN=<label> <TAB> statement <TAB> src <TAB> route.
+# pNN is the PRINTED page (report_page_offset: 0, MANIFEST — printed == PDF page). Text is verbatim
+# from report.txt (CMP-EXEC report.txt:382-383, CMP-BODY report.txt:942-943) with line-break
+# hyphenation joined, inline footnote-reference digits dropped (e.g. "China.1" -> "China."), whitespace
+# collapsed; curly quotes/en-dashes kept.
+#
+# NOTE on the footnote-2 SOURCE text: the verbatim footnote (report.txt:950-952, held as report-fn2.txt)
+# attaches "compared to 2.1 GW for all of Europe" to the two US data centres (2.4 GW) and states
+# Nusajaya's 0.662 GW in a separate sentence. Both figures sit in the one footnote, so 2.1/0.662 = 3.17
+# is the ratio each prose statement is checked against.
+#
+# === Compute comparison: Europe vs one Malaysian site (two statements judged against footnote 2) ===
+CMP-EXEC	p6=Exec-summary	Europe hosts only three times as much AI computing capacity as a single data centre site being completed in Malaysia this year.	report-fn2.txt	source
+CMP-BODY	p24=IO-3-body	By the end of 2026, a single data centre site in Malaysia will reach roughly one third of the AI compute capacity of Europe, including the UK and Norway.	report-fn2.txt	source

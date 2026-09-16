@@ -142,6 +142,53 @@ Adjudication drafts land in `evidence/2026-09-15-slice1-faith/adjudications.txt`
 - **Retrieval did not starve any leaf:** all 11 expected Part B pages, and in fact the whole held
   Part B (128 pp), were in the pool for every claim, so no verdict is a retrieval miss.
 
+### Adjudicated 16 Sept (PW)
+
+PW read all 11 leaves against the held Part B and filed a verdict per leaf in `adjudications.txt`
+(example root; read by the `-review` overlay, spec/SERVE.md § Adjudications). PW upheld six leaves and
+overturned five to `faithful` (table below).
+
+Two agreement counts, and they differ by the vocabulary the compare runs over. Against the machine's
+**raw** verdicts PW agrees on **6/11** (every upheld leaf). The rendered overlay reports **4/11**,
+because `single_source` mode renames the machine's `absent` to `uncorroborated` before the
+string-equality compare (`assay.go:4521-4527`, so it derives as *weakened* not *failed*,
+spec/ARGUMENT.md), and PW's `absent` on O2.1 and O3.1 no longer matches `uncorroborated`. Those two
+are substantive upholds the string compare scores as disagreements — a vocabulary artifact, not a
+read PW changed. Reconciling the two counts (PW re-files O2.1/O3.1 as `uncorroborated`, PW's own edit;
+or `Agree` compares the pre-remap verdict) is a decision left to PW, not taken here.
+
+| ID   | Machine     | PW          | Reason (one line, from `adjudications.txt`)                                            |
+|------|-------------|-------------|---------------------------------------------------------------------------------------|
+| IO-1 | overstated  | faithful    | "failed to translate" reads as "not yet", not an active failure; Part B p79 ("dispersed", "never leveraged in tandem") carries the same state |
+| IO-2 | unsupported | unsupported | the "any of the other objectives" dependency and the "under uncertainty / time pressure" framing are A's, absent from Part B p90 |
+| IO-3 | overstated  | faithful    | Part B IO-3 ACTIONs (municipal revenue-sharing, community-infrastructure investment) implement the community-respect commitment; judge saw only the "why it matters" block |
+| IO-4 | partial     | faithful    | Part B IO-4 ACTIONs (CBRN plan, loss-of-control emergency plans, Crisis Coordination Hub) implement both prevent and respond; judge saw only the "why it matters" block |
+| IO-5 | partial     | faithful    | Part B IO-5 actions (RAND-tiered weight security, export security, SL5 data centre) implement secure-access-controls; clause 2 was the judge misreading A's own referent |
+| O1.1 | partial     | partial     | A names Anthropic and export controls; Part B O1.1 describes only access "suddenly withdrawn by foreign governments" — A is more specific than B |
+| O1.2 | partial     | faithful    | Part B O1.2 ACTION (anti-capture facility via national public banks, "to keep a strategic asset under European control") is the without-foreign-capital alternative; judge read "private" as possibly foreign |
+| O2.1 | absent      | absent      | the unpredictability-of-value rationale is not in Part B §O2.1 (pp141–161); B argues breadth as a "coherent package", not from where value lands |
+| O2.2 | unsupported | unsupported | the "experts disagree which layer creates most value" premise is not in Part B §O2.2 (pp162–168); B states the conclusion without it |
+| O3.1 | absent      | absent      | Part B p169 declines the objective outright — "there are no detailed recommendations for this objective" |
+| O3.2 | unsupported | unsupported | the link from Europe's share of AI value creation to its shock-absorption capacity is not in Part B §O3.2 (pp169–173); it is A's own |
+
+**Totals.** Five machine verdicts overturned to `faithful` (IO-1, IO-3, IO-4, IO-5, O1.2); six upheld
+(IO-2, O1.1, O2.1, O2.2, O3.1, O3.2).
+
+- **Overturns, by cause.** Four are retrieval-scope (IO-3, IO-4, IO-5, O1.2): BM25 fed the judge each
+  objective's "WHY IT MATTERS" prose, not its ACTION blocks, so the implementation the Part A claim
+  promises sat outside the judged passages. One is phrasing (IO-1): the critic read "failed to
+  translate" as an active-failure assertion the source does not make, where PW reads it as "not yet".
+- **Upheld, in three kinds.** Rationale stated in A and absent from B (IO-2, O2.1, O2.2, O3.2) — A
+  supplies a premise or dependency B never argues; factual specificity A adds over B (O1.1 — Anthropic
+  / export controls where B says only "withdrawn by foreign governments"); objective declined with no
+  implementation (O3.1).
+- **The retrieval-scope cause is a tool lesson, filed as a todo, not fixed here** —
+  `docs/todo/plan-segmentation.md` § After the seam. It refines the Run-notes line above: the whole
+  Part B was in the candidate *pool*, but BM25 top-k *selected* each objective's prose over its own
+  ACTION bullets, so the four are top-k selection misses, not candidacy misses. For a document keyed
+  by the same ids as its claims, retrieval should return the whole section for the id rather than
+  BM25 top-k.
+
 ## Slice 2 — headline positive-control claim chain (compute: Europe vs one Malaysian site)
 
 The catalogue (H.7) flags this as the known-good path: executive summary, body and footnote all agree,
@@ -159,6 +206,34 @@ miscalibrated. Three passages, one claim, page-referenced (printed pages from th
   verdict `faithful`/consistent across all three. This is the positive control, not a defect probe.
 - A second in-document positive control exists (Figure 1, Epoch index, discloses the metric that did
   NOT accelerate — H.6) but it is not a claim *chain*; note it, don't scope it here.
+
+### Built 2026-09-16 (Slice 2)
+
+No judge run (no model call, no `-review`). Three leaves in `claims-slice2.txt` — `CMP-EXEC` (p6),
+`CMP-BODY` (p24), `CMP-FN2` (p24 footnote 2) — hung as one internal-consistency node (`CMP`) under
+`ROOT` in `argument-slice2.txt`. Source is the whole report: `sources/report.txt` added to
+`MANIFEST.md` as a held Slice-2 source (`src=report.txt`, `route=source`), with a "Roles for Slice
+2" section stating the internal-consistency config; `single_source: true` already holds. All three
+statements printed verbatim from `report.txt`, page-referenced, hyphenation joined and
+footnote-reference digits dropped per the Slice-1 text convention.
+
+- **Footnote-2 text differs from the quote above.** The verbatim footnote 2 (report.txt:950–952)
+  reads: "OpenAI Stargate Abilene and Anthropic-Amazon New Carlisle will together reach 2.4 GW
+  facility power in 2026, compared to 2.1 GW for all of Europe. The Nusajaya site in Malaysia will
+  reach 0.662 GW in 2026, with 0.34 GW already in operation." The "compared to 2.1 GW for all of
+  Europe" clause attaches to the two US data centres (2.4 GW), and Nusajaya's 0.662 GW is a separate
+  sentence — the elision "0.662 GW … compared to 2.1 GW" in this plan's bullet reattaches it. Both
+  operands sit in the one footnote, so 2.1 / 0.662 = 3.17 still reconciles; `CMP-FN2` carries the
+  footnote verbatim, not the elided form.
+
+### Pre-registration — verdict expected per leaf
+
+Written before any judge run (discipline: pre-register the attempt). Prediction: **all three
+`faithful`**. The two framings reconcile through footnote 2's arithmetic — 2.1 GW (all of Europe) /
+0.662 GW (Nusajaya, Malaysia) = 3.17, which is both "three times as much" (CMP-EXEC) and "roughly
+one third" (CMP-BODY). This is the positive control: **a non-faithful on ANY leaf is a calibration
+miss** (the critic penalising a paraphrase or arithmetic the same document supports), **not a
+document finding** — the report is internally consistent here by construction (H.7).
 
 ## Slice 3 — empirical section on AI progress and Europe's position
 
@@ -202,6 +277,105 @@ core the whole urgency framing rests on.
   provenance-loop test lives, and it is not this plan.
 - "(host to capture)" = the anchor is a compound sentence whose specific link target must be read off
   the PDF annotation at extraction, not guessed. Do NOT invent a host.
+
+### Built 2026-09-16 (Slice 3 fixtures) — no judge run
+
+`claims-slice3.txt` (20 leaves) and `argument-slice3.txt` written; no model call, no `-review`. Each
+leaf is one Slice-3 cited-source row: the report's sentence VERBATIM (reconstructed from `report.txt`,
+not from the MANIFEST anchor column — items 11, 12, 14 were paraphrased there and are fixed here),
+page-referenced, `route=evidence`, `cites` naming the held cited page (`cited/<stem>.txt`). The
+20-leaf set uses the MANIFEST's row granularity: item 8 splits into `08a` (Epoch, present) + `08b`
+(Bloomberg, walled), item 16 into `16a` (europe2031, present) + `16b` (Epoch, figure-only); items
+14≡15 and 17≡18 each share one target and one leaf. The argument tree's three nodes are the report's
+own subsection headings (`report.txt:164-166`): AIPROG (5 leaves), NEARTERM (8), EUROPE (7).
+
+**Deviation from this prompt's "src= blank" for the four unverifiable leaves.** A blank `cites` does
+NOT render `unverifiable` — `missingCites("")` returns nil, so the leaf would be judged against the
+pooled corpus (`assay.go:3506`, `:674`). `unverifiable` (no model call) fires only for a cited id that
+is NAMED but not in the held manifest (`assay.go:743-750`). So items 5, 19, 08b, 09 each cite their
+(un)available truth-maker and are left out of the held set: `08b`/`09` cite the walled file (fetched
+but not usably in the corpus), `05`/`19` cite an `uncited/…` id no held document answers to. Flagged
+for PW: revert to blank only if the intended semantics changed.
+
+### Run prerequisites — the grounding run is NOT executable as-is (three gaps)
+
+Verified 2026-09-16 against HEAD. Until all three close, the command below renders **20/20
+unverifiable** at best, or silently under-runs — a partial run, not a smaller pass.
+
+1. **Cited ids are not held.** MANIFEST § Slice-3 cited sources lists the 18 files in a markdown
+   TABLE; `manifest.LoadHeld` (`internal/manifest/manifest.go:145`, regex `:141`) reads only
+   backticked `- ` + "\`id\`" bullets, so `c.held` contains none of them → every `cites` leaf is
+   `unverifiable`. Fix: register the 16 grounding ids as bullets (`- ` + "\`cited/01-epoch.ai.txt\`" …),
+   leaving `08b`/`09`/`uncited/*` deliberately OUT so those four stay unverifiable.
+2. **No parser for web-page captures.** `retrieve.passagesForFile` (`internal/retrieve/retrieve.go:182`)
+   routes a `cited/` file to `splitFile`, which emits a passage only on a Hansard speaker line. The
+   captures have none (3 accidental glossary `NOTE:`/`HPIM:`/`CBRN:` matches across 18 files), so the
+   index gets ~3 garbage passages and 15 files contribute nothing. Fix: a `citedPassages` parser
+   (paragraph split, id base `cited/<stem>`, a `SourceCited` role), a `/cited/` case in
+   `passagesForFile`, and a spec line in `spec/TREE.md § Cite-scoped retrieval` beside the
+   `leaderboards/` shape it copies.
+3. **No cite-base mapping for `cited/`.** `citedExternalBases` (`assay.go:1006`) maps only
+   `paper:<stem>` and `<x>.txt` → `<x>`; a `cited/<stem>.txt` cite resolves to base `cited/<stem>`
+   only once the parser (gap 2) mints that base. These two are the same change and land together.
+
+Gaps 2–3 are Go code on a branch whose `assay.go` already carries an unrelated in-progress diff — a
+separate topic/branch, not folded into this fixture commit. This is a hand-off, not "should work".
+
+### Pre-registration — verdict expected per leaf (written before any judge run)
+
+Driven by the MANIFEST `fig` column: **present-as-text → `faithful`** (the cited page states the
+number) **unless flagged**; **figure-only → `absent`** (the datum renders only in an interactive
+chart / data tool, so it is not in the static extraction — a stated limit of the fixture, read as
+"checked, not located in text", not a document defect); **absent-in-extraction → `absent`**;
+**not-held → `unverifiable`** (no model call).
+
+| id | item | fig | expected | read first if NOT as expected |
+|----|------|-----|----------|-------------------------------|
+| c01-epoch | 1 | figure-only | absent | — |
+| c02-metr | 2 | figure-only | absent | — |
+| c03-anthropic | 3 | present | **flag** | Fig 2 is "Source: Anthropic" — the interested party (H.6); a non-faithful here is the finding |
+| c04-epoch | 4 | present | faithful | — |
+| c05-jagged | 5 | uncited | unverifiable | — |
+| c06-wemustactnow | 6 | present | **flag** | the ~200-economist statement is post-cutoff / catalogue-unverified (H.8) |
+| c07-pacing | 7 | present | **flag** | the 1,000+-employee statement is catalogue-unverified (H.8) |
+| c08a-epoch | 8 | present | faithful | — |
+| c08b-bloomberg | 8 | hand-fetch | unverifiable | — |
+| c09-theinfo | 9 | hand-fetch | unverifiable | — |
+| c10-epoch | 10 | figure-only | absent | — |
+| c11-iasr | 11 | present | faithful | — |
+| c12-redwood | 12 | present | **flag** | the OpenAI/Hugging Face incident is post-cutoff / catalogue-unverified (H.8) |
+| c13-forbes | 13 | present | faithful | ("none European" is derived from the list, not stated) |
+| c14-epoch | 14/15 | figure-only | absent | — |
+| c16a-europe2031 | 16 | present | **flag** | europe2031.ai sits in the authors' own citation orbit (H.5) |
+| c16b-epoch | 16 | figure-only | absent | — |
+| c17-epoch-fdc | 17/18 | figure-only | absent | — |
+| c19-privateinv | 19 | uncited | unverifiable | — |
+| c20-foxphilip | 20 | absent-in-extraction | absent | if the 100× figure IS in the page on a hand-read, that's a finding (extraction miss, not a citation gap) |
+
+**Totals expected:** 4 `faithful` (c04, c08a, c11, c13), 5 `flag` (c03, c06, c07, c12, c16a — a
+non-faithful verdict on any of these is the finding to read first), 7 `absent` (c01, c02, c10, c14,
+c16b, c17, c20; c20 doubles as a hand-read prompt), 4 `unverifiable` (c05, c08b, c09, c19). The flag
+leaves are NOT pre-registered `faithful`: they are where the cited page most plausibly does NOT carry
+what the report claims (interested-party chart, post-cutoff statements, a citation-orbit compute
+figure), so a `faithful` there is the result to distrust, and a non-faithful is the slice's payload.
+
+### Judge command — N=3 Sonnet against `sources/cited/` (blocked on the three prerequisites)
+
+Do not run until the prerequisites above close; PW runs it (never call the model API from a session).
+Flags go BEFORE the positional claims file. `-source sources/cited` is the fetched-citation corpus;
+`-manifest` gives the held set that decides `unverifiable`; `-refs` carries the report page per leaf
+for the `-review` deep-links.
+
+```sh
+# run from examples/tai-europe-2026/
+source ../../setkey.sh && ../../assay -backend anthropic -model claude-sonnet-4-6 \
+  -retrieve bm25 -n 3 \
+  -manifest sources/MANIFEST.md \
+  -source sources/cited \
+  -argument argument-slice3.txt -refs claims-slice3.txt \
+  -chain-dir evidence/2026-09-16-slice3/sonnet-cited \
+  claims-slice3.txt
+```
 
 ## Out of scope (explicit)
 

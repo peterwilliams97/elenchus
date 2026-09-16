@@ -1,0 +1,24 @@
+# argument-slice2.txt — Slice 2 positive control: the compute comparison stated three times (PLAN.md
+# §Slice 2, spec/ARGUMENT.md)
+#
+# title: A Transformative AI Strategy for Europe — KIRA Center, Version 1.0, September 2026
+#
+# Faithfulness control, restructured (spec/TREE.md § Refuters pre-registered for the reorder, refuter
+# (a)). The report states one compute comparison three times — executive summary (p6), IO-3 body
+# lead-in (p24), footnote 2 (p24). The two prose statements are the CLAIMS (CMP-EXEC, CMP-BODY);
+# footnote 2 is the SOURCE they are judged against (sources/report-fn2.txt), and shows the arithmetic
+# that reconciles the two framings ("three times" / "one third"): 2.1 GW for all of Europe divided by
+# 0.662 GW for the Nusajaya (Malaysia) site = 3.17. The two prose statements are held out of sources/.
+# Text, page and route live in claims-slice2.txt, not repeated here.
+#
+# Judgements are DERIVED bottom-up from a judge chain (spec/TREE.md), never authored. No judge run is
+# in this slice, so no judgement column appears — one would be a fabricated result.
+#
+# Line format (indentation = depth):
+#   <id>  | <content>  | <provenance note>
+# A bare id at the deepest level is an atomic-claim leaf resolved in claims-slice2.txt.
+#
+ROOT  | The report's compute comparison — Europe hosts ~3x one Malaysian site — is faithful to the GW figures footnote 2 states  | derived from the two leaves below
+  CMP  | Exec summary and body both reconcile with footnote 2's arithmetic (2.1 / 0.662 = 3.17)  | one faithfulness node over report-fn2.txt
+    CMP-EXEC  | Executive summary statement (p6): "three times as much"  | claims-slice2.txt
+    CMP-BODY  | IO-3 body lead-in (p24): "roughly one third of ... Europe"  | claims-slice2.txt

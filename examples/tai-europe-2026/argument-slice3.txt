@@ -1,0 +1,44 @@
+# argument-slice3.txt — Slice 3: the empirical diagnostic section grounded against its own citations
+# (PLAN.md §Slice 3, spec/ARGUMENT.md)
+#
+# title: A Transformative AI Strategy for Europe — KIRA Center, Version 1.0, September 2026
+#
+# The section "Why Europe needs to prepare for transformative AI" (printed pp20–26) rests the whole
+# urgency framing on ~20 cited numbers. Each leaf is one such number, judged (route=evidence) against
+# the fetched page the report cites for it (sources/cited/, held per MANIFEST § Slice-3 cited sources).
+# The root asks one thing: are the diagnostic section's numbers what their sources actually say. Its
+# three children are the report's own three subsections (headings verbatim, report.txt:164-166).
+#
+# Judgements are DERIVED bottom-up from a judge chain (spec/TREE.md § Single-source judging /
+# spec/ARGUMENT.md), never authored. No judge run is in this slice — it is not runnable until the three
+# cited-grounding gaps close (PLAN.md §Slice 3, "Run prerequisites") — so no judgement column appears;
+# one would be a fabricated result. Leaf text, page and cite live in claims-slice3.txt, not repeated here.
+#
+# Line format (indentation = depth):
+#   <id>  | <content>  | <provenance note>
+# A bare id at the deepest level is an atomic-claim leaf resolved in claims-slice3.txt.
+#
+ROOT  | The diagnostic section's numbers are what their cited sources say  | derived from the three subsection nodes below
+  AIPROG  | AI progress is extraordinarily rapid (pp21–22): the capability-trajectory numbers match their citations  | 5 leaves, report.txt:164
+    c01-epoch  | ECI: capabilities improving ~2x as fast since April 2024 (Fig 1)  | claims-slice3.txt — cited/01-epoch.ai (figure-only)
+    c02-metr  | 2024 models struggled with 4-minute programming tasks (METR)  | claims-slice3.txt — cited/02-metr.org (figure-only)
+    c03-anthropic  | agents now solve open-ended tasks for AI researchers (Fig 2, "Source: Anthropic")  | claims-slice3.txt — cited/03-anthropic.com (interested party, H.6)
+    c04-epoch  | the pace of improvement has begun accelerating (Fig 1)  | claims-slice3.txt — cited/04-epoch.ai (present)
+    c07-pacing  | 1,000+ frontier lab employees: labs "close to automating AI research"  | claims-slice3.txt — cited/07-pacingthefrontier.com (present; UNVERIFIED, H.8)
+  NEARTERM  | Near-term transformative AI is plausible (pp23–24): the trend numbers match their citations  | 8 leaves, report.txt:165
+    c05-jagged  | capability growth is 'jagged' (acknowledge-then-dismiss caveat)  | claims-slice3.txt — uncited (no annotation) -> unverifiable
+    c06-wemustactnow  | July 2026: ~200 economists, 16 Nobel laureates warn on "radically more powerful AI"  | claims-slice3.txt — cited/06-wemustactnow.ai (present; UNVERIFIED, H.8)
+    c08a-epoch  | OpenAI run rate doubled $20B->$40B in 8 months (revenue-growth clause)  | claims-slice3.txt — cited/08a-epoch.ai (present)
+    c08b-bloomberg  | same sentence — the $40B run-rate figure  | claims-slice3.txt — cited/08b-bloomberg.com (hand-fetch 403) -> unverifiable
+    c09-theinfo  | Anthropic projected 4x, already 5.2x by May 2026  | claims-slice3.txt — cited/09-theinformation.com (login wall) -> unverifiable
+    c10-epoch  | AI capex 2026 ~€650B, +70%/yr  | claims-slice3.txt — cited/10-epoch.ai (figure-only)
+    c11-iasr  | International AI Safety Report risk list (bio/chem, autonomy, loss of control)  | claims-slice3.txt — cited/11-internationalaisafetyreport.org (present)
+    c12-redwood  | OpenAI agents hacked Hugging Face via hidden message board  | claims-slice3.txt — cited/12-redwoodresearch.org (present; UNVERIFIED, H.8)
+  EUROPE  | Europe risks marginalisation (pp24–25): the Europe-vs-world gap numbers match their citations  | 7 leaves, report.txt:166
+    c13-forbes  | none of the ten most valuable AI companies are European  | claims-slice3.txt — cited/13-forbes.com (present; "none European" derived)
+    c14-epoch  | European run rate <2% of OpenAI+Anthropic; combined revenue 25x, $4B->$100B  | claims-slice3.txt — cited/14-epoch.ai-aicompanies (figure-only)
+    c16a-europe2031  | EU ~5% of global AI compute vs 75% US, 15% China  | claims-slice3.txt — cited/16a-europe2031.ai (present; authors' orbit, H.5)
+    c16b-epoch  | same sentence — Epoch supercomputers trend  | claims-slice3.txt — cited/16b-epoch.ai-supercomputers (figure-only; H.5)
+    c17-epoch-fdc  | one Malaysian site ≈ one third of Europe's compute  | claims-slice3.txt — cited/17-epoch.ai-fdc-hub (figure-only; shared with Slice 2, H.5)
+    c19-privateinv  | Europe got just 5–6% of global private AI investment in 2025  | claims-slice3.txt — uncited (no annotation) -> unverifiable
+    c20-foxphilip  | market pays ~100x more for US frontier than the European fast follower  | claims-slice3.txt — cited/20-foxphilip.substack.com (absent in extraction)

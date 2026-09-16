@@ -1,0 +1,64 @@
+# title: A Transformative AI Strategy for Europe
+# date: Version 1.0, September 2026
+# sources: examples/tai-europe-2026/sources/MANIFEST.md
+#
+# Slice 3 (PLAN.md §Slice 3): the empirical diagnostic section "Why Europe needs to prepare for
+# transformative AI" (printed pp20–26), three subsections — AI progress is extraordinarily rapid
+# (pp21–22), Near-term transformative AI is plausible (pp23–24), Europe risks marginalisation
+# (pp24–25). One leaf per Slice-3 row: the report's sentence VERBATIM (reconstructed from report.txt
+# — line-break hyphenation joined, inline footnote-reference digits dropped e.g. "China.1" -> "China.",
+# whitespace collapsed; curly quotes / en-dashes / the × sign kept), page-referenced in the pNN field.
+# route=evidence on every leaf: the truth-maker is the report's OWN external citation, a fetched page
+# held under sources/cited/, not another part of the report. The check is cite-scoped faithfulness —
+# does the cited page say the number the report attributes to it (spec/TREE.md § Cite-scoped retrieval).
+#
+# Five TAB fields per leaf: id <TAB> pNN=label <TAB> statement <TAB> cites <TAB> route.
+# `cites` names the held cited page (`cited/<stem>.txt`), matching the URI annotation read off the PDF
+# (sources/MANIFEST.md § Slice-3 cited sources). pNN is the PRINTED page (report_page_offset: 0).
+#
+# UNVERIFIABLE leaves (items 5, 19, 08b, 09) — cite a NOT-HELD id on purpose, NOT a blank cites.
+#   Under the code a blank `cites` is NOT unverifiable: missingCites("") returns nil, so the claim is
+#   judged against the pooled corpus (assay.go:3506, :674). `unverifiable` (no model call) fires only
+#   when a cited id is NAMED but absent from the held manifest (assay.go:743-750). So each of the four
+#   names its (un)available truth-maker and is left out of the held set:
+#     - 08b, 09 — the page was fetched but is a wall (Bloomberg 403 bot-block; The Information login
+#       wall), so it is not USABLY in the corpus: cites the file, which stays unregistered -> "cited
+#       document(s) not in corpus", so-what = fetch it.
+#     - 05, 19 — no URI annotation on the PDF at this locus (uncited): cites an `uncited/…` id that no
+#       held document answers to, so the leaf renders unverifiable rather than grounding on nothing.
+#   This DEVIATES from the plan-prompt's "src= blank"; blank would silently ground these four instead
+#   of marking them unverifiable. Flagged to PW.
+#
+# NOT RUNNABLE until three gaps close (see PLAN.md §Slice 3 Pre-registration, "Run prerequisites" and
+# REPORT.md): (1) the 16 held cited ids below are registered as backticked `- ` bullets in MANIFEST so
+# LoadHeld sees them; (2) a `/cited/` parser in internal/retrieve splits a web-page capture into
+# passages (splitFile yields ~0 — the captures carry no Hansard speaker lines); (3) citedExternalBases
+# maps `cited/<stem>.txt` -> base `cited/<stem>`. Until then every leaf renders unverifiable.
+#
+# Expected verdict per leaf is pre-registered in PLAN.md §Slice 3, keyed by these ids. The MANIFEST
+# `fig` column drives it: present-as-text -> faithful (unless flagged), figure-only -> absent (a
+# stated limit of a static extraction), absent-in-extraction -> absent.
+#
+# === AI progress is extraordinarily rapid (pp21–22) ===
+c01-epoch	p21=ECI-fig1	Based on ECI scores, model capabilities have been improving nearly twice as fast since April 2024 than before.	cited/01-epoch.ai.txt	evidence
+c02-metr	p21=capabilities-2024	In 2024, they struggled with basic programming tasks that took programmers 4 minutes.	cited/02-metr.org.txt	evidence
+c03-anthropic	p22=RSI-fig2	AI models were barely able to write a coherent line of code four years ago, but they can now solve increasingly complex and open-ended tasks on behalf of AI researchers (see Figure 2).	cited/03-anthropic.com.txt	evidence
+c04-epoch	p22=accelerating	In fact, by some key metrics, the pace at which AI models are improving has begun accelerating (Figure 1).	cited/04-epoch.ai.txt	evidence
+c07-pacing	p22=employees-stmt	Over a thousand frontier lab employees jointly stated that “the world’s leading AI companies believe they could be close to automating AI research”.	cited/07-pacingthefrontier.com.txt	evidence
+# === Near-term transformative AI is plausible (pp23–24) ===
+c05-jagged	p23=jagged	AI capability growth is also ‘jagged’: models reach superhuman performance on some tasks while unexpectedly lagging on others.	uncited/p23-jagged	evidence
+c06-wemustactnow	p23=economists	In July 2026, around 200 economists, including 16 Nobel Prize winners, signed a statement warning that “radically more powerful AI” could arrive in the coming decade, leading to an “unprecedented transformation of our economy” and “large-scale job displacement”.	cited/06-wemustactnow.ai.txt	evidence
+c08a-epoch	p23=openai-runrate	Yet it only took OpenAI the first eight months of the year to roughly double its annualised run rate, from over $20 billion to more than $40 billion.	cited/08a-epoch.ai.txt	evidence
+c08b-bloomberg	p23=openai-40bn	Yet it only took OpenAI the first eight months of the year to roughly double its annualised run rate, from over $20 billion to more than $40 billion.	cited/08b-bloomberg.com.txt	evidence
+c09-theinfo	p23=anthropic-52x	Similarly, Anthropic projected 4x growth in its most optimistic scenario for 2026, but had already grown by 5.2× by May 2026.	cited/09-theinformation.com.txt	evidence
+c10-epoch	p23=capex	AI capex in 2026 is projected to be around €650 billion and growing by more than 70% annually.	cited/10-epoch.ai.txt	evidence
+c11-iasr	p24=iasr-risks	According to the International AI Safety Report, plausible risks include AI-enabled biological or chemical attacks, the erosion of human autonomy, and loss of control scenarios “where AI systems operate outside of anyone’s control, with no clear path to regaining control”.	cited/11-internationalaisafetyreport.org.txt	evidence
+c12-redwood	p24=huggingface	One example of this is the aforementioned incident, in which AI agents developed by OpenAI coordinated through a hidden message board and eventually hacked the servers of Hugging Face, a multi-billion dollar AI company, with agents working together to conceal evidence from the systems that were supposed to monitor them.	cited/12-redwoodresearch.org.txt	evidence
+# === Europe risks marginalisation (pp24–25) ===
+c13-forbes	p24=ten-most-valuable	None of the world’s ten most valuable AI companies are European.	cited/13-forbes.com.txt	evidence
+c14-epoch	p24=runrate-2pct	The annualised revenue run rate of European model developers is likely less than 2% of the combined run rate of their two leading international competitors OpenAI and Anthropic, whose combined revenue has grown roughly 25-fold in two years – from $4 billion to over $100 billion.	cited/14-epoch.ai-aicompanies.txt	evidence
+c16a-europe2031	p24=eu-5pct	The EU only hosts around 5% of global AI compute, compared to 75% in the US and 15% in China.	cited/16a-europe2031.ai.txt	evidence
+c16b-epoch	p24=eu-5pct-epoch	The EU only hosts around 5% of global AI compute, compared to 75% in the US and 15% in China.	cited/16b-epoch.ai-supercomputers.txt	evidence
+c17-epoch-fdc	p24=malaysia-onethird	By the end of 2026, a single data centre site in Malaysia will reach roughly one third of the AI compute capacity of Europe, including the UK and Norway.	cited/17-epoch.ai-fdc-hub.txt	evidence
+c19-privateinv	p24=private-inv	In 2025, all of Europe combined received just 5–6% of global private AI investment.	uncited/p24-private-investment	evidence
+c20-foxphilip	p25=100x-access	The market already pays roughly 100 times more for access to US frontier models than to the European fast follower.	cited/20-foxphilip.substack.com.txt	evidence
