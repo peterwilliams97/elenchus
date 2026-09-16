@@ -270,6 +270,39 @@ names, returns only that capture and no report passage, and a cite to a document
 to `Below`. `retrieve.TestLeaderboardPassages` pins the capture ingestion (base, source tag, verbatim
 figure), and `TestCitedExternalBases` (assay_test.go) pins the report-vs-external split of a `cites` field.
 
+### The segmenter seam
+
+A **Segmenter** turns one held document into passages — the parser a corpus file gets, chosen by an
+explicit registry (`internal/retrieve/segment.go`, `passagesForFile`) rather than a general prose
+splitter for everything. Two are named:
+
+- **`HansardSegmenter`** — the existing speaker-turn parser (`splitData`, the body of `splitFile`),
+  **unchanged**: committee transcripts split into turns with role and question context. A corpus file
+  with no more specific routing lands here, exactly as before the seam.
+- **`PlainSegmenter`** — splits a document on blank lines into paragraph passages, **merging each
+  fragment under ~200 runes into the next paragraph** (a wrapped heading or a nav/menu line off an
+  HTML-to-text strip is held and attached forward, so the prose stays whole rather than scattering into
+  one-line passages). It is used for **any held id under `cited/`** — a fetched web-page capture, the
+  external truth-maker for a `route=evidence` claim, which carries no speaker turns. The passage id base
+  is `cited/<stem>` and `Source=cited`.
+
+Selection is by the held id's `cited/` prefix (the on-disk path substring `/cited/`), the same shape the
+submission/qon/leaderboard/report parsers route by. **Cite-scoped retrieval** then restricts a
+`route=evidence` claim's candidate passages to its cited id's passages: `citedExternalBases` (assay.go)
+maps a cite `cited/<stem>.txt` to the base `cited/<stem>`, and `RetrieveFrom` keeps only passages on that
+base — so the claim is grounded against the page it cites, never the report restating the same number
+(the axis boundary in CLAUDE.md). A cite naming an id not in the manifest (a walled or uncited target) is
+`unverifiable` with no model call, decided before retrieval.
+
+Refuters: `retrieve.TestSegmenterGoldenUnchanged` is the golden — every existing corpus's passage set
+(vic-lceic hearings/submissions/qon, dora, quocirca, ai-index report/leaderboards/papers) is byte-identical
+to a hash captured on the pre-seam code, so the refactor perturbed nothing the plain segmenter did not add
+(master-plan is excluded: its Markdown `sources/` runs `retrieve=none` and reaches no segmenter).
+`retrieve.TestPlainSegmenterCited` pins the plain segmenter over the 16 held tai-europe captures — each
+yields ≥3 passages on the `cited/<stem>` base with `Source=cited`, and two `fig=present` anchor sentences
+each land in exactly one passage. `TestSlice3CiteScopedClassification` (assay_test.go) is the end-to-end
+dry run: the 20 Slice-3 leaves classify, with no model call, into 16 eligible + 4 unverifiable + 0 floored.
+
 ### Single-source judging has a direction
 
 When the manifest is `single_source: true` the report is its own only source, so the passages a claim

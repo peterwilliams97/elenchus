@@ -48,6 +48,17 @@ assert byte-identical output. The old code is the test.
 - **Item 2 (critique of code)** — the seam gives it a home, not the work: a code corpus needs a
   segmenter whose passages are Go declarations (`go/ast`, one passage per top-level decl). Genuinely
   new — a different producer (code, not hearings), so a different partition with its own segmenter.
+- **Retrieve the whole section by id for id-keyed documents** — a retrieval-strategy lesson from the
+  `tai-europe-2026` slice-1 faithfulness run (`examples/tai-europe-2026/PLAN.md` § Adjudicated 16
+  Sept (PW)). When the source is keyed by the same ids as the claims — there, each Part A objective
+  claim is checked against its own-id Part B implementation — BM25 top-k over the whole source surfaced
+  each objective's "WHY IT MATTERS" prose but not its ACTION blocks, and PW's read overturned four
+  `faithful`-should-have-been verdicts (IO-3, IO-4, IO-5, O1.2) to false non-faithful. Candidacy was
+  not the problem (the whole 128-pp Part B was in the pool); top-k *selection* was. Fix: for an
+  id-keyed corpus, a retrieve route that returns the whole section for the claim's id (an oracle-by-id
+  segmenter, or a manifest-declared id→page-range map feeding `-retrieve oracle`) rather than BM25
+  top-k. Not a `retrieve.go` change to make blind — it needs a corpus that declares the id→section
+  mapping in its `MANIFEST.md`, which `tai-europe-2026` already does (`sections:` table).
 
 ## Sequence
 

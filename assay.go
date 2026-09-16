@@ -1001,8 +1001,9 @@ func (c cfg) passagesForClaim(id, text, path, cites, srcPath string, fullSrc *[]
 // cited documents that are NOT the report — the set RetrieveFrom restricts to. It is empty when the
 // claim cites only report excerpts (or nothing), the signal to judge against the report itself. A report
 // cite is any id matching a manifest report excerpt's PDF filename (`report.pdf`,
-// `report-productivity.pdf`); the two external shapes this corpus uses map to their passage bases:
-// `paper:<stem>` → `papers/<stem>` and a `<dir>/<stem>.txt` leaderboard id → `<dir>/<stem>`.
+// `report-productivity.pdf`); the external shapes this corpus uses map to their passage bases:
+// `paper:<stem>` → `papers/<stem>`, and a `<dir>/<stem>.txt` id — a `leaderboards/` capture or a
+// `cited/` web page (spec/TREE.md § The segmenter seam) — → `<dir>/<stem>`, the base the segmenter mints.
 func (c cfg) citedExternalBases(cites string) map[string]bool {
 	reportFiles := map[string]bool{}
 	for _, r := range c.reports {

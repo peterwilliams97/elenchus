@@ -2323,6 +2323,80 @@ func childByID(t *testing.T, n *tree.ArgNode, id string) *tree.ArgNode {
 	return nil
 }
 
+// TestSlice3CiteScopedClassification is refuter (c) for the segmenter seam (spec/TREE.md § The
+// segmenter seam): a dry classification of the 20 Slice-3 leaves against the tai-europe cited corpus,
+// with NO model call. Each leaf lands in one of three pre-model buckets — unverifiable (its cited id is
+// not held), floored (cite-scoped retrieval found nothing), or eligible (the judge would run) — exactly
+// the split runFaithfulness makes before any dispatch. The expected split is 16 eligible + 4
+// unverifiable + 0 floored: the four unverifiable are 08b/09 (held on disk but a wall, left out of the
+// manifest) and 05/19 (uncited, citing an uncited/ id no held document answers to). If the plain
+// segmenter or the cited/<stem> base resolution regressed, a held leaf would fall to floored and the
+// 16 would drop.
+func TestSlice3CiteScopedClassification(t *testing.T) {
+	const (
+		claimsFile = "examples/tai-europe-2026/claims-slice3.txt"
+		manifestF  = "examples/tai-europe-2026/sources/MANIFEST.md"
+		citedDir   = "examples/tai-europe-2026/sources/cited"
+	)
+	if _, err := os.Stat(citedDir); err != nil {
+		t.Skipf("tai-europe cited corpus not present: %v", err)
+	}
+	input, err := os.ReadFile(claimsFile)
+	if err != nil {
+		t.Fatalf("read %s: %v", claimsFile, err)
+	}
+	held, err := manifest.LoadHeld(manifestF)
+	if err != nil {
+		t.Fatalf("LoadHeld(%s): %v", manifestF, err)
+	}
+	ix, err := retrieve.Load(citedDir)
+	if err != nil {
+		t.Fatalf("Load(%s): %v", citedDir, err)
+	}
+	c := cfg{
+		retrieveMode: "bm25",
+		index:        ix,
+		held:         held,
+		maxTokens:    retrieveTokenCap,
+		floor:        0,
+	}
+
+	var eligible, unverifiable, floored []string
+	var fullSrc []retrieve.Passage
+	claims := splitSummary(string(input))
+	for _, raw := range claims {
+		id, path, text, cites, _ := parseClaimLine(raw)
+		if miss := c.missingCites(cites); len(miss) > 0 {
+			unverifiable = append(unverifiable, id)
+			continue
+		}
+		if _, below := c.passagesForClaim(id, text, path, cites, "", &fullSrc); below {
+			floored = append(floored, id)
+			continue
+		}
+		eligible = append(eligible, id)
+	}
+
+	if len(claims) != 20 {
+		t.Fatalf("parsed %d Slice-3 leaves, want 20 — a short claims file is not a smaller pass", len(claims))
+	}
+	if len(eligible) != 16 {
+		t.Errorf("eligible (would be judged) = %d %v, want 16", len(eligible), eligible)
+	}
+	if len(floored) != 0 {
+		t.Errorf("floored = %d %v, want 0 — a held cited leaf found no passage (segmenter/base regression)", len(floored), floored)
+	}
+	wantUnverif := map[string]bool{"c08b-bloomberg": true, "c09-theinfo": true, "c05-jagged": true, "c19-privateinv": true}
+	if len(unverifiable) != len(wantUnverif) {
+		t.Errorf("unverifiable = %d %v, want 4 %v", len(unverifiable), unverifiable, wantUnverif)
+	}
+	for _, id := range unverifiable {
+		if !wantUnverif[id] {
+			t.Errorf("unexpected unverifiable leaf %q; want exactly %v", id, wantUnverif)
+		}
+	}
+}
+
 // readEdgeChain reads an edge chain JSONL back into records, so a test can assert the verdict and detail
 // the pass wrote. A missing file is a test failure — the pass is expected to have written it.
 func readEdgeChain(t *testing.T, path string) []chainRecord {

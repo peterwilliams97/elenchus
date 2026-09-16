@@ -4,6 +4,24 @@ Deferred and abandoned items, so reversals and dead ends survive the session bou
 backlog (`docs/todo/roadmap.md`) and not a change log (`rigour-map/decision_log.jsonl`) — this is the
 holding pen for "decided to defer," with enough context to resume cold.
 
+## 2026-09-16 — `TestSegmenterGoldenUnchanged` pins hashes of gitignored inputs
+
+The segmenter-seam golden (`internal/retrieve/segment_test.go`) hashes each existing corpus's passage
+set and compares to a constant, to prove the refactor is byte-identical. The corpora it reads are
+gitignored (`.gitignore:73`, `:77` — the "don't commit copyrighted docs" rule), so the constants are
+machine- and disk-specific: a corpus re-fetched or re-extracted anywhere drifts the hash with no code
+change. It already bit once — dora's on-disk `report.txt` had drifted from its captured constant
+(`85573b…` → `69a49e…`) while `reportPassages`/`paraSplit` were provably untouched by the seam; the
+dora constant was bumped to the current value on 2026-09-16 (PW-approved) rather than treated as a
+regression. The other 7 corpora still matched.
+
+**Decided to defer:** the redesign. The byte-identical claim would be better served by comparing
+pre-seam vs post-seam on the same inputs (the git diff already shows `reportPassages`/`paraSplit`
+unchanged), or by hashing a small *committed* fixture rather than the gitignored corpus. As written
+the golden will keep failing on any machine whose corpus copy differs, and each failure reads as
+"the seam perturbed this corpus" when it means "this machine's corpus differs from the capture
+machine's." To resume: pick committed-fixture vs same-machine-diff and rework the test.
+
 ## Edge pass (spec/EDGE.md) — 2026-09-14
 
 Spec-only. `spec/EDGE.md` (247 lines) is written but **untracked**; no code, tags, or chains exist yet.

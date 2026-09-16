@@ -59,6 +59,7 @@ const (
 	SourceQoN         = "qon"         // a response to questions on notice (paragraphs, like a submission)
 	SourceReport      = "report"      // the assayed report as its own source; a report passage's Source is its excerpt stem, "report" for the base excerpt
 	SourceLeaderboard = "leaderboard" // a benchmark-leaderboard capture; the external truth-maker for a route=benchmark claim
+	SourceCited       = "cited"       // a fetched web-page capture under cited/; the external truth-maker for a route=evidence claim
 )
 
 // searchText is what ranking and embedding see: the question (when present) then the answer. Text
@@ -187,6 +188,15 @@ func passagesForFile(path string) ([]Passage, error) {
 		return qonPassages(path)
 	case strings.Contains(path, "/leaderboards/"):
 		return leaderboardPassages(path)
+	case strings.Contains(path, "/cited/"):
+		// A fetched web-page capture: no Hansard speaker turns, so the plain segmenter splits it into
+		// paragraph passages (segment.go). Selection is by the cited/ directory, matching the held id's
+		// cited/<stem>.txt prefix (spec/TREE.md § The segmenter seam).
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return nil, err
+		}
+		return PlainSegmenter{}.Split(path, data)
 	case isReportExcerpt(path):
 		return reportPassages(path)
 	default:
@@ -349,12 +359,18 @@ func submissionPassages(path string) ([]Passage, error) {
 }
 
 // splitFile parses one transcript into passages: read the roster, then accumulate lines into the
-// current turn until the next speaker line.
+// current turn until the next speaker line. The read and the parse are split so a Segmenter
+// (segment.go) can hand `splitData` bytes it already has, without a second os.ReadFile.
 func splitFile(path string) ([]Passage, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
+	return splitData(path, data)
+}
+
+// splitData is splitFile's body over bytes already in hand — the Hansard segmenter's Split.
+func splitData(path string, data []byte) ([]Passage, error) {
 	date := filepath.Base(filepath.Dir(path))
 	session := strings.TrimSuffix(filepath.Base(path), ".txt")
 	roster := parseRoster(string(data))
@@ -592,6 +608,11 @@ func Format(ps []Passage) string {
 		}
 		if p.Source == SourceQoN {
 			fmt.Fprintf(&b, "[%s · response to questions on notice · %s]\n%s\n\n", p.ID, p.Speaker, p.Text)
+			continue
+		}
+		if p.Source == SourceCited {
+			// A fetched web page: the external truth-maker a route=evidence claim is grounded against.
+			fmt.Fprintf(&b, "[%s · cited web page · %s]\n%s\n\n", p.ID, p.Speaker, p.Text)
 			continue
 		}
 		fmt.Fprintf(&b, "[%s · %s · %s (%s)]\n", p.ID, p.Date, p.Speaker, p.Role)
