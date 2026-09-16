@@ -2723,8 +2723,14 @@ what they would get wrong. Empty string when the summary is faithful or the gap 
 Return ONLY JSON:
 {"findings":[{"mode":string,"finding":string}],"verdict":"faithful"|"partial"|"overstated"|"absent"|"contradicted","evidence":string,"what_source_actually_says":string|null,"gap":"none"|"scope"|"denominator"|"timerange"|"attribution"|"other","so_what":string}`
 
-// judgeSchema constrains the faithfulness judge's answer. Field order matches the prompt: verdict,
-// gap, evidence[], report_says, source_says, then reason. All are required (Anthropic strict tools
+// judgeSchema constrains the faithfulness judge's answer. Field order is reasoning-before-enum: the
+// three free-text fields (report_says, source_says, reason) are emitted first, then gap, evidence[],
+// and the verdict enum last, so the enum is chosen after the reasoning is written and cannot be
+// pattern-matched ahead of it. A strict tool emits fields in schema-property order, so the order here
+// is the generation order. The edge and substance schemas already reason first (edge's warrant before
+// its defeater, substance's critique before its verdict); this brings the faithfulness judge into
+// line — spec/TREE.md § Reasoning before the enum cites the slice-2 CMP-BODY case, where 2/3 samples
+// returned an enum their own reasoning contradicted. All fields stay required (Anthropic strict tools
 // and the Ollama format both accept "" for the free-text fields), and evidence cites the source by
 // passage id and a verbatim quote, so code can verify the quote without a second model call.
 // report_says/source_says are the two ≤12-word plain restatements code assembles into the stakes
@@ -2732,12 +2738,12 @@ Return ONLY JSON:
 const judgeSchema = `{
   "type":"object",
   "properties":{
-    "verdict":{"type":"string","enum":["faithful","partial","overstated","absent","contradicted"]},
-    "gap":{"type":"string","enum":["none","scope","denominator","timerange","attribution","other"]},
-    "evidence":{"type":"array","items":{"type":"object","properties":{"passage_id":{"type":"string"},"quote":{"type":"string"}},"required":["passage_id","quote"],"additionalProperties":false}},
     "report_says":{"type":"string"},
     "source_says":{"type":"string"},
-    "reason":{"type":"string"}
+    "reason":{"type":"string"},
+    "gap":{"type":"string","enum":["none","scope","denominator","timerange","attribution","other"]},
+    "evidence":{"type":"array","items":{"type":"object","properties":{"passage_id":{"type":"string"},"quote":{"type":"string"}},"required":["passage_id","quote"],"additionalProperties":false}},
+    "verdict":{"type":"string","enum":["faithful","partial","overstated","absent","contradicted"]}
   },
   "required":["verdict","gap","evidence","report_says","source_says","reason"],
   "additionalProperties":false

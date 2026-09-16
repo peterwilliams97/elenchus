@@ -37,6 +37,31 @@ func TestJudgeSchemaValid(t *testing.T) {
 	}
 }
 
+// TestJudgeSchemaReasoningBeforeEnum pins the reasoning-before-enum property order: a strict tool
+// emits fields in schema-property order, so report_says, source_says and reason must precede gap,
+// evidence and the verdict enum, forcing the enum to be chosen after the reasoning is written
+// (spec/TREE.md § Reasoning before the enum — the slice-2 CMP-BODY calibration case). A map decode
+// loses key order, so the check reads offsets in the schema source itself.
+func TestJudgeSchemaReasoningBeforeEnum(t *testing.T) {
+	pos := func(field string) int {
+		i := strings.Index(judgeSchema, `"`+field+`":`)
+		if i < 0 {
+			t.Fatalf("judgeSchema has no property %q", field)
+		}
+		return i
+	}
+	reason := pos("reason")
+	for _, later := range []string{"gap", "evidence", "verdict"} {
+		if !(reason < pos(later)) {
+			t.Errorf("judgeSchema: reason (%d) must precede %q (%d) so the enum is chosen after the reasoning",
+				reason, later, pos(later))
+		}
+	}
+	if !(pos("report_says") < pos("source_says") && pos("source_says") < reason) {
+		t.Errorf("judgeSchema: the reasoning fields must be ordered report_says < source_says < reason")
+	}
+}
+
 func TestFaithJudgeSysKeepsLiteralizationAndVerbatim(t *testing.T) {
 	for _, want := range []string{"Literalization", "VERBATIM", "passage_id"} {
 		if !strings.Contains(faithJudgeSys, want) {

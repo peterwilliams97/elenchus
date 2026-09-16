@@ -240,6 +240,52 @@ model and the tree (`spec/CLI.md` § Faithfulness judge and § Retrieval carry t
 Faithfulness itself is scope-disciplined: `faithful` requires the source to state the claim's subject,
 scope, and direction; an adjacent or broader statement is `partial` at best (`gap=scope`).
 
+### Reasoning before the enum
+
+`judgeSchema` (`assay.go`) orders its properties reasoning-first: `report_says`, `source_says` and
+`reason` are emitted before `gap`, `evidence`, and the `verdict` enum. A strict tool emits fields in
+schema-property order, so this is the order the model generates them in — the enum is chosen only
+after the plain restatements and the reason have been written, not pattern-matched ahead of them. The
+edge and substance schemas already reason first: edge's `warrant` precedes its `defeater`
+(`internal/edge/prompt.go`), and substance's `critique` precedes its `verdict` (`assay.go`, the
+`Return ONLY JSON` template). This brings the faithfulness judge into line with them.
+
+The calibration case that motivated the reorder is slice-2 CMP-BODY (the IO-3 body statement "roughly
+one third of the AI compute capacity of Europe"), run Sonnet N=3 on 2026-09-16
+(`examples/tai-europe-2026/evidence/2026-09-16-slice2/sonnet/claims-slice2.faithfulness.jsonl`,
+record 1): samples were `overstated, contradicted, contradicted` (modal `contradicted`, 2/3) while the
+record's own `critic_finding` reads "the ratio roughly one third — the claim is arithmetically
+consistent with the source figures. Verdict: faithful." Two of three samples returned an enum their
+own reasoning contradicted — the failure a verdict-first field order invites, where the enum is fixed
+before the arithmetic is worked. Refuter: `TestJudgeSchemaReasoningBeforeEnum` (`judge_test.go`) pins
+`reason` before `gap`/`evidence`/`verdict` in the schema source.
+
+### Refuters for the reorder — results
+
+Pre-registered before the runs (discipline: pre-register the attempt, not the success); the
+prediction and the observed result are kept side by side below. **Decision: the reorder stands.**
+
+- **(a) Enum agrees with reasoning on CMP-BODY; arithmetic accepted.** Predicted `faithful` 3/3 on
+  both restructured Slice-2 leaves. Result: the reordered schema no longer returns an enum its own
+  reasoning contradicts — the arithmetic (2.1 / 0.662 = 3.17 ≈ "three times" / "one third") is
+  accepted. CMP-BODY still scored partial, but the cause was a source-scoping error in our fixture,
+  not a judge miss: footnote 2 states "2.1 GW for all of Europe" with no country scope, so CMP-BODY's
+  "including the UK and Norway" had no truth-maker. Fixed by holding the p192 body sentence alongside
+  the footnote in `sources/report-fn2.txt` (see MANIFEST and `claims-slice2.txt`); re-registered
+  `faithful`, pending the slice-2 rerun.
+- **(b) DORA N=3 rerun scored against noise and adjudicated leaves.** Result: the a-vs-b noise floor
+  (two runs of the unchanged config) differs on **3/136** leaves. The reorder-vs-b comparison changed
+  **28/126** leaves (10 leaves errored, below, so 126 comparable) — 22 milder, 6 harsher. Agreement
+  with the 5 PW-adjudicated DORA leaves rose **0/5 → 3/5** (AD19 moved toward the human verdict). The
+  reorder moves well above the noise floor and improves agreement with the settled leaves, so it stands.
+- **10 leaves errored on billing** (DG4–DG15, ME4, ME5) and are excluded from the 126; they are to be
+  rerun into the same chain dir (command below).
+
+**Corrected scoring rule.** A judge change is scored against the a/b noise floor and against the
+human-adjudicated leaves — never against the previous run's verdicts. The previous run is not ground
+truth: a change that moves verdicts is a fix if it moves them toward adjudicated leaves and beyond
+what two identical runs differ by, regardless of how many earlier verdicts it disturbs.
+
 ### Cite-scoped retrieval
 
 Which passages a claim is judged against is decided by its `cites`, not by the whole corpus:
