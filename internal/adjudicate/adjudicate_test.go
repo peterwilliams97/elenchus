@@ -44,6 +44,25 @@ func TestAgreeThreeTwo(t *testing.T) {
 	}
 }
 
+// TestAgreeSingleSourceSpelling is the stated refuter for the single-source fold: a claim the chain
+// judged 'absent' agrees whether the human wrote the raw verdict ('absent') or the page's display
+// spelling ('uncorroborated'), and a genuine mismatch ('faithful') still disagrees.
+func TestAgreeSingleSourceSpelling(t *testing.T) {
+	machine := map[string]string{"E1": "absent", "E2": "absent", "E3": "absent"}
+	adjs := []Adjudication{
+		{ID: "E1", Verdict: "absent"},
+		{ID: "E2", Verdict: "uncorroborated"},
+		{ID: "E3", Verdict: "faithful"},
+	}
+	got := Agree(machine, adjs)
+	if got.N != 3 || got.Agreed != 2 {
+		t.Fatalf("Agree = N %d agreed %d, want 3/2", got.N, got.Agreed)
+	}
+	if len(got.Disagreements) != 1 || got.Disagreements[0].ID != "E3" {
+		t.Fatalf("want one disagreement, on E3, got %+v", got.Disagreements)
+	}
+}
+
 func TestLoad(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "adjudications.txt")

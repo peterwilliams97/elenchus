@@ -4521,6 +4521,16 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 			fmt.Fprintf(os.Stderr, "warning: cannot write %s: %v\n", c.auditPath, err)
 		}
 	}
+	// `machine` is every judged row's id → pooled Faith, captured BEFORE the single-source remap below so
+	// the human is scored against the raw chain verdict, not the 'uncorroborated' display spelling
+	// (adjudicate.Agree folds the two spellings, so either human spelling agrees). It covers every judged
+	// claim, not just argument-tree leaves — many judged claims sit off the tree — so an adjudication of
+	// any judged claim counts. The per-leaf DISPLAY stays gated to the tree: only a rendered leaf draws a
+	// card, so only there does the human chip appear beside the machine badge (spec/SERVE.md § Adjudications).
+	machine := make(map[string]string, len(rows))
+	for i := range rows {
+		machine[rows[i].ID] = rows[i].Faith
+	}
 	// A single-source corpus (manifest single_source: true) holds the report as its own only source, so
 	// a leaf 'absent' is not a grounding miss against some other held document — there is none — but a
 	// claim the report states once and no second document repeats. Rename it 'uncorroborated' before it
@@ -4564,16 +4574,6 @@ func (c *cfg) presentArgument(rows []brief.Row, details map[string]tree.Leaf, md
 	adjs, err := adjudicate.Load(adjPath)
 	if err != nil {
 		fatal("adjudications: " + err.Error())
-	}
-	// The agreement count covers every adjudicated leaf that has a machine verdict, so an adjudication of
-	// a judged claim counts even when that claim is not an argument-tree leaf (many DORA leaves are judged
-	// but sit off the argument tree). `machine` is therefore every judged row's id → pooled Faith, after
-	// the single-source remap above — not just the rendered leaves. The per-leaf DISPLAY stays gated to
-	// the tree: only a rendered leaf draws a card, so only there does the human chip appear beside the
-	// machine badge (adjudicate.Agree, spec/SERVE.md § Adjudications).
-	machine := make(map[string]string, len(rows))
-	for i := range rows {
-		machine[rows[i].ID] = rows[i].Faith
 	}
 	adj := adjudicate.NewOverlay(machine, adjs)
 	page, rootBlock := tree.ArgumentPage(root, details, title, what, c.singleSource, adj)

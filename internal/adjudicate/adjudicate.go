@@ -4,7 +4,8 @@ package adjudicate
 // where the machine judge agreed with them, so the argument page can show the human verdict beside the
 // machine's and the index can report the agreement count (spec/SERVE.md § Adjudications). It authors no
 // verdict: a machine verdict is the judge's pooled Faith, a human verdict is a line in the file, and
-// `Agree` only compares the two strings for equality.
+// `Agree` compares the two strings for equality after `canonVerdict` folds the single-source display
+// spelling onto the raw chain verdict.
 
 import (
 	"errors"
@@ -106,13 +107,23 @@ func Agree(machine map[string]string, adjs []Adjudication) Result {
 			continue // adjudicates no rendered leaf: gated out
 		}
 		r.N++
-		if m == a.Verdict {
+		if canonVerdict(m) == canonVerdict(a.Verdict) {
 			r.Agreed++
 			continue
 		}
 		r.Disagreements = append(r.Disagreements, Disagreement{ID: a.ID, Human: a.Verdict, Machine: m, Reason: a.Reason})
 	}
 	return r
+}
+
+// canonVerdict folds the single-source display spelling onto the raw chain verdict it renames, so a human
+// who wrote what the page showed ('uncorroborated') agrees with a chain that recorded 'absent', and either
+// spelling from the human matches (presentArgument's remap, assay.go). Every other verdict is unchanged.
+func canonVerdict(v string) string {
+	if v == "uncorroborated" {
+		return "absent"
+	}
+	return v
 }
 
 // NewOverlay builds the render overlay from the adjudications and the machine verdicts. It returns nil
