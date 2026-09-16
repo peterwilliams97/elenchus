@@ -148,14 +148,16 @@ PW read all 11 leaves against the held Part B and filed a verdict per leaf in `a
 (example root; read by the `-review` overlay, spec/SERVE.md § Adjudications). PW upheld six leaves and
 overturned five to `faithful` (table below).
 
-Two agreement counts, and they differ by the vocabulary the compare runs over. Against the machine's
-**raw** verdicts PW agrees on **6/11** (every upheld leaf). The rendered overlay reports **4/11**,
-because `single_source` mode renames the machine's `absent` to `uncorroborated` before the
-string-equality compare (`assay.go:4521-4527`, so it derives as *weakened* not *failed*,
-spec/ARGUMENT.md), and PW's `absent` on O2.1 and O3.1 no longer matches `uncorroborated`. Those two
-are substantive upholds the string compare scores as disagreements — a vocabulary artifact, not a
-read PW changed. Reconciling the two counts (PW re-files O2.1/O3.1 as `uncorroborated`, PW's own edit;
-or `Agree` compares the pre-remap verdict) is a decision left to PW, not taken here.
+Two agreement counts once differed by the vocabulary the compare runs over: against the machine's
+**raw** verdicts PW agrees on **6/11** (every upheld leaf), but the string-equality compare against
+the `single_source` display spelling scored PW's `absent` on O2.1 and O3.1 as disagreements
+(`single_source` mode renames `absent` to `uncorroborated`, so it derives as *weakened* not *failed*,
+spec/ARGUMENT.md), giving 4/11 — a vocabulary artifact, not a read PW changed. **Resolved:** `Agree`
+scores against the pre-remap raw verdict (the `machine` map in `presentArgument`, `assay.go`, is
+captured before the remap) and `canonVerdict` folds `uncorroborated`→`absent`
+(`internal/adjudicate/adjudicate.go`), so both counts reconcile at **6/11**. The remaining question is
+display, not counting — the card still shows `uncorroborated` while the human files `absent` — a UX
+call parked in `docs/todo/design-notes.md` § Single-source adjudication.
 
 | ID   | Machine     | PW          | Reason (one line, from `adjudications.txt`)                                            |
 |------|-------------|-------------|---------------------------------------------------------------------------------------|

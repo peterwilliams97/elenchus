@@ -37,6 +37,19 @@ assert byte-identical output. The old code is the test.
 
 ## After the seam
 
+- **Golden refuter pins gitignored corpora — make it portable.** `TestSegmenterGoldenUnchanged`
+  (`internal/retrieve/segment_test.go`), built with the seam, hashes each existing corpus's passage
+  set against a constant to prove the refactor is byte-identical. The corpora it reads are gitignored
+  (`.gitignore:73`, `:77` — the don't-commit-copyrighted-docs rule), so the constants are machine- and
+  disk-specific: a corpus re-fetched or re-extracted anywhere drifts the hash with no code change, and
+  the failure reads as "the seam perturbed this corpus" when it means "this machine's corpus differs
+  from the capture machine's". It already bit once — dora's on-disk `report.txt` had drifted
+  (`85573b…` → `69a49e…`) while `reportPassages`/`paraSplit` were provably untouched by the seam; the
+  dora constant was bumped 2026-09-16 (PW-approved) rather than treated as a regression, and the other
+  seven corpora still matched. Fix: either compare pre-seam vs post-seam on the same inputs (the git
+  diff already shows the report parsers unchanged, so the byte-identical claim is a diff, not a
+  hash), or hash a small *committed* fixture rather than the gitignored corpus. Decide
+  committed-fixture vs same-machine-diff, then rework the test.
 - **Item 6 (other reports)** — closer to done than first stated: a plain report already flows through
   `reportPassages` via the `report.txt` suffix. The real blocker is the page-number assumption —
   `reportPassages` maps `printed page = form-feed index + 1`, valid only "for a report whose PDF has

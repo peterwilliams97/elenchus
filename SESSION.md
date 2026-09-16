@@ -15,12 +15,8 @@ change. It already bit once — dora's on-disk `report.txt` had drifted from its
 dora constant was bumped to the current value on 2026-09-16 (PW-approved) rather than treated as a
 regression. The other 7 corpora still matched.
 
-**Decided to defer:** the redesign. The byte-identical claim would be better served by comparing
-pre-seam vs post-seam on the same inputs (the git diff already shows `reportPassages`/`paraSplit`
-unchanged), or by hashing a small *committed* fixture rather than the gitignored corpus. As written
-the golden will keep failing on any machine whose corpus copy differs, and each failure reads as
-"the seam perturbed this corpus" when it means "this machine's corpus differs from the capture
-machine's." To resume: pick committed-fixture vs same-machine-diff and rework the test.
+**Decided to defer:** the redesign (committed-fixture vs same-machine-diff). Filed as the action item
+in `docs/todo/plan-segmentation.md` § After the seam — see there rather than duplicating the fix here.
 
 ## Edge pass (spec/EDGE.md) — 2026-09-14
 

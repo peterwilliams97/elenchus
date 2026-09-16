@@ -33,6 +33,27 @@ mostly right and its exact failure is the line `assay` is built on.
   **surviving refutation is the best test of a claim's coherence and its nerve; it is never, on its
   own, evidence the claim is true — for that, the retrieval half exists.**
 
+## Single-source adjudication: which verdict does the human file against? (2026-09-16)
+
+On a `single_source: true` corpus `presentArgument` (`assay.go`) renames the machine's `absent` to
+`uncorroborated` before it reaches the tree, because with the report as its own only source an
+`absent` is not a grounding miss but a claim the report states once and no second document repeats —
+it derives as *weakened*, not *failed* (`spec/ARGUMENT.md`, spec/SERVE.md § Adjudications). The leaf
+card therefore *displays* `uncorroborated`, while the raw chain verdict is `absent`.
+
+The **count** half of this is settled: `adjudicate.Agree` scores the human against the raw verdict
+(the `machine` map is captured before the remap) and `canonVerdict` folds `uncorroborated`→`absent`,
+so a human who wrote either spelling agrees with a chain that recorded `absent` (committed 2026-09-16,
+`59e6cfb`). That closes the earlier `tai-europe-2026` slice-1 discrepancy — raw 6/11 vs a rendered
+4/11 — at 6/11 (`examples/tai-europe-2026/PLAN.md` § Adjudicated 16 Sept).
+
+**What is still unsettled** is the display, not the count: a human reading the page sees the machine
+badge say `uncorroborated` but, filing from the raw verdict, writes `absent` — the human chip and the
+machine badge then show different words on a leaf they *agree* on. Two ways out, and it is a UX call,
+not a counting one: (i) show the human the raw `absent` on the card so the spellings match what they
+type, or (ii) guide the human to file the display spelling `uncorroborated`. The fold makes both
+harmless to the count, so this is cosmetic-plus-clarity, low priority. Peter's call.
+
 ## The elenchus leg is the dormant one (2026-09-13)
 
 `examples/destructive/README.md` is the repo's adversarial/Socratic heart: its seven substance
