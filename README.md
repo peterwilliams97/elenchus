@@ -7,7 +7,7 @@ recommendations to the report's thesis. The output is a page you read.
 ![review.html — the source document on the left, assay's reading of the report on the right](docs/review-screenshot.png)
 
 The worked run is the Victorian LCEIC report on the cultural and creative industries:
-[`examples/vic-lceic/current/review.html`](examples/vic-lceic/current/review.html). It is two panes.
+<https://peterwilliams97.github.io/elenchus-vic-lceic/>. It is two panes.
 The **left** shows the source document — the report itself, or the hearing transcript, submission, or
 question-on-notice a quote comes from — as the original PDF. The **right** is assay's top-down
 reading: the report's root proposition, the eleven recommendations under it each with a derived
@@ -40,6 +40,15 @@ R9   Appeal to clarify decision-making on the SBS relocation feasibility study. 
 R10  Advocate an SBS physical presence in a culturally diverse Victorian location.  — open
 R11  Targeted funding/incentives to the independent sector for regional content.  — open (F51 ?)
 ```
+
+## Worked examples
+
+- <https://peterwilliams97.github.io/elenchus-vic-lceic/> — the Victorian LCEIC inquiry into the
+  cultural and creative industries, checked claim-by-claim against the hearing transcripts and
+  submissions.
+- <https://peterwilliams97.github.io/elenchus-dora-2026/> — the 2026 DORA State of AI-assisted
+  Software Development report, its headline findings checked against the report's own data, with the
+  human adjudications shown beside the machine verdicts.
 
 ## How to read the right pane
 
