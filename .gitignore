@@ -80,6 +80,7 @@ examples/tai-europe-2026/sources/*
 # verbatim quotes from the report, held for analysis not redistribution; rebuilt from the tracked
 # claims-machine.txt / adjudications.txt and MANIFEST with the render command in CLAUDE.md § Running it.
 examples/tai-europe-2026/site/
+examples/tai-europe-2026/site-slice*/
 examples/tai-europe-2026/evidence/
 # The -review site and the judge chains hold verbatim quotes from the DORA report (copyrighted,
 # held for analysis not redistribution), so they carry the same terms as the sources; rebuilt from
