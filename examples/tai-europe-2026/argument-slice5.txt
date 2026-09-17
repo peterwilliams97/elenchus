@@ -1,0 +1,33 @@
+# argument-slice5.txt — Slice 5, claim 2: why NOT build / why NOT open-weight, grounded on its citations
+# (PLAN.md §Slice 5, spec/ARGUMENT.md)
+#
+# title: A Transformative AI Strategy for Europe — KIRA Center, Version 1.0, September 2026
+#
+# O1.1 (“Secure ongoing access to frontier AI systems”, Part A pp50–53) argues that Europe should pursue
+# ‘compute for access’ deals rather than count on building its own frontier model or on open-weight
+# models. Slice 5 grounds the five sourced claims behind that “why not build / why not open-weight” step
+# against the report’s OWN citations (route=evidence, cite-scoped). The root asks one thing: does the case
+# against building / against open-weight rest on what its sources say. Its three children are the case’s
+# three legs. Leaf text, page and cite live in claims-slice5.txt.
+#
+# Judgements are DERIVED bottom-up from a judge chain (spec/TREE.md § Single-source judging /
+# spec/ARGUMENT.md), never authored. No judge run is in this slice — it is blocked on the same three
+# cited-grounding gaps as Slice 3 (PLAN.md §Slice 3 "Run prerequisites") — so no judgement column appears;
+# one would be a fabricated result.
+#
+# Line format (indentation = depth):  <id>  | <content>  | <provenance note>
+# A bare id at the deepest level is an atomic-claim leaf resolved in claims-slice5.txt.
+#
+# GROUNDABILITY: only w02’s truth-maker is usably held; four of five leaves render `unverifiable` this run
+# (two walls, one uncited pair) — the slice’s payload is that the anti-build/anti-open-weight case grounds
+# on citations a fetch pass cannot reach. See claims-slice5.txt header.
+#
+ROOT  | Europe’s case against building / against open-weight is what its sources say  | derived from the three legs below
+  OPENWEIGHT  | Open-weight is a risky substitute — lags the frontier and faces coming proliferation curbs (p51)  | 2 leaves, report.txt:2311-2314 (p51)
+    w01-epoch-openlag  | open-weight models lag frontier performance by several months  | claims-slice5.txt — cited/4x-21-epoch.ai (open-vs-closed ECI gap) — UNREACHABLE this session (proxy) -> unverifiable; pre-reg “several months” vs source “four months”
+    w02-iasr-proliferation  | governments are likely to restrict open-weight proliferation as misuse potential grows  | claims-slice5.txt — cited/4x-22-internationalaisafetyreport.org (HELD, but bare home is a PORTAL) -> expect absent
+  ACCESS  | Frontier access itself is being restricted, so it cannot be counted on (p51)  | 1 leaf, report.txt:2305 (p51)
+    w03-reuters-china  | China is reportedly considering similar restrictions on its most advanced models  | claims-slice5.txt — cited/4x-20-reuters.com (HTTP 401 DataDome wall) -> unverifiable
+  BUILD  | A European frontier build is extraordinarily costly (~€790bn/3yr), and a half-hearted build is the worst path (pp174–187, p175)  | 2 leaves, report.txt:9318-9334 (p175)
+    w04-cost-790bn  | a serious attempt would likely cost ~€790 billion over the first three years  | claims-slice5.txt — uncited/p175-cost-790bn (no URI annotation at this locus) -> unverifiable; prompt said €800bn, scoped text says €790bn
+    w05-halfhearted  | a half-hearted build backed by statements not resources is the worst of all possible paths  | claims-slice5.txt — uncited/p175-half-hearted (no URI annotation; the report’s own normative judgement) -> unverifiable

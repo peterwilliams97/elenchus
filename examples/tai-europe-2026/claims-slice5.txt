@@ -1,0 +1,58 @@
+# title: A Transformative AI Strategy for Europe
+# date: Version 1.0, September 2026
+# sources: examples/tai-europe-2026/sources/MANIFEST-slice5.md
+#
+# Slice 5, claim 2 (PLAN.md §Slice 5): WHY NOT BUILD / WHY NOT OPEN-WEIGHT. The five sourced claims by
+# which O1.1 (“Secure ongoing access to frontier AI systems”) argues Europe should NOT count on its own
+# frontier build or on open-weight models, and so should take the Leverage Approach: open-weight lags and
+# faces proliferation curbs (p51), frontier access is already being restricted (China, p51), and a
+# European build is ~€790bn / a half-hearted build is the worst path (pp174–187, printed p175). One leaf
+# per sourced sentence: the report's sentence VERBATIM (reconstructed from report.txt — line-break
+# hyphenation joined, inline footnote-reference digits dropped, whitespace collapsed; curly quotes /
+# en-dashes kept), page-referenced in the pNN field. route=evidence on every leaf: the truth-maker is the
+# report's OWN external citation (the PDF URI annotation, read with pypdf by rect y against the text line),
+# not another part of the report. The check is cite-scoped faithfulness — does the cited page say what the
+# report attributes to it (spec/TREE.md § Cite-scoped retrieval).
+#
+# Five TAB fields per leaf: id <TAB> pNN=label <TAB> statement <TAB> cites <TAB> route.
+# pNN is the PRINTED page (offset 0: printed page N == PDF page N, VERIFIED Slice 1 / MANIFEST-slice4).
+#
+# GROUNDABILITY OF THIS SLICE — only ONE of the five truth-makers is usably held; the payload is that the
+# “why not build/open-weight” case rests on citations a fetch pass cannot ground:
+#   w01 (open-weight lag)   -> epoch.ai/data-insights/open-closed-eci-gap : UNREACHABLE this session (the
+#                              filtering proxy 502s / cannot resolve epoch.ai; curl and WebFetch both fail).
+#                              Cited-but-not-held -> unverifiable. Could NOT obtain the real page; PW hand-fetch.
+#   w02 (proliferation)     -> internationalaisafetyreport.org/ : HELD (HTTP 200), but the bare home is a
+#                              PORTAL page (lists publications; no misuse/proliferation body text) — the
+#                              claim is in the linked full-report PDF, not on the cited URL. Expect ABSENT.
+#   w03 (China restriction) -> reuters.com/…/beijing-…-2026-07-07 : HTTP 401 DataDome bot-wall (stub only).
+#                              Cited-but-not-held -> unverifiable.
+#   w04 (€790bn cost)        -> NO URI annotation at this locus (uncited) -> unverifiable.
+#   w05 (half-hearted worst) -> NO URI annotation at this locus (uncited) -> unverifiable.
+#
+# UNVERIFIABLE mechanism (as Slice 3/4): a blank `cites` grounds on the pooled corpus (assay.go:3506, :674);
+# `unverifiable` (no model call) fires only when a NAMED cited id is absent from the held manifest
+# (assay.go:743-750). So w01/w03 name their walled/unreachable cited file (left OUT of the held set), and
+# w04/w05 name an `uncited/…` id no held document answers to. Only w02 is in the held set (MANIFEST-slice5.md).
+#
+# NOT RUNNABLE until the three Slice-3 grounding gaps close (PLAN.md §Slice 3 “Run prerequisites”): the
+# `cited/` ids must be registered as MANIFEST bullets for LoadHeld, retrieve needs a `/cited/` paragraph
+# parser, and citedExternalBases must map `cited/<stem>.txt`. Until then every leaf renders unverifiable.
+#
+# PRE-REGISTRATION (written before any judge run; verdicts in PLAN.md §Slice 5):
+#  - w01 “by several months”: the cited Epoch open-vs-closed ECI-gap page reportedly puts the open-weight lag
+#    at ~“four months”. If hand-fetched, watch “several months” (report) vs “four months” (source): direction
+#    is ambiguous (four IS several), so a faithful-leaning read is plausible — flag only if the page's own
+#    figure contradicts “several”. Unverifiable THIS run (epoch unreachable).
+#  - €800bn vs €790bn: this prompt named the cost “€800bn”, but the scoped pp174–187 text (report.txt:9332,
+#    printed p175) states “approximately €790 billion over the first three years”; the €800bn figure is the
+#    page-73/75 summary/Table-1 rounding. w04 carries the p175 €790bn wording VERBATIM. Flagged to PW.
+#
+# === OPENWEIGHT: open-weight models are a risky substitute for frontier access (O1.1, p51) ===
+w01-epoch-openlag	p51=open-weight-lag	Counting on open-weight models is also a risky bet: they lag behind the performance of frontier models by several months	cited/4x-21-epoch.ai.txt	evidence
+w02-iasr-proliferation	p51=proliferation	governments are likely to restrict their proliferation as the potential to misuse them increases	cited/4x-22-internationalaisafetyreport.org.txt	evidence
+# === ACCESS: frontier access itself is being restricted, so it cannot be counted on (p51) ===
+w03-reuters-china	p51=china-restrict	China is reportedly considering similar restrictions on its most advanced models.	cited/4x-20-reuters.com.txt	evidence
+# === BUILD: a European frontier build is extraordinarily costly, and half-hearted is the worst path (pp174–187, p175) ===
+w04-cost-790bn	p175=cost-790bn	a serious attempt with a significant chance of succeeding would likely cost Europe approximately €790 billion over the first three years of such a project	uncited/p175-cost-790bn	evidence
+w05-halfhearted	p175=half-hearted	A half-hearted attempt at a European frontier AI project consisting of bold political statements and ambitions but not backed up by the extraordinary resolve and resources required would lead Europe down the worst of all possible paths: still without domestic frontier AI capabilities, and without reliable ways to use other leverage to secure access to foreign frontier AI.	uncited/p175-half-hearted	evidence

@@ -1,0 +1,47 @@
+# argument-slice4.txt — Slice 4: the leverage premise grounded against its own citations
+# (PLAN.md §Slice 4, spec/ARGUMENT.md)
+#
+# title: A Transformative AI Strategy for Europe — KIRA Center, Version 1.0, September 2026
+#
+# IO-1 (“Create a Member State Alliance for Supply Chain Security”, Part A pp28–30, Part B pp79–89) and
+# the compute deep dive (pp189–196) rest a whole recommendation on one premise: that Europe controls
+# chokepoints in the AI chip supply chain, that those chokepoints are non-substitutable, and that this
+# is leverage worth organising an Alliance around. Each leaf is one sourced factual claim on that
+# premise, judged (route=evidence) against the fetched page the report cites for it (sources/cited/4x-*,
+# held per MANIFEST-slice4.md). The root asks one thing: is the leverage premise what its sources say.
+# Its five children are the premise’s five load-bearing steps.
+#
+# Judgements are DERIVED bottom-up from a judge chain (spec/TREE.md § Single-source judging /
+# spec/ARGUMENT.md), never authored. No judge run is in this slice — it is blocked on the same three
+# cited-grounding gaps as Slice 3 (PLAN.md §Slice 3 "Run prerequisites") — so no judgement column
+# appears; one would be a fabricated result. Leaf text, page and cite live in claims-slice4.txt.
+#
+# Line format (indentation = depth):  <id>  | <content>  | <provenance note>
+# A bare id at the deepest level is an atomic-claim leaf resolved in claims-slice4.txt.
+#
+# SCOPE GAPS flagged to PW (PLAN.md §Slice 4): (1) the report’s strongest “share of the layer” claim —
+# “ASML (Netherlands) and suppliers such as Zeiss (Germany) or Trumpf (Germany) hold monopolies over
+# relevant [layers]”, Figure 10 (report.txt:2818, O2.2, ~p60) — sits OUTSIDE the scoped pages, so this
+# slice grounds the assets ENUMERATION but not the MONOPOLY assertion the leverage thesis leans on.
+# (2) ASM (ASM International, ALD equipment), named in the task, does not appear in the report at all
+# (grep report.txt) — no leaf, not fabricated.
+#
+ROOT  | Europe’s chokepoint leverage is what its sources say  | derived from the five premise nodes below
+  CONTROL  | Europe holds AI-supply-chain chokepoints (ASML/EUV equipment, Zeiss/Trumpf inputs)  | 2 leaves, report.txt:1087 (p28), :10350 (p192)
+    s01-chipexplorer  | Member States host chipmaking equipment (ASML/EUV), specialised-input suppliers (Zeiss, Trumpf), datasets  | claims-slice4.txt — cited/4x-01-chipexplorer.eto.tech (figure-only: data tool, assets not in static text)
+    s02-dwarkesh  | only one company in the world, the Dutch ASML, can make EUV machines (biggest bottleneck from 2028)  | claims-slice4.txt — cited/4x-02-dwarkesh.com (present) — LOAD-BEARING
+  SUBST  | The chokepoints have no ready substitutes — genuine, sold-out bottlenecks (pp190–192)  | 4 leaves, report.txt:10329-10352 (p192), :10306 (p190)
+    s03-tomshardware  | high-bandwidth memory fully sold out for 2026, expected to persist through 2027+  | claims-slice4.txt — cited/4x-03-tomshardware.com (present)
+    s04-chosun  | TSMC’s 2-nanometer process reportedly sold out until 2028  | claims-slice4.txt — cited/4x-04-chosun.com (headline-only: “TSMC 2-Nanometer Sold Out”; body not extracted)
+    s05-epoch-crunch  | inference supply ~3.4x/yr vs demand ~10x/yr — demand outrunning supply  | claims-slice4.txt — cited/4x-05-epochai.substack.com (present)
+    s06-semianalysis  | “on-demand GPU rental capacity is sold out across all GPU types”  | claims-slice4.txt — cited/4x-06-semianalysis.com (present)
+  SHARE  | Europe controls very little of the compute layer itself (~5% of global AI compute)  | 2 leaves, report.txt:10391 (p192)
+    s07a-europe2031  | the EU only hosts around 5% of global AI compute  | claims-slice4.txt — cited/4x-07-europe2031.ai (present; authors’ own scenario paper, H.5 citation orbit)
+    s07b-epoch  | same sentence — Epoch AI-supercomputers trend  | claims-slice4.txt — cited/4x-08-epoch.ai (present; H.5)
+  DEPEND  | Europe is on the receiving end — dependent on foreign models/chips, access can be cut (p28)  | 4 leaves, report.txt:1076-1092 (p28)
+    s08-glasswing  | April 2026: Anthropic shared its most capable model with selected partners only (Glasswing)  | claims-slice4.txt — cited/4x-09-anthropic.com-glasswing (present; INTERESTED PARTY, H.6)
+    s09-fable-mythos  | June 2026: US export directive forced Anthropic to disable its top models for all customers  | claims-slice4.txt — cited/4x-10-anthropic.com-fable-mythos (present; INTERESTED PARTY, H.6)
+    s10-enisa  | ENISA only admitted to the model after sustained negotiations  | claims-slice4.txt — cited/4x-11-euractiv.com (Cloudflare 403 wall; Bloomberg alternate 4x-14 also 403) -> unverifiable
+    s11-europarl  | Europe’s firms get no preferential access to chips built with European equipment  | claims-slice4.txt — cited/4x-12-europarl.europa.eu (present; debate agenda — the preferentiality clause is the report’s gloss)
+  LEVERAGE  | What the chokepoints buy: indirect powers turn assets into concrete leverage (p28)  | 1 leaf, report.txt:1091
+    s12-antonleicht  | export controls / investment screening / ACI can turn assets into leverage over frontier-AI access  | claims-slice4.txt — cited/4x-13-antonleicht.me (present; leverage-framing essay — the ACI/screening list is the report’s)

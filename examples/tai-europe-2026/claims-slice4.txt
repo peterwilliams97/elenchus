@@ -1,0 +1,51 @@
+# title: A Transformative AI Strategy for Europe
+# date: Version 1.0, September 2026
+# sources: examples/tai-europe-2026/sources/MANIFEST-slice4.md
+#
+# Slice 4 (PLAN.md §Slice 4): the LEVERAGE PREMISE. Every sourced factual claim, in IO-1 (Part A
+# pp28–30, Part B pp79–89) and the compute deep dive (pp189–196), about what Europe controls in the
+# AI chip supply chain (ASML/EUV, Zeiss, Trumpf, share of the layer, substitutability, US dependence)
+# and about what leverage that control buys. One leaf per sourced sentence: the report's sentence
+# VERBATIM (reconstructed from report.txt — line-break hyphenation joined, inline footnote-reference
+# digits dropped, whitespace collapsed; curly quotes / en-dashes kept), page-referenced in the pNN field.
+# route=evidence on every leaf: the truth-maker is the report's OWN external citation, a fetched page
+# held under sources/cited/4x-*, not another part of the report. The check is cite-scoped faithfulness
+# — does the cited page say what the report attributes to it (spec/TREE.md § Cite-scoped retrieval).
+#
+# Five TAB fields per leaf: id <TAB> pNN=label <TAB> statement <TAB> cites <TAB> route.
+# `cites` names the held cited page (`cited/4x-NN-<host>.txt`), matching the URI annotation read off the
+# PDF with pypdf (MANIFEST-slice4.md § Slice-4 cited sources). pNN is the PRINTED page (offset 0).
+#
+# UNVERIFIABLE leaf (s10) cites a NOT-HELD id on purpose, not a blank cites: a blank `cites` grounds on
+# the pooled corpus (assay.go:3506, :674); `unverifiable` (no model call) fires only when a NAMED cited
+# id is absent from the held manifest (assay.go:743-750). s10's truth-makers (euractiv, and the Bloomberg
+# alternate 4x-14) are both Cloudflare/403 walls — fetched but not usably in the corpus — so s10 cites
+# the walled euractiv file, left out of the held set, and renders unverifiable rather than grounding on
+# nothing.
+#
+# NOT RUNNABLE until the three Slice-3 grounding gaps close (PLAN.md §Slice 3 "Run prerequisites"): the
+# `cited/` ids must be registered as MANIFEST bullets for LoadHeld, retrieve needs a `/cited/` paragraph
+# parser, and citedExternalBases must map `cited/<stem>.txt`. Until then every leaf renders unverifiable.
+#
+# Expected verdict per leaf is pre-registered in PLAN.md §Slice 4, keyed by these ids and driven by the
+# MANIFEST fig column: present -> faithful (unless flagged), figure-only / headline-only -> absent,
+# walled -> unverifiable.
+#
+# === CONTROL: Europe holds AI-supply-chain chokepoints (IO-1 Part A p28; deep dive p192) ===
+s01-chipexplorer	p28=assets	Member States host various assets that the entire Western AI stack depends on, including world-leading chipmaking equipment (e.g. ASML’s extreme ultraviolet lithography (EUV) machines), critical suppliers of specialised inputs (e.g. Zeiss for optics and Trumpf for lasers), and proprietary datasets (e.g. in manufacturing and healthcare).	cited/4x-01-chipexplorer.eto.tech.txt	evidence
+s02-dwarkesh	p192=euv-monopoly	From 2028 and beyond, some experts expect extreme ultraviolet lithography (EUV) machines to become the biggest bottleneck – chipmaking machines so complex that only one company in the world, the Dutch ASML, is able to produce them.	cited/4x-02-dwarkesh.com.txt	evidence
+# === SUBSTITUTABILITY: the chokepoints have no ready substitutes (deep dive pp190–192) ===
+s03-tomshardware	p192=hbm-soldout	For example, high-bandwidth memory – a key component of modern AI chips – is fully sold out for 2026, a bottleneck that industry and independent experts think could persist through 2027 and beyond.	cited/4x-03-tomshardware.com.txt	evidence
+s04-chosun	p192=tsmc-2nm	Similarly, TSMC’s 2-nanometer chip production process, required for the latest generation of AI chips, is reportedly sold out until 2028.	cited/4x-04-chosun.com.txt	evidence
+s05-epoch-crunch	p190=supply-vs-demand	Epoch AI finds that global inference supply – the ability to serve AI models at scale – is growing ~3.4x per year, driven by gains in both the amount and the efficiency of chips. However, several proxies suggest that demand for AI at a fixed model size and price is growing closer to 10x per year.	cited/4x-05-epochai.substack.com.txt	evidence
+s06-semianalysis	p190=gpu-soldout	According to research company Semianalysis, ‘on-demand GPU rental capacity is sold out across all GPU types’, which makes the search for AI chips ‘like trying to book airplane tickets on the last flight out’, characterised by ‘high prices, and almost no availability’.	cited/4x-06-semianalysis.com.txt	evidence
+# === SHARE: Europe controls very little of the compute layer itself (deep dive p192) ===
+s07a-europe2031	p192=eu-5pct	Countries and regions whose AI workloads mostly run on foreign infrastructure – such as the EU, which only hosts around 5% of global AI compute – could be cut off from data centres and the frontier models that run on them at any time.	cited/4x-07-europe2031.ai.txt	evidence
+s07b-epoch	p192=eu-5pct-epoch	Countries and regions whose AI workloads mostly run on foreign infrastructure – such as the EU, which only hosts around 5% of global AI compute – could be cut off from data centres and the frontier models that run on them at any time.	cited/4x-08-epoch.ai.txt	evidence
+# === DEPENDENCE: Europe is on the receiving end; access can be cut (IO-1 Part A p28) ===
+s08-glasswing	p28=glasswing	For example, in April 2026, Anthropic shared its most capable model with only selected partners under Project Glasswing, to allow them to test and prepare their defences against AI-enabled cyberattacks.	cited/4x-09-anthropic.com-glasswing.txt	evidence
+s09-fable-mythos	p28=export-directive	A few months later, in June 2026, the US government issued an export control directive that restricted access to Anthropic’s most capable models for foreign nationals, in practice forcing Anthropic to disable these models for all customers.	cited/4x-10-anthropic.com-fable-mythos.txt	evidence
+s10-enisa	p28=enisa	European institutions and companies were not among the first to receive access: the EU Agency for Cybersecurity (ENISA) reportedly only got invited to access the model after sustained negotiations (and has not received access to newer versions yet).	cited/4x-11-euractiv.com.txt	evidence
+s11-europarl	p28=chip-deals	Europe’s companies also do not currently get preferential access to the chips built with European equipment, nor can all Member States rely on being treated preferentially in chip deals or restrictions.	cited/4x-12-europarl.europa.eu.txt	evidence
+# === LEVERAGE: what the chokepoints buy (IO-1 Part A p28) ===
+s12-antonleicht	p28=indirect-powers	They do hold various indirect powers – such as export controls, investment screening or Union countermeasures under the Anti-Coercion Instrument (ACI) – that can be used to turn valuable assets into concrete leverage, for example in negotiations over access to frontier AI models and chips.	cited/4x-13-antonleicht.me.txt	evidence

@@ -72,6 +72,8 @@ assert byte-identical output. The old code is the test.
   segmenter, or a manifest-declared id→page-range map feeding `-retrieve oracle`) rather than BM25
   top-k. Not a `retrieve.go` change to make blind — it needs a corpus that declares the id→section
   mapping in its `MANIFEST.md`, which `tai-europe-2026` already does (`sections:` table).
+- **CSV segmenter: header + row as a passage, base cited/data/<file>** — needed to judge claims
+  against chart data (tai-europe slice 3 used PW-computed adjudications instead).
 
 ## Sequence
 

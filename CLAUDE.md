@@ -249,6 +249,27 @@ this envelope to specific code loci — consult the relevant row before changing
   initials asserts a reading the human never made. Write `cc` and stop; promotion is the human's edit.
 
 
+## Working on a new report
+
+- Read the whole document first (a summariser with the PDF loaded is fine). Find the claims whose
+  falsity would change the conclusion; check only those. The tool verifies, it does not choose what
+  to check.
+- A missing or wrong citation gets looked up (web search) or recorded as "no source exists" — never
+  merely flagged as uncited.
+- When a citation is a chart, fetch the data behind it (CSV/JSON), compute the number, and hold the
+  data file as a source.
+- Judge schemas emit reasoning fields before the verdict enum.
+- A judge change is scored against the a/b noise floor and against human-adjudicated leaves, never
+  against the previous run's verdicts.
+- Positive controls must be checkable under the run's mode (single_source self-exclusion makes a
+  self-quoted footnote absent).
+- Known judge limits: no currency conversion; counts derived from a list read as absent. Adjudicate
+  these by computation.
+- Adjudication lines: no `|` inside a reason; record the method (grep / count / read / run / computed).
+- Rebuild (`./build.sh`) before every run; write the run command into the chain dir.
+- Cost: ~$25 per 100 claims at N=3 on Sonnet 4.6.
+
+
 ## Reporting to the human
 The first line of every report is a locator: `example: <dir>` for corpus work (name the example the
 run is about, e.g. `example: examples/ai-index-2026-coding`), or `repo` for code-only work that

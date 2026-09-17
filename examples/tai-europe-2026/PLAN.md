@@ -361,6 +361,36 @@ leaves are NOT pre-registered `faithful`: they are where the cited page most pla
 what the report claims (interested-party chart, post-cutoff statements, a citation-orbit compute
 figure), so a `faithful` there is the result to distrust, and a non-faithful is the slice's payload.
 
+> **Data addendum (17 Sept) supersedes the `absent` rows for c14 and c16b below** — see next section.
+
+### Data addendum (17 Sept) — Epoch chart CSVs re-pre-register c16b / c14 / c08a
+
+PW fetched Epoch's underlying chart DATA (`sources/cited/data/*.csv`, SHA-256 in
+`MANIFEST-slice3.md`) — the numbers the `figure-only` pages render only as interactive charts. c16b,
+c14, c08a now cite the CSV first (primary) and keep their page id as secondary
+(`claims-slice3.txt`). The `fig`-column logic that pre-registered c14/c16b `absent` (figure-only → not
+in the static strip) no longer applies: the datum IS in the held CSV. Re-pre-registered, written
+before any judge run:
+
+| id | truth-maker CSV | expected | basis / caveat |
+|----|-----------------|----------|----------------|
+| c08a-epoch | `14-ai_companies_revenue_reports.csv` | faithful | OpenAI run-rate rows ($20bn → $40bn, first 8 months 2026) present in the export |
+| c14-epoch | `14-ai_companies_revenue_reports.csv` | faithful | OpenAI+Anthropic combined run-rate and European-developer rows present; ~25× / $4bn→$100bn checkable |
+| c16b-epoch | `ai_supercomputers.csv` | **faithful for EU ≈5% and US ≈75% (by MW); NOT for China 15%** | China is 11% by MW, 7% by H100e — the report's 15% overstates it. Shares computed by PW over the 482 `Status=Existing` systems by Power Capacity (MW): US 73.9 / China 11.2 / EU 5.5 |
+
+c16b is a **compound** claim (three shares); the CSV grounds two and refutes the third, so a uniform
+`faithful` is the wrong result — the China 15% is the overstatement to surface. Falsifier: recompute
+the by-MW country shares over `Status=Existing` rows of `ai_supercomputers.csv`; if China lands near
+15% (not ~11%) the pre-registration is wrong and c16b is faithful after all.
+
+**Fourth run prerequisite (CSV-specific), on top of gaps 1–3 above.** `retrieve.Load` ingests `.txt`
+only (`internal/retrieve/retrieve.go:131`); `citedExternalBases` (`assay.go:1007`) maps only
+`paper:`/`.txt`; the plain segmenter splits on blank lines a CSV lacks, and CSV records span multiple
+physical lines (quoted fields wrap). Needs a CSV rule — `encoding/csv`, header + one data row per
+passage, id base `cited/data/<file>` — plus a `.csv` case in `Load`'s walker and in
+`citedExternalBases`. Go code on its own branch, not folded into this fixture edit; until it lands the
+three re-pointed leaves render `absent` on their secondary page cite, not `faithful`.
+
 ### Judge command — N=3 Sonnet against `sources/cited/` (blocked on the three prerequisites)
 
 Do not run until the prerequisites above close; PW runs it (never call the model API from a session).
@@ -379,11 +409,168 @@ source ../../setkey.sh && ../../assay -backend anthropic -model claude-sonnet-4-
   claims-slice3.txt
 ```
 
+## Slice 4 — the leverage premise (what Europe controls in the chip supply chain, and what it buys)
+
+IO-1 ("Create a Member State Alliance for Supply Chain Security", Part A pp28–30, Part B pp79–89) and
+the compute deep dive (pp189–196) rest one recommendation — form an Alliance around Europe's
+supply-chain assets — on a single premise: that Europe controls chokepoints in the AI chip supply
+chain, that those chokepoints have no ready substitutes, and that this is leverage worth organising
+around. Slice 4 grounds every SOURCED factual claim on that premise against the report's own external
+citation (route=evidence, cite-scoped, held under `sources/cited/4x-*`), the same config as Slice 3.
+This pulls the compute deep dive IN from the original out-of-scope list (below); robotics stays out.
+
+- **Link inventory** (PDF URI annotations read with pypdf, by rect y-coordinate against the text line
+  — never guessed): p28 = 9 links, p190 = 14, p191 = 10, p192 = 16, p193 = 19; Part B pp79–89 carries
+  only eur-lex / state.gov / government.nl policy-instrument links, no factual chokepoint citations, so
+  no Part B leaf. The chokepoint facts live in IO-1 Part A p28 and the deep dive pp190–192.
+
+### Built 2026-09-16 (Slice 4 fixtures) — no judge run, no commit
+
+`claims-slice4.txt` (13 leaves), `argument-slice4.txt` (root → 5 premise nodes), `sources/MANIFEST-slice4.md`
+(no `single_source`). 14 cited pages fetched with `curl` (Chrome UA) into `sources/cited/4x-*.html`,
+stripped to `.txt` (stdlib HTMLParser); 12 held HTTP 200, 2 walled (euractiv 403 Cloudflare, Bloomberg
+403). SHA-256 over each held `.html` in MANIFEST-slice4. The five premise nodes:
+
+- **CONTROL** (2) — Europe holds chokepoints: assets enumeration (s01, chipexplorer) + EUV made only
+  by the Dutch ASML (s02, dwarkesh).
+- **SUBST** (4) — no ready substitutes: HBM sold out (s03), TSMC 2nm sold out (s04), inference demand
+  ~10x vs supply ~3.4x (s05), GPUs "sold out across all GPU types" (s06).
+- **SHARE** (2) — Europe hosts ~5% of global AI compute (s07a europe2031, s07b epoch).
+- **DEPEND** (4) — access can be cut: Glasswing (s08), US export directive (s09), ENISA delay (s10),
+  no preferential chip access (s11).
+- **LEVERAGE** (1) — indirect powers turn assets into leverage (s12, antonleicht).
+
+**Two scope gaps flagged (not fabricated to close):** (1) the report's strongest "share of the layer"
+claim — "ASML (Netherlands) and suppliers such as Zeiss (Germany) or Trumpf (Germany) hold monopolies
+over relevant [layers]", Figure 10 (report.txt:2818, O2.2, ~p60) — sits OUTSIDE the scoped pages. This
+slice grounds the assets *enumeration* and the EUV-monopoly *step* but not that layer-*monopoly*
+assertion, which is what the leverage thesis most leans on; its own citation is a separate fetch.
+(2) **ASM** (ASM International), named in the task, does not appear anywhere in `report.txt` — no leaf.
+
+### Pre-registration — verdict expected per leaf, and what a non-faithful means for the strategy
+
+Written before any judge run. Expected verdict is driven by the MANIFEST `fig` column: **present →
+`faithful`** unless flagged; **figure-only / headline-only → `absent`** (datum not in the static
+extraction — a stated fixture limit, read as "checked, not located", not a document defect);
+**walled → `unverifiable`** (no model call). The **flag** leaves are where the cited page most
+plausibly does NOT carry what the report claims; a `faithful` there is the result to distrust, a
+non-faithful is the slice's payload.
+
+| leaf | node | fig | expected | if non-faithful, what it means for the strategy |
+|------|------|-----|----------|--------------------------------------------------|
+| s02-dwarkesh | CONTROL | present | **faithful — LOAD-BEARING** | if the "only the Dutch ASML makes EUV" chokepoint is overstated, IO-1's premier bargaining chip is weaker than claimed and the whole Alliance-leverage thesis loses its anchor |
+| s01-chipexplorer | CONTROL | figure-only | absent | the report's single most-cited "what Europe controls" sentence grounds on an interactive data tool whose ASML/Zeiss/Trumpf data does not extract — already unconfirmable in text |
+| s03-tomshardware | SUBST | present | faithful | if HBM is not a real sold-out bottleneck, the "no ready substitutes" pillar (IO-1's Alliance-secretariat leverage map) softens |
+| s04-chosun | SUBST | headline-only | absent | headline confirms "TSMC 2nm sold out"; the "until 2028" specificity is not in the extraction — read as extraction miss, not citation gap |
+| s05-epoch-crunch | SUBST | present | faithful | if demand is NOT outrunning supply ~10x vs ~3.4x, the "compute crunch → chokepoint = leverage" mechanism weakens |
+| s06-semianalysis | SUBST | present | faithful | corroborates s05; a miss here is a scarcity-claim overreach |
+| s07a-europe2031 | SHARE | present | **flag (H.5)** | europe2031 is the authors' own scenario paper; a faithful only proves the orbit is self-consistent. A non-faithful undercuts the compute-poverty diagnosis the whole deep dive rests on |
+| s07b-epoch | SHARE | present | **flag (H.5)** | same 5% figure, second orbit source; distrust a faithful, read a non-faithful as the finding |
+| s08-glasswing | DEPEND | present | **flag (H.6)** | Anthropic's own page is the truth-maker; a faithful proves only that the interested party says what the report says. If non-faithful, the urgency case (Europe gets cut off) leans on a source that doesn't support it |
+| s09-fable-mythos | DEPEND | present | **flag (H.6)** | same interested-party caveat for the US-export-directive claim, the sharpest "access was actually withdrawn" evidence |
+| s10-enisa | DEPEND | walled | unverifiable | both truth-makers (euractiv, Bloomberg) are 403 walls; the ENISA-delay claim cannot be grounded until hand-fetched |
+| s11-europarl | DEPEND | present | faithful (partial risk) | the EP page is a debate agenda; "no preferential chip access" is the report's gloss, so an `overstated`/`partial` here is the report editorialising a citation |
+| s12-antonleicht | LEVERAGE | present | partial | the essay grounds the leverage *framing*; the specific export-controls / investment-screening / ACI list is the report's own — expect the framing to hold and the instrument list to be absent |
+
+**Totals expected:** 5 `faithful` (s03, s05, s06, s11 with partial risk; s02 as the load-bearing one),
+4 `flag` (s07a, s07b, s08, s09 — a non-faithful on any is the payload), 2 `absent` (s01, s04),
+1 `unverifiable` (s10), 1 `partial` (s12). The load-bearing claim is **s02**: it is the one leaf whose
+non-faithful would discredit the Alliance recommendation outright, so it is pre-registered `faithful`
+and is the result to read first if it comes back otherwise.
+
+### Run prerequisites & judge command (blocked on the three Slice-3 gaps)
+
+Same three gaps as Slice 3 (PLAN.md §Slice 3 "Run prerequisites"): register the `cited/4x-*` ids for
+`LoadHeld`, add the `/cited/` paragraph parser in `internal/retrieve`, and map `cited/<stem>.txt` in
+`citedExternalBases`. Until they close every leaf renders `unverifiable`. PW runs the command below
+(never call the model API from a session). N=3 Sonnet, flags BEFORE the positional claims file:
+
+```sh
+# run from examples/tai-europe-2026/
+source ../../setkey.sh && ../../assay -backend anthropic -model claude-sonnet-4-6 \
+  -retrieve bm25 -n 3 \
+  -manifest sources/MANIFEST-slice4.md \
+  -source sources/cited \
+  -argument argument-slice4.txt -refs claims-slice4.txt \
+  -chain-dir evidence/2026-09-16-slice4/sonnet-cited \
+  claims-slice4.txt
+```
+
+## Slice 5, claim 2 — why NOT build / why NOT open-weight (O1.1, p51 + pp174–187)
+
+O1.1 (“Secure ongoing access to frontier AI systems”, Part A pp50–53) argues Europe should pursue
+‘compute for access’ deals rather than count on its own frontier build or on open-weight models. Slice 5
+grounds the five sourced claims behind that “why not build / why not open-weight” step against the
+report’s OWN citations (route=evidence, cite-scoped, same config as Slice 3/4). This pulls the €790bn
+cost and the half-hearted-is-worst claims IN from the costed-hypothetical pp174–187 (below, still OUT of
+scope otherwise); the full costing table, coalition mechanics and robotics stay out.
+
+- **Link inventory** (PDF URI annotations, pypdf by rect y): p51 = the open-weight sentence carries two
+  links (epoch open-vs-closed ECI gap on “several months”; internationalaisafetyreport.org on the
+  misuse/proliferation clause), the China sentence one (reuters). Printed **p175** (pp174–187 costed
+  section): the €790bn figure and the half-hearted sentence carry **no** URI annotation — the page’s
+  only three links (von der Leyen / hyperscaler-capex / Manhattan-Project) sit on other sentences.
+
+### Built 2026-09-17 (Slice 5 fixtures) — no judge run, no commit
+
+`claims-slice5.txt` (5 leaves), `argument-slice5.txt` (root → 3 legs: OPENWEIGHT, ACCESS, BUILD),
+`sources/MANIFEST-slice5.md` (no `single_source`). Only ONE truth-maker is usably held — the payload of
+this slice is that the anti-build / anti-open-weight case rests on citations a fetch pass mostly cannot
+reach:
+
+- **w02** → internationalaisafetyreport.org/ fetched HTTP 200 and **held**, but the bare home is a
+  PORTAL (lists publications; the misuse/proliferation body is in the linked full-report PDF, not on the
+  cited URL). SHA-256 in MANIFEST-slice5.
+- **w01** → epoch.ai/data-insights/open-closed-eci-gap **could not be obtained**: epoch.ai is unreachable
+  from this session (proxy `502 CONNECT tunnel failed` to curl, `ENOTFOUND` to WebFetch). Not fetched,
+  cited-but-not-held → unverifiable. PW hand-fetch.
+- **w03** → reuters.com/…/beijing-…-2026-07-07 is an HTTP 401 DataDome wall (771-byte stub kept, not
+  held) → unverifiable.
+- **w04/w05** → uncited (no URI annotation at p175) → unverifiable.
+
+**Two flags to PW (not fabricated to close):** (1) **€800bn vs €790bn** — this prompt named the cost
+“€800bn”, but the scoped pp174–187 text (report.txt:9332, printed p175) states “approximately **€790
+billion** over the first three years”; €800bn is the page-73/75 summary / Table-1 rounding. w04 carries
+the p175 €790bn wording verbatim. (2) w02’s cited URL is a portal, so the leaf is a citation-precision
+case (the report cites a landing page, not the page carrying the claim), pre-registered `absent`.
+
+### Pre-registration — verdict expected per leaf (written before any judge run)
+
+| leaf | node | cite status | expected | read first if NOT as expected |
+|------|------|-------------|----------|-------------------------------|
+| w01-epoch-openlag | OPENWEIGHT | unreachable (proxy) | unverifiable | on PW’s hand-fetch: “several months” (report) vs the Epoch page’s ~“four months”. Direction is ambiguous (four IS several) — flag only if the source figure contradicts “several” |
+| w02-iasr-proliferation | OPENWEIGHT | held (home-portal) | **absent** | a `faithful` here would mean the bare portal page actually carries the government-will-restrict-proliferation prediction — distrust it (citation-precision finding) |
+| w03-reuters-china | ACCESS | wall (HTTP 401) | unverifiable | — |
+| w04-cost-790bn | BUILD | uncited | unverifiable | — |
+| w05-halfhearted | BUILD | uncited | unverifiable | the report’s own normative judgement; grounding it externally would be a category error |
+
+**Totals expected:** 1 `absent` (w02), 4 `unverifiable` (w01, w03, w04, w05), 0 `faithful`. A `faithful`
+on any leaf is the result to distrust; the slice’s payload is precisely that this case does not ground on
+a fetch pass.
+
+### Judge command — N=3 Sonnet against `sources/cited/` (blocked on the three Slice-3 prerequisites)
+
+Same three gaps as Slice 3/4 (PLAN.md §Slice 3 “Run prerequisites”). Until they close every leaf renders
+`unverifiable`. PW runs the command (never call the model API from a session). Flags BEFORE the positional
+claims file:
+
+```sh
+# run from examples/tai-europe-2026/
+source ../../setkey.sh && ../../assay -backend anthropic -model claude-sonnet-4-6 \
+  -retrieve bm25 -n 3 \
+  -manifest sources/MANIFEST-slice5.md \
+  -source sources/cited \
+  -argument argument-slice5.txt -refs claims-slice5.txt \
+  -chain-dir evidence/2026-09-17-slice5/sonnet-cited \
+  claims-slice5.txt
+```
+
 ## Out of scope (explicit)
 
-Everything not in the three slices above, including: the other 8 objectives-worth of Part A/B body and
-all §-recommendation decomposition beyond the 11 objective pairs; the compute (pp189–196) and robotics
-(pp197–204) deep dives; the costed European-frontier-AI-project hypothetical (pp174–187); the
+Everything not in the five slices above, including: the other 8 objectives-worth of Part A/B body and
+all §-recommendation decomposition beyond the 11 objective pairs; the robotics
+(pp197–204) deep dive; the rest of the costed European-frontier-AI-project hypothetical (pp174–187)
+beyond Slice 5’s €790bn-cost and half-hearted leaves; the
 attribution-trap contributor test (H.3); the AI-provenance re-verification pass over all 795 links
 (H.4) and the citation-loop provenance test (H.5) except where slice-3 items 16–17 touch it; Figure 2
 interested-party grounding (H.6) beyond holding the link; the acknowledge-then-dismiss inference step

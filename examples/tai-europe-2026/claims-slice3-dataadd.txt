@@ -1,0 +1,13 @@
+# title: A Transformative AI Strategy for Europe
+# date: Version 1.0, September 2026
+# sources: examples/tai-europe-2026/sources/MANIFEST.md
+#
+# Slice-3 DATA-ADDENDUM subset (17 Sept): the three leaves re-pointed at an Epoch chart-DATA CSV
+# (primary) with their original page id kept as secondary. Run only these three against the CSV
+# truth-makers. Rows are verbatim from claims-slice3.txt; pre-registration in PLAN.md #Slice 3
+# "Data addendum": c08a faithful, c14 faithful, c16b faithful for EU/US shares but NOT China 15%.
+# NOT gradable until the CSV segmenter + .csv cases in retrieve.Load/citedExternalBases land.
+#
+c08a-epoch	p23=openai-runrate	Yet it only took OpenAI the first eight months of the year to roughly double its annualised run rate, from over $20 billion to more than $40 billion.	cited/data/14-ai_companies_revenue_reports.csv,cited/08a-epoch.ai.txt	evidence
+c14-epoch	p24=runrate-2pct	The annualised revenue run rate of European model developers is likely less than 2% of the combined run rate of their two leading international competitors OpenAI and Anthropic, whose combined revenue has grown roughly 25-fold in two years – from $4 billion to over $100 billion.	cited/data/14-ai_companies_revenue_reports.csv,cited/14-epoch.ai-aicompanies.txt	evidence
+c16b-epoch	p24=eu-5pct-epoch	The EU only hosts around 5% of global AI compute, compared to 75% in the US and 15% in China.	cited/data/ai_supercomputers.csv,cited/16b-epoch.ai-supercomputers.txt	evidence
