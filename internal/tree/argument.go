@@ -373,6 +373,92 @@ func recReason(n *ArgNode) string {
 	return strings.Join(parts, "; ")
 }
 
+// disputedSet collects the leaf ids a human adjudicated to a different verdict than the machine — the
+// disagreements the overlay already computed (adjudicate.Agree), gated to judged leaves. It seeds the
+// `disputed` flag that propagates up the tree (spec/ARGUMENT.md § Disputed leaves): a node whose derived
+// verdict is load-bearing on one of these leaves is annotated, while the verdict itself does not move.
+// nil when there is no overlay or no disagreement, so a run with neither renders exactly as before.
+func disputedSet(adj *adjudicate.Overlay) map[string]bool {
+	if adj == nil || len(adj.Result.Disagreements) == 0 {
+		return nil
+	}
+	m := make(map[string]bool, len(adj.Result.Disagreements))
+	for _, d := range adj.Result.Disagreements {
+		m[d.ID] = true
+	}
+	return m
+}
+
+// disputedFor returns the disputed leaf ids that are LOAD-BEARING for `n`'s derived verdict — the leaves a
+// human read otherwise AND whose contribution set the verdict this node derives, so the flag names only the
+// disagreements the verdict actually rests on (spec/ARGUMENT.md § Disputed leaves). It follows the same
+// deciding-child path decidingChild walks: a child whose own subtree contributes the node's worst severity.
+// Openness a `?` edge or an edge defeater introduces has no responsible leaf — the linkage, not a claim, is
+// the open question — so those edges carry nothing up. A leaf dominated by a worse sibling is not on the
+// path either. Returns the ids in child order, deduped; nil when the verdict rests on no disputed leaf. The
+// derived verdict is unchanged either way — this only annotates it.
+func disputedFor(n *ArgNode, disputed map[string]bool) []string {
+	if len(disputed) == 0 {
+		return nil
+	}
+	if n.row != nil {
+		if disputed[n.ID] {
+			return []string{n.ID}
+		}
+		return nil
+	}
+	j := n.Judgement()
+	if j == jOpinion {
+		return nil // an opinion node rests on no evidence leaf, so no leaf is load-bearing for it
+	}
+	target := sev(j)
+	seen := map[string]bool{}
+	var out []string
+	for _, c := range n.Children {
+		if c.Query {
+			continue // openness from an unestablished linkage: no leaf is responsible for it
+		}
+		cj := c.Judgement()
+		if cj == jOpinion {
+			continue // an opinion contributes nothing to hold/fail (an edge-open opinion opens via its edge)
+		}
+		if c.EdgeVerdict == jOpen && sev(jOpen) > sev(cj) {
+			continue // this child's contribution is its edge defeater, not its subtree: no leaf responsible
+		}
+		if sev(cj) != target {
+			continue // dominated child: not what set this node's verdict
+		}
+		for _, id := range disputedFor(c, disputed) {
+			if !seen[id] {
+				seen[id] = true
+				out = append(out, id)
+			}
+		}
+	}
+	return out
+}
+
+// disputeClause renders the parenthetical a flagged node carries in its badge line and in the root tally —
+// "(machine; human disagrees: <ids>)" — naming the load-bearing leaves a human read otherwise. "" when the
+// node rests on no disputed leaf, so an unflagged node is untouched.
+func disputeClause(n *ArgNode, disputed map[string]bool) string {
+	ids := disputedFor(n, disputed)
+	if len(ids) == 0 {
+		return ""
+	}
+	return fmt.Sprintf("(machine; human disagrees: %s)", strings.Join(ids, ", "))
+}
+
+// withDispute appends a node's dispute clause to a tally entry, so a flagged recommendation reads
+// "<entry> (machine; human disagrees: <ids>)" (spec/ARGUMENT.md § Disputed leaves). `base` is the entry
+// already built for the node's class; the clause is added only when the node rests on a disputed leaf.
+func withDispute(n *ArgNode, base string, disputed map[string]bool) string {
+	if dc := disputeClause(n, disputed); dc != "" {
+		return base + " " + dc
+	}
+	return base
+}
+
 // ArgumentTitle returns the report name from an argument.txt "# title:" header line — the name the
 // site pages carry as their <title> and index.html as its <h1>. It returns "" when the file has no
 // such line; the caller then falls back to the file name, never to the thesis, which stays the root
@@ -404,7 +490,10 @@ func ArgumentTitle(argText string) string {
 // beside the machine badge on each adjudicated leaf and, beneath the `what` sentence, the agreement
 // count and the disagreements. nil when the corpus carries no adjudications — the page is then unchanged.
 func ArgumentPage(root *ArgNode, details map[string]Leaf, title, what string, singleSource bool, adj *adjudicate.Overlay) (page, rootBlock string) {
-	rootBlock = argRootBlock(root)
+	// disputed seeds the leaf-disagreement flag (spec/ARGUMENT.md § Disputed leaves); nil (no overlay or
+	// no disagreement) leaves every render below byte-identical to a run without adjudications.
+	disputed := disputedSet(adj)
+	rootBlock = argRootBlock(root, disputed)
 	var b strings.Builder
 	fmt.Fprintf(&b, argHead, html.EscapeString(title))
 	fmt.Fprintf(&b, "<main class=\"page\">\n<h1>%s</h1>\n", html.EscapeString(title))
@@ -417,7 +506,7 @@ func ArgumentPage(root *ArgNode, details map[string]Leaf, title, what string, si
 	// proposition, the recommendation tally, the base sentence) before opening any recommendation.
 	b.WriteString(`<section class="thesis">` + "\n")
 	fmt.Fprintf(&b, "<p class=\"prop\">%s</p>\n", html.EscapeString(root.Content))
-	fmt.Fprintf(&b, "<p class=\"tally\">%s</p>\n", html.EscapeString(rootTally(root)))
+	fmt.Fprintf(&b, "<p class=\"tally\">%s</p>\n", html.EscapeString(rootTally(root, disputed)))
 	if s := baseSentence(root); s != "" {
 		fmt.Fprintf(&b, "<p class=\"base\">%s</p>\n", html.EscapeString(s))
 	}
@@ -428,7 +517,7 @@ func ArgumentPage(root *ArgNode, details map[string]Leaf, title, what string, si
 	}
 	b.WriteString("</section>\n")
 	for _, c := range root.Children {
-		renderNodeCard(&b, c, details, adj)
+		renderNodeCard(&b, c, details, adj, disputed)
 	}
 	b.WriteString(keyHTML(singleSource))
 	b.WriteString("</main>\n")
@@ -447,7 +536,7 @@ func ArgumentPage(root *ArgNode, details map[string]Leaf, title, what string, si
 // recommendation splits into those the report does not say what they rest on (a `?`-edge or childless
 // deciding child) and those whose findings are contested (a stated child that opens); a failed one
 // names the load-bearing child that collapsed it.
-func rootTally(root *ArgNode) string {
+func rootTally(root *ArgNode, disputed map[string]bool) string {
 	var holds, weakened, opinion, fails []string
 	var openUnstated, openContested, openEdge int
 	recs := 0
@@ -460,20 +549,24 @@ func rootTally(root *ArgNode) string {
 		if c.Query {
 			id += " ?"
 		}
+		// A recommendation whose derived verdict is load-bearing on a leaf a human read otherwise carries
+		// the same "(machine; human disagrees: …)" clause here as on its card (spec/ARGUMENT.md § Disputed
+		// leaves). open is counted, not listed by id, so its members carry no clause in the tally — the
+		// disagreement still shows on the node's own card below.
 		switch c.Judgement() {
 		case jHolds:
-			holds = append(holds, id)
+			holds = append(holds, withDispute(c, id, disputed))
 		case jWeakened:
-			weakened = append(weakened, id)
+			weakened = append(weakened, withDispute(c, id, disputed))
 		case jOpinion:
-			opinion = append(opinion, id)
+			opinion = append(opinion, withDispute(c, id, disputed))
 		case jFails:
 			dc := strings.TrimSuffix(decidingChild(c), " ?")
-			if dc == "" {
-				fails = append(fails, c.ID)
-			} else {
-				fails = append(fails, fmt.Sprintf("%s: no held source supports %s", c.ID, dc))
+			entry := c.ID
+			if dc != "" {
+				entry = fmt.Sprintf("%s: no held source supports %s", c.ID, dc)
 			}
+			fails = append(fails, withDispute(c, entry, disputed))
 		case jOpen:
 			// Three reasons a recommendation is open, in the order spec/EDGE.md §4 ranks them: an edge
 			// defeater (F holds, R still doesn't follow) heads the set; then a `?`-edge or childless
@@ -582,10 +675,10 @@ func baseSentence(root *ArgNode) string {
 // argRootBlock is the one screen above the tree: the root proposition, the root's tally paragraph and
 // the base sentence, then one line per recommendation — every root child but `base` — its proposition
 // and judgement, plus the child that decides it when it does not hold. It ends with a trailing newline.
-func argRootBlock(root *ArgNode) string {
+func argRootBlock(root *ArgNode, disputed map[string]bool) string {
 	var b strings.Builder
 	fmt.Fprintln(&b, root.Content)
-	fmt.Fprintln(&b, rootTally(root))
+	fmt.Fprintln(&b, rootTally(root, disputed))
 	if s := baseSentence(root); s != "" {
 		fmt.Fprintln(&b, s)
 	}
@@ -606,6 +699,11 @@ func argRootBlock(root *ArgNode) string {
 				line += fmt.Sprintf(" (%s)", r)
 			}
 		}
+		// A holds node can be disputed too — a human read a load-bearing leaf as failing — so the clause is
+		// appended regardless of the verdict (spec/ARGUMENT.md § Disputed leaves).
+		if dc := disputeClause(c, disputed); dc != "" {
+			line += " " + dc
+		}
 		fmt.Fprintln(&b, line)
 	}
 	return b.String()
@@ -615,7 +713,7 @@ func argRootBlock(root *ArgNode) string {
 // base — as a closed <details> card: a badge for its DERIVED judgement, its id (with a trailing `?`
 // on a `?` edge), its proposition, and, when it does not hold, the child that decides it in small
 // text. An atomic-claim leaf renders through renderLeafCard.
-func renderNodeCard(b *strings.Builder, n *ArgNode, details map[string]Leaf, adj *adjudicate.Overlay) {
+func renderNodeCard(b *strings.Builder, n *ArgNode, details map[string]Leaf, adj *adjudicate.Overlay, disputed map[string]bool) {
 	if n.row != nil {
 		renderLeafCard(b, n.row, details, adj)
 		return
@@ -630,9 +728,15 @@ func renderNodeCard(b *strings.Builder, n *ArgNode, details map[string]Leaf, adj
 			fmt.Fprintf(b, `<span class="dc">(%s)</span>`, html.EscapeString(r))
 		}
 	}
+	// A node whose derived verdict is load-bearing on a leaf a human read otherwise carries the disagreement
+	// beside the badge (spec/ARGUMENT.md § Disputed leaves). The derived verdict is unchanged; this only says
+	// a human disagreed with the machine on a leaf it rests on.
+	if dc := disputeClause(n, disputed); dc != "" {
+		fmt.Fprintf(b, `<span class="dispute">%s</span>`, html.EscapeString(dc))
+	}
 	b.WriteString("</summary>\n")
 	for _, c := range n.Children {
-		renderNodeCard(b, c, details, adj)
+		renderNodeCard(b, c, details, adj, disputed)
 	}
 	b.WriteString("</details>\n")
 }
@@ -756,6 +860,7 @@ details.card details.card{margin:.5rem .8rem}
 .card .q{color:#999}
 .card .prop{flex:1 1 18rem}
 .card .dc{color:#777;font-size:.85rem;white-space:nowrap}
+.card .dispute{color:#b3005c;font-size:.82rem;font-weight:600;white-space:nowrap}
 .leaf .body{padding:.5rem .85rem .85rem;color:#333;font-size:.95rem}
 .leaf .claimfull{margin:.2rem 0 .5rem}
 .leaf .meta{color:#555;margin:.2rem 0}

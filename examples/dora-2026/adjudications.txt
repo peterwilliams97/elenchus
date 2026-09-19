@@ -9,7 +9,8 @@
 #
 # PW lines (reasons PW gave): ES5 identical figure, AD19 complementary percentages, EX20 rounding,
 # SD1 taxonomy level — the four single-source consistency corrections (spec/TREE.md § Single-source
-# judging has a direction) — and ES2. The rest are `cc` drafts awaiting PW's read. CM10 left for PW.
+# judging has a direction) — ES2, and CM10 (the report states the platform friction finding on p62;
+# the machine missed it). The rest are `cc` drafts awaiting PW's read.
 
 ES5 | faithful | The majority of survey respondents (90%) use AI as part of their work | 4 | PW | claim reproduces the source figure verbatim (90%); the machine's overstated is a false positive — identical figure, identical scope
 AD19 | faithful | While 30% of those surveyed indicate a more reserved stance, with "a little" (23%) or "no trust at all" (7%) | 31 | PW | the 70% "some confidence" and the 30% "little/no trust" partition one 100% split — complements, not a contradiction
@@ -21,3 +22,4 @@ PE2 | overstated | Dedicated platform teams are the dominant organizational mode
 FT2 | overstated | a prerequisite for success with AI. Without a user at the center of your strategy, AI adoption is unlikely to help, and may even hinder, your team's performance | 95 | cc | the source frames this as advice ("not just beneficial, it's a prerequisite"); rendered as a flat causal finding it overstates the recommendation
 VS4 | partial | While AI adoption on its own shows a modest impact, the effect is dramatically amplified in organizations with strong VSM practices | 78 | cc | verbatim on AI's impact on organizational performance; carried to the team- and product-performance framing the direction holds but the measured outcome differs
 CM12 | partial | adopting AI-assisted development tools can harm teams that don't have a user-centric focus | 64 | cc | direction is faithful, but the claim fuses two findings (harm without focus; strong positive with a North Star focus) into one causal chain
+CM10 | faithful | Conversely, we found that AI's neutral effect on respondents' reported experiences of friction is made harmful. That is, respondents experience more friction in organizations with quality internal platforms | 62 | PW | p62 states the platform friction finding in so many words; the machine's contradicted misattributed it to small batches, but the report asserts the harmful friction effect for quality internal platforms directly

@@ -148,6 +148,23 @@ the root does not run. The `base` node is absent from every count in the tally (
 sentence), and the open recommendations split into exactly two reasons — `?`-edge/childless versus
 contested — that sum to the open total.
 
+## Disputed leaves — where a human read a leaf otherwise
+
+A human adjudication (`spec/SERVE.md` § Adjudications) that differs from the machine's leaf verdict
+marks that leaf **disputed**, and the flag propagates up to every node whose derived verdict is
+**load-bearing** on it — the deciding-child path from the node down to the leaf (§ Internal judgement),
+the same path a `?` edge or an edge defeater is excluded from, since openness the report's own structure
+introduces has no leaf a human could disagree with. Each flagged node renders `<verdict> (machine; human
+disagrees: <leaf ids>)` — in its badge line and, for a recommendation, in the root tally beside its id.
+The derived verdict itself never moves: it stays the machine's conjunction of the machine leaf verdicts
+(no verdict is authored, per § A node is content plus a derived judgement), and the flag only records
+that the verdict rests on a leaf a human read differently.
+
+*Refuter.* A leaf whose adjudication matches the machine flags nothing; a disputed leaf dominated by a
+worse sibling flags neither its parent (whose verdict that sibling set) nor the tree above, only the
+nodes whose verdict it is the deciding contribution to; and adding an adjudication never changes any
+node's derived verdict — the tree rendered with and without the overlay differs only in the clause.
+
 ## How the LCEIC tree is authored — the attachment rule
 
 The one authored decision, beyond writing each node's content, is which findings a recommendation

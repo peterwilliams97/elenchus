@@ -384,6 +384,69 @@ func TestArgumentPageAdjudications(t *testing.T) {
 	}
 }
 
+// TestDisputedFlag pins the disputed-leaf propagation (spec/ARGUMENT.md § Disputed leaves): a leaf a human
+// read otherwise than the machine flags every node whose derived verdict is load-bearing on it — its
+// finding and the recommendation above — while an adjudication the machine agreed with flags nothing. The
+// derived verdicts do not move: R-BAD still fails on the machine's contradicted, R-OK still holds.
+func TestDisputedFlag(t *testing.T) {
+	arg := joinLines(
+		"root  | Root.  | x",
+		"    R-BAD  | Rec bad.  | x",
+		"        F-BAD  | Finding bad.  | x",
+		"            CBAD",
+		"    R-OK  | Rec ok.  | x",
+		"        F-OK  | Finding ok.  | x",
+		"            COK",
+	)
+	root := mustBuild(t, arg, []brief.Row{
+		{ID: "CBAD", Text: "bad claim", Faith: "contradicted"},
+		{ID: "COK", Text: "ok claim", Faith: "faithful"},
+	})
+	machine := map[string]string{"CBAD": "contradicted", "COK": "faithful"}
+	adjs := []adjudicate.Adjudication{
+		{ID: "CBAD", Verdict: "faithful", Initials: "PW", Reason: "the source states it directly"},
+		{ID: "COK", Verdict: "faithful", Initials: "PW", Reason: "agrees with the machine"},
+	}
+	disputed := disputedSet(adjudicate.NewOverlay(machine, adjs))
+
+	rBad := childByID(root, "R-BAD")
+	fBad := childByID(rBad, "F-BAD")
+	rOk := childByID(root, "R-OK")
+
+	// The disputed leaf is load-bearing for its finding and the recommendation above it.
+	if got := disputedFor(fBad, disputed); len(got) != 1 || got[0] != "CBAD" {
+		t.Errorf("F-BAD disputedFor = %v, want [CBAD]", got)
+	}
+	if got := disputedFor(rBad, disputed); len(got) != 1 || got[0] != "CBAD" {
+		t.Errorf("R-BAD disputedFor = %v, want [CBAD]", got)
+	}
+	// An adjudication the machine agreed with is not in the disputed set, so it flags nothing.
+	if got := disputedFor(rOk, disputed); len(got) != 0 {
+		t.Errorf("R-OK disputedFor = %v, want none (adjudication agreed)", got)
+	}
+	// The derived verdicts are unmoved by the disagreement — the flag annotates, it does not re-judge.
+	if j := rBad.Judgement(); j != jFails {
+		t.Errorf("R-BAD judgement = %q, want fails", j)
+	}
+	if j := rOk.Judgement(); j != jHolds {
+		t.Errorf("R-OK judgement = %q, want holds", j)
+	}
+	// The clause reaches the rendered page and the stdout root block, on the disputed branch only.
+	page, block := ArgumentPage(root, nil, "Report", "what", false, adjudicate.NewOverlay(machine, adjs))
+	if !strings.Contains(page, "(machine; human disagrees: CBAD)") {
+		t.Errorf("page missing the disputed clause for CBAD")
+	}
+	if strings.Contains(page, "human disagrees: COK") {
+		t.Errorf("agreed leaf COK must not produce a disputed clause")
+	}
+	if !strings.Contains(block, "(machine; human disagrees: CBAD)") {
+		t.Errorf("root block missing the disputed clause for CBAD:\n%s", block)
+	}
+	if strings.Contains(block, "human disagrees: COK") {
+		t.Errorf("root block: agreed leaf COK must not produce a disputed clause")
+	}
+}
+
 // TestSubstanceGatesHold is the substance-rollup refuter (spec/SUBSTANCE-CORPUS.md): the substance axis
 // gates the one `holds` case. A settled-faithful leaf holds when substance is absent (a
 // faithfulness-only run, back-compat) or `substantive` (the control shape); a settled-faithful leaf whose
@@ -523,7 +586,7 @@ func TestEdgeMethodLineRendersOnce(t *testing.T) {
 	root := mustBuild(t, arg, []brief.Row{{ID: "CM1", Text: "c", Faith: "faithful"}})
 	childByID(root, "R1").Children[0].EdgeVerdict = "unchallenged" // lifted off this edge
 	root.RootMethods = []string{"method: a shared common-cause world — defeats every edge of this evidence type."}
-	block := argRootBlock(root)
+	block := argRootBlock(root, nil)
 	if n := strings.Count(block, "method: a shared common-cause world"); n != 1 {
 		t.Fatalf("method line should render exactly once, got %d", n)
 	}

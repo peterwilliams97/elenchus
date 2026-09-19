@@ -2,14 +2,16 @@
 
 Reports are written to persuade.
 
-[`assay`](assay.go) reads a report against the documents it draws on and asks, claim by claim, 
-whether the sources actually bear each one out. Then propagates those checks up through the findings 
-and recommendations to the report's thesis. The output is a page that leaves a reader a manageable 
-number of claims worth questioning, each with the passage that settles it.
+[`assay`](assay.go) 
+* reads a report against the documents it is based on
+* asks, claim by claim, whether the sources bear each one out. 
+* Propagates those checks up through the  findings and recommendations to the report's thesis. 
+* Produces a summary for a human reader with a manageable number of claims that need to be checked. 
+Each claim is shown  with the passage from the report that supports it. 
 
 ![review.html — the DORA report PDF on the left, assay's reading of the report on the right](docs/screenshots/dora-screenshot.png)
 
-The worked run above is the 2025 DORA *State of AI-assisted Software Development* report (v.2025.2),
+The worked example above is the 2025 DORA *State of AI-assisted Software Development* report (v.2025.2),
 checked against its own figures and text: <https://peterwilliams97.github.io/elenchus-dora-2026/>.
 It is two panes. 
 
@@ -19,14 +21,26 @@ It is two panes.
 each recommendation under it with a derived verdict, each recommendation opening to the findings it
 rests on, and each finding opening to the atomic claims that support it.
 
-In the screenshot the platform recommendation **R-PLAT fails** because its finding **F-PLAT fails**.
-F-PLAT fails because its core premise **CM10 is contradicted, 3/3**. The **so what** line
-explains the discrepancy: the report attributes friction to platforms, while the original source 
-attributes it to small batches. 
-The **report: §Quality internal platforms p62** link jumps the left pane to that page; 
-the **reason** line is the judge's justification; and the quoted passage beneath it is the report 
-text the verdict was read against. Click a report `§` or a quote on the right and the left
-pane jumps to that page of that PDF.
+The screenshot shows one recommendation being checked.
+
+The report recommends investing in an internal platform (**R-PLAT**). That recommendation rests on
+one finding (**F-PLAT**), and the finding rests on one claim (**CM10**): that with a good internal
+platform, AI helps organizational performance more but also adds friction.
+
+The AI judge marked CM10 **contradicted**, three runs out of three. It decided the report blames the
+extra friction on small batches, not on platforms.
+
+The judge was wrong. Page 62, open in the left pane, says: "Conversely, we found that AI's neutral
+effect on respondents' reported experiences of friction is made harmful. That is, respondents
+experience more friction in organizations with quality internal platforms."
+
+A human reviewer therefore marked CM10 **faithful**. That verdict appears beside the machine's
+**contradicted** badge. The verdicts above it are still computed by the code, so R-PLAT and F-PLAT
+read **fails (machine; human disagrees: CM10)**.
+
+On the right, the **report: §Quality internal platforms p62** link opens that page on the left. The
+**reason** line is the judge's explanation, and the quote under it is the report text the judge
+read. Clicking any `§` link or quote on the right opens its page on the left.
 
 
 The top of the right pane has the thesis, the tally over the nine recommendations, and the
@@ -38,9 +52,9 @@ AI's primary role in software development is that of an amplifier — it magnifi
 high-performing organizations and the dysfunctions of struggling ones; the greatest returns come not
 from the tools themselves but from the underlying organizational system.
 
-Of 9 recommendations, 3 hold (R-DATA, R-BATCH, R-USER), 3 are weakened (R-STANCE, R-ACCESS, R-VSM),
-2 fail (R-VC: no held source supports F-VC, R-PLAT: no held source supports F-PLAT), 1 is opinion
-(R-TRANSFORM ?).
+Of 9 recommendations, 3 hold (R-DATA, R-BATCH, R-USER), 3 are weakened (R-STANCE, R-ACCESS, R-VSM
+(machine; human disagrees: VS4)), 2 fail (R-VC: no held source supports F-VC, R-PLAT: no held source
+supports F-PLAT (machine; human disagrees: CM10)), 1 is opinion (R-TRANSFORM ?).
 2 findings support no recommendation.
 
 weakened  R-STANCE       Clarify and socialize your AI policies — establish a clear, communicated policy on permitted tools and usage.
@@ -49,10 +63,33 @@ weakened  R-ACCESS       Connect AI to your internal context — give AI tools s
 fails     R-VC           Embrace and fortify your safety nets — make teams proficient in rollback and revert features.
 holds     R-BATCH        Reduce the size of work items — enforce the discipline of working in small batches.
 holds     R-USER         Center users' needs in product strategy — keep the user as the product's North Star.
-fails     R-PLAT         Invest in your internal platform — treat it as a product and the strategic prerequisite for unlocking AI's organizational value.
-weakened  R-VSM          Use value stream management to turn AI investment into a competitive advantage.
+fails     R-PLAT         Invest in your internal platform — treat it as a product and the strategic prerequisite for unlocking AI's organizational value. (machine; human disagrees: CM10)
+weakened  R-VSM          Use value stream management to turn AI investment into a competitive advantage. (machine; human disagrees: VS4)
 opinion   R-TRANSFORM ?  Treat AI adoption as an organizational transformation, not a tools purchase — redesign workflows, roles, governance, and culture.
 ```
+
+## What we did on the DORA report
+
+1. **One source.** The corpus is the report itself (v.2025.2, 142 pages). The survey data behind it
+   is not public, so the check is internal: does the report's own text and figures support what the
+   report says elsewhere? Nothing here tests whether the survey numbers are true.
+2. **Claims.** The report was broken into 136 atomic claims, each tied to a section and page, and
+   arranged under the report's thesis, nine recommendations and their findings.
+3. **Machine judging.** Claude Sonnet 4.6 judged each claim three times against passages retrieved
+   from the report. Each claim gets a verdict and an agreement count such as 3/3.
+4. **Derived verdicts.** Code, not a person, rolls the claim verdicts up the tree. Result: 3
+   recommendations hold, 3 are weakened, 2 fail, 1 is opinion.
+5. **Human check.** A human has read 11 of the 136 claims against the page and agreed with the
+   machine on 4. Of the 7 disagreements, 4 were neighbouring labels (partial vs overstated, partial
+   vs faithful), 1 was a problem the machine missed (FT2), and 2 were **contradicted** verdicts that
+   were simply wrong (SD1, CM10). CM10 was wrong 3/3, and it is the reason R-PLAT shows as failing.
+6. **Disagreement is shown, not hidden.** A human verdict sits beside the machine's and never
+   replaces it. Any node that rests on a disputed claim says so:
+   `R-PLAT fails (machine; human disagrees: CM10)`.
+
+What this means for a reader: the other 125 verdicts are machine drafts that nobody has checked, and
+a unanimous 3/3 is not proof of correctness. The tool's job is to put each claim next to the page it
+rests on so that checking takes seconds. The reading is still yours.
 
 ## Worked examples
 
@@ -66,25 +103,22 @@ opinion   R-TRANSFORM ?  Treat AI adoption as an organizational transformation, 
 
 ## How to read the right pane
 
-Every node — the root, each recommendation, each finding — carries a **derived** verdict. The six
+Every node — the root, each recommendation, each finding — carries a **derived** verdict. The five
 node labels, from `spec/ARGUMENT.md`:
 
 - **holds** — every load-bearing child holds. The node stands on the ground its content claims.
 - **weakened** — no child fails or opens, but some child is only partial, or wobbles between runs.
   The node still stands, but on narrower ground than its content claims.
 - **open** — no load-bearing child fails, but the report never states what the node rests on (a `?`
-  edge, or no finding attached), or a finding it rests on is contested. Not settled either way — the
-  reader has to open it.
+  edge, or no finding attached), or a finding it rests on is contested (a leaf label, defined below).
+  Not settled either way — the reader has to open it.
 - **fails** — a load-bearing child fails: a supporting claim is contradicted, unsupported, or absent
   from the sources. One collapsed load-bearing premise collapses the node.
 - **opinion** — the node is a pure value judgement. That is not evidence, so faithfulness cannot
   settle it and the tree does not pretend to.
-- **contested** — a leaf where two identical runs land on different verdicts because the sources
-  don't settle the claim either way.
 
-**open** and **contested** are facts about the report, not about assay: **open** marks a place where
-the report never says what its recommendation rests on, and **contested** marks a claim the sources
-leave underdetermined — both describe the material, not the tool that read it.
+**open** is a fact about the report, not about assay: it marks a place where the report never says
+what its recommendation rests on — the material, not the tool that read it.
 
 Under every finding sit its atomic claims, each with a **leaf faithfulness verdict** — whether the
 source bears the claim out, never whether it is true (`spec/ARGUMENT.md`, `spec/TREE.md`):
@@ -99,6 +133,11 @@ source bears the claim out, never whether it is true (`spec/ARGUMENT.md`, `spec/
 
 (Two more the vocabulary carries: **unsupported** — no held source states it — and **unverifiable** —
 the cited document is not in the corpus.)
+
+A leaf also carries a **stability class** from re-running the judge. **contested** marks a leaf where
+two identical runs land on different verdicts because the sources don't settle the claim either way —
+a fact about the report, not about assay. A contested leaf **opens** the node above it: that is what
+the node label `open` records when a finding is contested rather than left unstated.
 
 Three more things ride on a leaf:
 
@@ -122,18 +161,13 @@ Three inputs, kept separate on purpose:
   leaves up (`spec/ARGUMENT.md`). Writing a verdict into the tree is the one edit the format forbids —
   it would let the builder's opinion pass as a result.
 
-What counts as a source differs by run. For **DORA** the corpus holds exactly one document — the
-report itself — so the only automated check is internal consistency: does the report say this, and do
-its figures agree across chapters and pages? It does not ground the survey numbers; their truth-maker
-is the survey microdata and the fitted models, which are not held, so every survey figure comes back
-`unverifiable` for grounding by design, not omission (`examples/dora-2026/sources/MANIFEST.md`). For
-**LCEIC** the sources are external — the hearing transcripts, submissions, and questions-on-notice,
-each quote carrying its document, witness, and page — so a claim is checked against a document other
-than the one making it.
+What counts as a source differs by run. For **LCEIC** the sources are external — the hearing
+transcripts, submissions, and questions-on-notice, each quote carrying its document, witness, and
+page — so a claim is checked against a document other than the one making it.
 
 On both runs, machine verdicts a human has read are shown beside the machine badge with the
 reviewer's initials, and the argument page reports how many adjudicated leaves the judge agreed on
-(for DORA, 4 of 10) (`spec/SERVE.md` § Adjudications).
+(`spec/SERVE.md` § Adjudications).
 
 ## Run it on your own report
 
