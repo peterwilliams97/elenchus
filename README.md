@@ -1,59 +1,73 @@
 # elenchus
 
-[assay](assay.go) takes a report and the documents it draws on, breaks the report into atomic claims, checks
-each claim against those sources, and propagates the checks up through the findings and
-recommendations to the report's thesis. The output is a page you read.
+Reports are written to persuade.
 
-![review.html — the source document on the left, assay's reading of the report on the right](docs/screenshots/dora-screenshot.png)
+[`assay`](assay.go) reads a report against the documents it draws on and asks, claim by claim, 
+whether the sources actually bear each one out. Then propagates those checks up through the findings 
+and recommendations to the report's thesis. The output is a page that leaves a reader a manageable 
+number of claims worth questioning, each with the passage that settles it.
 
-The worked run is the Victorian LCEIC report on the cultural and creative industries:
-<https://peterwilliams97.github.io/elenchus-vic-lceic/>. It is two panes.
-The **left** shows the source document — the report itself, or the hearing transcript, submission,
-or question-on-notice a quote comes from — as the original PDF. The **right** is assay's top-down
-reading: the report's root proposition, the eleven recommendations under it each with a derived
-verdict, each recommendation opening to the findings it rests on, and each finding opening to the
-verbatim quotes that support it with their provenance. Click a report `§` or a quote on the right
-and the left pane jumps to that page of that PDF.
+![review.html — the DORA report PDF on the left, assay's reading of the report on the right](docs/screenshots/dora-screenshot.png)
 
-The top of the right pane, verbatim from
-[`argument.html`](examples/vic-lceic/current/argument.html):
+The worked run above is the 2025 DORA *State of AI-assisted Software Development* report (v.2025.2),
+checked against its own figures and text: <https://peterwilliams97.github.io/elenchus-dora-2026/>.
+It is two panes. 
+
+* The **left** shows the source, in this case the report itself, open at p62 
+(*Quality internal platforms*, Figure 44). 
+* The **right** is assay's top-down reading: the report's root thesis,
+each recommendation under it with a derived verdict, each recommendation opening to the findings it
+rests on, and each finding opening to the atomic claims that support it.
+
+In the screenshot the platform recommendation **R-PLAT fails** because its finding **F-PLAT fails**.
+F-PLAT fails because its core premise **CM10 is contradicted, 3/3**. The **so what** line
+explains the discrepancy: the report attributes friction to platforms, while the original source 
+attributes it to small batches. 
+The **report: §Quality internal platforms p62** link jumps the left pane to that page; 
+the **reason** line is the judge's justification; and the quoted passage beneath it is the report 
+text the verdict was read against. Click a report `§` or a quote on the right and the left
+pane jumps to that page of that PDF.
+
+
+The top of the right pane has the thesis, the tally over the nine recommendations, and the
+recommendations themselves (`examples/dora-2026/site/index.html`, contents from
+`examples/dora-2026/argument.txt`):
 
 ```
-Victoria's cultural and creative industries are economically and socially significant but under
-strain, and the Victorian Government should act — and press the Federal Government and national
-broadcasters — to rebuild, sustain and fairly fund them.
+AI's primary role in software development is that of an amplifier — it magnifies the strengths of
+high-performing organizations and the dysfunctions of struggling ones; the greatest returns come not
+from the tools themselves but from the underlying organizational system.
 
-Of 11 recommendations, 2 hold (R1, R2), 1 is weakened (R3), 6 are open — 5 because the report
-doesn't say what they rest on, 1 because their findings are contested — 1 fails (R7: no held source
-supports F33), 1 is opinion (R9).
-41 findings support no recommendation.
+Of 9 recommendations, 3 hold (R-DATA, R-BATCH, R-USER), 3 are weakened (R-STANCE, R-ACCESS, R-VSM),
+2 fail (R-VC: no held source supports F-VC, R-PLAT: no held source supports F-PLAT), 1 is opinion
+(R-TRANSFORM ?).
+2 findings support no recommendation.
 
-R1   Index grant programs to CPI.  — holds
-R2   Reduce the administrative burden of grant programs, esp. those capped ≤$20,000.  — holds
-R3   Release grant calendars in advance.  — weakened (F22)
-R4   Advocate release of state/territory breakdowns in the federal cultural-funding dataset.  — open (F29 ?)
-R5   Advocate release of remoteness/geography breakdowns in the federal cultural-funding dataset.  — open (F31 ?)
-R6   Advocate for at least one more Victorian member on the ABC Board.  — open
-R7   Advocate for more ABC jobs in Victoria, proportionate to population.  — fails (F33)
-R8   Increase funding for Victoria's screen/creative agencies; enhance ABC partnerships.  — open (F39)
-R9   Appeal to clarify decision-making on the SBS relocation feasibility study.  — opinion (F43)
-R10  Advocate an SBS physical presence in a culturally diverse Victorian location.  — open
-R11  Targeted funding/incentives to the independent sector for regional content.  — open (F51 ?)
+weakened  R-STANCE       Clarify and socialize your AI policies — establish a clear, communicated policy on permitted tools and usage.
+holds     R-DATA         Treat your data as a strategic asset — invest in the quality, accessibility, and unification of internal data sources.
+weakened  R-ACCESS       Connect AI to your internal context — give AI tools secure access to internal documentation, codebases, and data.
+fails     R-VC           Embrace and fortify your safety nets — make teams proficient in rollback and revert features.
+holds     R-BATCH        Reduce the size of work items — enforce the discipline of working in small batches.
+holds     R-USER         Center users' needs in product strategy — keep the user as the product's North Star.
+fails     R-PLAT         Invest in your internal platform — treat it as a product and the strategic prerequisite for unlocking AI's organizational value.
+weakened  R-VSM          Use value stream management to turn AI investment into a competitive advantage.
+opinion   R-TRANSFORM ?  Treat AI adoption as an organizational transformation, not a tools purchase — redesign workflows, roles, governance, and culture.
 ```
 
 ## Worked examples
 
+- <https://peterwilliams97.github.io/elenchus-dora-2026/> — the 2025 DORA *State of AI-assisted
+  Software Development* report (v.2025.2), its headline findings checked against the report's own
+  data, with the human adjudications shown beside the machine verdicts.
 - <https://peterwilliams97.github.io/elenchus-vic-lceic/> — the Victorian LCEIC inquiry into the
   cultural and creative industries, checked claim-by-claim against the hearing transcripts and
-  submissions.
-- <https://peterwilliams97.github.io/elenchus-dora-2026/> — the 2026 DORA State of AI-assisted
-  Software Development report, its headline findings checked against the report's own data, with the
-  human adjudications shown beside the machine verdicts.
+  submissions. Run the same corpus twice and about 20% of leaf verdicts move (of 60 judged findings:
+  48 settle, 3 wobble, 9 contested); a leaf that moves is marked contested and sent to the reader.
 
 ## How to read the right pane
 
-Every node — the root, each recommendation, each finding — carries a verdict. The six labels, from
-`spec/ARGUMENT.md`:
+Every node — the root, each recommendation, each finding — carries a **derived** verdict. The six
+node labels, from `spec/ARGUMENT.md`:
 
 - **holds** — every load-bearing child holds. The node stands on the ground its content claims.
 - **weakened** — no child fails or opens, but some child is only partial, or wobbles between runs.
@@ -72,21 +86,54 @@ Every node — the root, each recommendation, each finding — carries a verdict
 the report never says what its recommendation rests on, and **contested** marks a claim the sources
 leave underdetermined — both describe the material, not the tool that read it.
 
+Under every finding sit its atomic claims, each with a **leaf faithfulness verdict** — whether the
+source bears the claim out, never whether it is true (`spec/ARGUMENT.md`, `spec/TREE.md`):
+
+- **faithful** — the source states the claim's subject, scope, and direction.
+- **partial** — the source is adjacent, narrower, or broader: it bears on the claim without stating
+  it (a scope, denominator, timerange, or attribution gap).
+- **overstated** — the claim inflates the source: a hedge dropped, a number pushed, a certainty the
+  source does not carry.
+- **absent** — the cited document is held and was searched, but says nothing on the claim.
+- **contradicted** — the source states the opposite of the claim.
+
+(Two more the vocabulary carries: **unsupported** — no held source states it — and **unverifiable** —
+the cited document is not in the corpus.)
+
+Three more things ride on a leaf:
+
+- **3/3** — the agreement. Each claim is judged N times (here N=3); `k/N` is how many of those
+  samples landed on the verdict shown. `3/3` is unanimous; a split such as `2/3` is a claim the judge
+  itself was unsure of.
+- **so what** — one line, in plain words, naming the gap between what the report says and what the
+  source says (`The report says X; the source only says Y`). It is the leaf's headline for a reader
+  deciding whether to look closer.
+- **reason** — the judge's own one-line justification for the verdict, citing the passages it read.
+
 ## Where the judgements come from
 
-Three sources, kept separate on purpose:
+Three inputs, kept separate on purpose:
 
 - The **report** supplies the propositions and the structure — each node's content, in the report's
   own words, and which findings a recommendation rests on.
-- The **sources** supply the quotes — verbatim passages from the hearings, submissions, and
-  questions-on-notice, each carrying the document, witness, and page it came from.
+- The **sources** supply the quotes each claim is checked against, carrying the document and page
+  each came from.
 - The **code** derives every verdict. No judgement is written by hand; each is computed from the
-  leaves up (`spec/ARGUMENT.md`). Writing a verdict into the tree is the one edit the format forbids
-  — it would let the builder's opinion pass as a result.
+  leaves up (`spec/ARGUMENT.md`). Writing a verdict into the tree is the one edit the format forbids —
+  it would let the builder's opinion pass as a result.
 
-Run the same corpus twice and about 20% of leaf verdicts move (of 60 judged findings: 48 settle, 3
-wobble, 9 contested). The tool doesn't know whether that's the sources or the judge, so it reports
-it: a leaf that moves is marked contested and sent to the reader.
+What counts as a source differs by run. For **DORA** the corpus holds exactly one document — the
+report itself — so the only automated check is internal consistency: does the report say this, and do
+its figures agree across chapters and pages? It does not ground the survey numbers; their truth-maker
+is the survey microdata and the fitted models, which are not held, so every survey figure comes back
+`unverifiable` for grounding by design, not omission (`examples/dora-2026/sources/MANIFEST.md`). For
+**LCEIC** the sources are external — the hearing transcripts, submissions, and questions-on-notice,
+each quote carrying its document, witness, and page — so a claim is checked against a document other
+than the one making it.
+
+On both runs, machine verdicts a human has read are shown beside the machine badge with the
+reviewer's initials, and the argument page reports how many adjudicated leaves the judge agreed on
+(for DORA, 4 of 10) (`spec/SERVE.md` § Adjudications).
 
 ## Run it on your own report
 
@@ -120,12 +167,13 @@ assay -from current.faithfulness.jsonl,current-2026-09-10.faithfulness.jsonl \
 assay -backfill-passages <chain> -source ../sources/hearings,../sources/submissions,../sources/qon
 ```
 
-`-review` needs `-argument` and `-manifest`; it writes `review.html` alongside `argument.html`, with
-the report `§` and quote links rewritten to open the source PDFs in the left pane.
+`-review` needs `-argument` and `-manifest`; it writes `review.html` alongside `index.html`, with
+the report `§` and quote links rewritten to open the source PDFs in the left pane. `assay serve
+<site-dir>` then serves the built site over HTTP so the `#page=N` links land on the right page.
 
 ## For readers
 
-The narrative walkthrough of this run is a Google Doc:
+The narrative walkthrough of the LCEIC run is a Google Doc:
 <https://docs.google.com/document/d/1GekNT4G8ESlQ__HrKafCTeaEOi7v2AVHBR3pqevM7HQ>.
 
 ## The name
