@@ -1,19 +1,19 @@
 # elenchus
 
-`assay` takes a report and the documents it draws on, breaks the report into atomic claims, checks
+[assay](assay.go) takes a report and the documents it draws on, breaks the report into atomic claims, checks
 each claim against those sources, and propagates the checks up through the findings and
 recommendations to the report's thesis. The output is a page you read.
 
-![review.html — the source document on the left, assay's reading of the report on the right](docs/review-screenshot.png)
+![review.html — the source document on the left, assay's reading of the report on the right](docs/screenshots/dora-screenshot.png)
 
 The worked run is the Victorian LCEIC report on the cultural and creative industries:
 <https://peterwilliams97.github.io/elenchus-vic-lceic/>. It is two panes.
-The **left** shows the source document — the report itself, or the hearing transcript, submission, or
-question-on-notice a quote comes from — as the original PDF. The **right** is assay's top-down
+The **left** shows the source document — the report itself, or the hearing transcript, submission,
+or question-on-notice a quote comes from — as the original PDF. The **right** is assay's top-down
 reading: the report's root proposition, the eleven recommendations under it each with a derived
 verdict, each recommendation opening to the findings it rests on, and each finding opening to the
-verbatim quotes that support it with their provenance. Click a report `§` or a quote on the right and
-the left pane jumps to that page of that PDF.
+verbatim quotes that support it with their provenance. Click a report `§` or a quote on the right
+and the left pane jumps to that page of that PDF.
 
 The top of the right pane, verbatim from
 [`argument.html`](examples/vic-lceic/current/argument.html):

@@ -294,8 +294,8 @@ func main() {
 
 	// -from replays a saved chain with no model calls, so it renders straight from the JSONL and
 	// returns. The one exception is -edge: the edge-level adversarial pass (spec/EDGE.md) makes one
-	// model call per in-scope F→R edge, so -from -edge wires a backend + key first and writes its own
-	// chain under testing/chains/. Without -edge the render is unchanged and needs no key.
+	// model call per in-scope F→R edge, so -from -edge wires a backend + key first and writes its
+	// own chain under testing/chains/. Without -edge the render is unchanged and needs no key.
 	if fromChain != "" {
 		c.usage = newUsageCounters()
 		if c.edge {
@@ -370,8 +370,8 @@ func main() {
 	case src != "":
 		modeSuffix = "faithfulness"
 	}
-	// -axis adds the substance axis to the -source corpus run (spec/SUBSTANCE-CORPUS.md). It is inert
-	// outside that path: the single-file modes select their axis directly.
+	// -axis adds the substance axis to the -source corpus run (spec/SUBSTANCE-CORPUS.md). It is
+	// inert outside that path: the single-file modes select their axis directly.
 	for _, a := range strings.Split(axisList, ",") {
 		if strings.EqualFold(strings.TrimSpace(a), "substance") {
 			c.substanceOn = true
